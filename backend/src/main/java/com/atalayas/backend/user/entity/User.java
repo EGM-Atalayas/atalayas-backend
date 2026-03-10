@@ -1,6 +1,6 @@
-package egm.atalayas.backend.user.entity;
+package com.atalayas.backend.user.entity;
 
-import egm.atalayas.backend.role.entity.Role;
+import com.atalayas.backend.role.entity.Role;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -93,4 +93,3 @@ public class User implements UserDetails {
         return firstName + " " + lastName;
     }
 }
-

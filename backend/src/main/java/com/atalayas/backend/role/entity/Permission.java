@@ -1,4 +1,4 @@
-package egm.atalayas.backend.role.entity;
+package com.atalayas.backend.role.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -19,4 +19,3 @@ public class Permission {
     @Column(nullable = false, unique = true, length = 100)
     private String name;
 }
-

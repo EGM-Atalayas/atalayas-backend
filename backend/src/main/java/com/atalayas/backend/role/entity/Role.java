@@ -1,6 +1,6 @@
-package egm.atalayas.backend.role.entity;
+package com.atalayas.backend.role.entity;
 
-import egm.atalayas.backend.common.enums.RoleType;
+import com.atalayas.backend.common.enums.RoleType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -31,4 +31,3 @@ public class Role {
     )
     private Set<Permission> permissions;
 }
-

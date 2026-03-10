@@ -1,8 +1,8 @@
-package egm.atalayas.backend.user.mapper;
+package com.atalayas.backend.user.mapper;
 
-import egm.atalayas.backend.user.dto.UserProfileResponse;
-import egm.atalayas.backend.user.dto.UserResponse;
-import egm.atalayas.backend.user.entity.User;
+import com.atalayas.backend.user.dto.UserProfileResponse;
+import com.atalayas.backend.user.dto.UserResponse;
+import com.atalayas.backend.user.entity.User;
 import org.springframework.stereotype.Component;
 
 import java.util.stream.Collectors;
@@ -39,4 +39,3 @@ public class UserMapper {
                 .build();
     }
 }
-

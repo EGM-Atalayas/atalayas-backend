@@ -1,4 +1,4 @@
-package egm.atalayas.backend.auth.dto;
+package com.atalayas.backend.auth.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,4 +19,3 @@ public class AuthResponse {
     private String fullName;
     private String role;
 }
-

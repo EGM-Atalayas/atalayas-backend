@@ -1,4 +1,4 @@
-package egm.atalayas.backend.user.dto;
+package com.atalayas.backend.user.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,4 +22,3 @@ public class UserResponse {
     private Set<String> roles;
     private LocalDateTime createdAt;
 }
-

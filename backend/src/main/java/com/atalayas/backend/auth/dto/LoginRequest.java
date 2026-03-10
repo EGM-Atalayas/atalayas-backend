@@ -1,4 +1,4 @@
-package egm.atalayas.backend.auth.dto;
+package com.atalayas.backend.auth.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -14,4 +14,3 @@ public class LoginRequest {
     @NotBlank(message = "La contraseña es obligatoria")
     private String password;
 }
-

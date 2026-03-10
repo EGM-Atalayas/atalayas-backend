@@ -1,8 +1,8 @@
-package egm.atalayas.backend.user.controller;
+package com.atalayas.backend.user.controller;
 
-import egm.atalayas.backend.user.dto.UserProfileResponse;
-import egm.atalayas.backend.user.dto.UserResponse;
-import egm.atalayas.backend.user.service.UserService;
+import com.atalayas.backend.user.dto.UserProfileResponse;
+import com.atalayas.backend.user.dto.UserResponse;
+import com.atalayas.backend.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -50,4 +50,3 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 }
-

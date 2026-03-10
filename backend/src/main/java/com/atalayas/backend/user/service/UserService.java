@@ -1,11 +1,11 @@
-package egm.atalayas.backend.user.service;
+package com.atalayas.backend.user.service;
 
-import egm.atalayas.backend.exception.ResourceNotFoundException;
-import egm.atalayas.backend.user.dto.UserProfileResponse;
-import egm.atalayas.backend.user.dto.UserResponse;
-import egm.atalayas.backend.user.entity.User;
-import egm.atalayas.backend.user.mapper.UserMapper;
-import egm.atalayas.backend.user.repository.UserRepository;
+import com.atalayas.backend.exception.ResourceNotFoundException;
+import com.atalayas.backend.user.dto.UserProfileResponse;
+import com.atalayas.backend.user.dto.UserResponse;
+import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.user.mapper.UserMapper;
+import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -51,4 +51,3 @@ public class UserService {
         userRepository.save(user);
     }
 }
-

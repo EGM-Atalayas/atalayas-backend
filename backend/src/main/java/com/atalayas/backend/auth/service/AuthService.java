@@ -1,16 +1,16 @@
-package egm.atalayas.backend.auth.service;
+package com.atalayas.backend.auth.service;
 
-import egm.atalayas.backend.auth.dto.AuthResponse;
-import egm.atalayas.backend.auth.dto.LoginRequest;
-import egm.atalayas.backend.auth.dto.RefreshTokenRequest;
-import egm.atalayas.backend.auth.dto.RegisterRequest;
-import egm.atalayas.backend.common.enums.RoleType;
-import egm.atalayas.backend.role.entity.Role;
-import egm.atalayas.backend.role.repository.RoleRepository;
-import egm.atalayas.backend.security.JwtService;
-import egm.atalayas.backend.security.SecurityConstants;
-import egm.atalayas.backend.user.entity.User;
-import egm.atalayas.backend.user.repository.UserRepository;
+import com.atalayas.backend.auth.dto.AuthResponse;
+import com.atalayas.backend.auth.dto.LoginRequest;
+import com.atalayas.backend.auth.dto.RefreshTokenRequest;
+import com.atalayas.backend.auth.dto.RegisterRequest;
+import com.atalayas.backend.common.enums.RoleType;
+import com.atalayas.backend.role.entity.Role;
+import com.atalayas.backend.role.repository.RoleRepository;
+import com.atalayas.backend.security.JwtService;
+import com.atalayas.backend.security.SecurityConstants;
+import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -102,4 +102,3 @@ public class AuthService {
                 .build();
     }
 }
-
