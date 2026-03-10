@@ -1,4 +1,4 @@
-package egm.atalayas.backend.security;
+package com.atalayas.backend.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;

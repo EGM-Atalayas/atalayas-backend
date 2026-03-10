@@ -1,4 +1,4 @@
-package egm.atalayas.backend.security;
+package com.atalayas.backend.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;

@@ -1,6 +1,6 @@
-package egm.atalayas.backend.security;
+package com.atalayas.backend.security;
 
-import egm.atalayas.backend.user.repository.UserRepository;
+import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

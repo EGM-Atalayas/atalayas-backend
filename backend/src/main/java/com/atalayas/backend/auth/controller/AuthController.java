@@ -1,10 +1,10 @@
-package egm.atalayas.backend.auth.controller;
+package com.atalayas.backend.auth.controller;
 
-import egm.atalayas.backend.auth.dto.AuthResponse;
-import egm.atalayas.backend.auth.dto.LoginRequest;
-import egm.atalayas.backend.auth.dto.RefreshTokenRequest;
-import egm.atalayas.backend.auth.dto.RegisterRequest;
-import egm.atalayas.backend.auth.service.AuthService;
+import com.atalayas.backend.auth.dto.AuthResponse;
+import com.atalayas.backend.auth.dto.LoginRequest;
+import com.atalayas.backend.auth.dto.RefreshTokenRequest;
+import com.atalayas.backend.auth.dto.RegisterRequest;
+import com.atalayas.backend.auth.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

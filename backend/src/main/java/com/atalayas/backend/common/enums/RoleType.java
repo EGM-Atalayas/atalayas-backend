@@ -1,4 +1,4 @@
-package egm.atalayas.backend.common.enums;
+package com.atalayas.backend.common.enums;
 
 public enum RoleType {
     ROLE_SUPER_ADMIN,

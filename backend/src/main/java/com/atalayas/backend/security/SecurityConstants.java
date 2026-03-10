@@ -1,4 +1,4 @@
-package egm.atalayas.backend.security;
+package com.atalayas.backend.security;
 
 public final class SecurityConstants {
 
