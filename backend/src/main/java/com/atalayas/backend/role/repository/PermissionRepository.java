@@ -1,13 +1,10 @@
 package com.atalayas.backend.role.repository;
 
-import com.atalayas.backend.role.entity.Permission;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-
-import java.util.Optional;
-
-@Repository
-public interface PermissionRepository extends JpaRepository<Permission, Long> {
-
-    Optional<Permission> findByName(String name);
+/**
+ * @deprecated La tabla permissions no existe en el nuevo esquema de BD.
+ * Este repositorio se mantiene vacío para evitar errores de compilación
+ * mientras se migra el código que lo referenciara.
+ */
+@Deprecated
+public interface PermissionRepository {
 }

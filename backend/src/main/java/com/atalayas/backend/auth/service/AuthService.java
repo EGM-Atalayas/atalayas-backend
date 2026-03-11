@@ -4,8 +4,7 @@ import com.atalayas.backend.auth.dto.AuthResponse;
 import com.atalayas.backend.auth.dto.LoginRequest;
 import com.atalayas.backend.auth.dto.RefreshTokenRequest;
 import com.atalayas.backend.auth.dto.RegisterRequest;
-import com.atalayas.backend.common.enums.RoleType;
-import com.atalayas.backend.role.entity.Role;
+import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.role.repository.RoleRepository;
 import com.atalayas.backend.security.JwtService;
 import com.atalayas.backend.security.SecurityConstants;
@@ -17,8 +16,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -36,20 +33,22 @@ public class AuthService {
             throw new IllegalArgumentException("Ya existe un usuario con el email: " + request.getEmail());
         }
 
-        Role employeeRole = roleRepository.findByName(RoleType.ROLE_EMPLOYEE)
-                .orElseThrow(() -> new IllegalStateException("Rol ROLE_EMPLOYEE no encontrado en la base de datos"));
+        Rol rol = roleRepository.findById(request.getRolId())
+                .orElseThrow(() -> new IllegalArgumentException("Rol no encontrado con id: " + request.getRolId()));
 
         User user = User.builder()
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
+                .nombre(request.getNombre())
+                .apellidos(request.getApellidos())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .roles(Set.of(employeeRole))
+                .empresaId(request.getEmpresaId())
+                .rol(rol)
+                .puestoTrabajo(request.getPuestoTrabajo())
                 .build();
 
         userRepository.save(user);
 
-        String accessToken = jwtService.generateAccessToken(user);
+        String accessToken  = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
         return buildAuthResponse(user, accessToken, refreshToken);
@@ -63,7 +62,7 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
-        String accessToken = jwtService.generateAccessToken(user);
+        String accessToken  = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
         return buildAuthResponse(user, accessToken, refreshToken);
@@ -79,26 +78,28 @@ public class AuthService {
             throw new IllegalArgumentException("Refresh token inválido o expirado");
         }
 
-        String newAccessToken = jwtService.generateAccessToken(user);
+        String newAccessToken  = jwtService.generateAccessToken(user);
         String newRefreshToken = jwtService.generateRefreshToken(user);
 
         return buildAuthResponse(user, newAccessToken, newRefreshToken);
     }
 
     private AuthResponse buildAuthResponse(User user, String accessToken, String refreshToken) {
-        String role = user.getRoles().stream()
-                .findFirst()
-                .map(r -> r.getName().name())
-                .orElse("ROLE_EMPLOYEE");
-
+        Rol rol = user.getRol();
         return AuthResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .expiresIn(SecurityConstants.ACCESS_TOKEN_EXPIRATION)
+                .usuarioId(user.getUsuarioId())
                 .email(user.getEmail())
-                .fullName(user.getFullName())
-                .role(role)
+                .nombre(user.getNombre())
+                .apellidos(user.getApellidos())
+                .avatarUrl(user.getAvatarUrl())
+                .rolId(rol.getRolId())
+                .codigoRol(rol.getCodigoRol())
+                .nombreRol(rol.getNombreRol())
+                .empresaId(user.getEmpresaId())
                 .build();
     }
 }

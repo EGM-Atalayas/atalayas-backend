@@ -1,21 +1,9 @@
 package com.atalayas.backend.role.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
-
-@Entity
-@Table(name = "permissions")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+/**
+ * @deprecated La tabla permissions no existe en el nuevo esquema de BD.
+ * Clase mantenida como stub para evitar errores de compilación.
+ */
+@Deprecated
 public class Permission {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false, unique = true, length = 100)
-    private String name;
 }

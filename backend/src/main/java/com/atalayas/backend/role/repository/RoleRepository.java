@@ -1,14 +1,16 @@
 package com.atalayas.backend.role.repository;
 
-import com.atalayas.backend.common.enums.RoleType;
-import com.atalayas.backend.role.entity.Role;
+import com.atalayas.backend.role.entity.Rol;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface RoleRepository extends JpaRepository<Role, Long> {
+public interface RoleRepository extends JpaRepository<Rol, UUID> {
 
-    Optional<Role> findByName(RoleType name);
+    Optional<Rol> findByCodigoRol(String codigoRol);
+
+    Optional<Rol> findByNombreRol(String nombreRol);
 }

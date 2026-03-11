@@ -6,19 +6,38 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.Set;
+import java.util.UUID;
 
+/**
+ * Respuesta completa de un usuario (tabla usuario).
+ */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserResponse {
 
-    private Long id;
-    private String firstName;
-    private String lastName;
+    private UUID usuarioId;
     private String email;
-    private boolean enabled;
-    private Set<String> roles;
-    private LocalDateTime createdAt;
+    private String nombre;
+    private String apellidos;
+    private String avatarUrl;
+
+    // FK empresa
+    private UUID empresaId;
+    private String nombreEmpresa;
+
+    // FK rol
+    private UUID rolId;
+    private String codigoRol;
+    private String nombreRol;
+
+    private String puestoTrabajo;
+    private boolean activo;
+    private boolean terminosAceptados;
+    private int intentosFallidos;
+
+    private LocalDateTime fechaRegistro;
+    private LocalDateTime ultimoLogin;
+    private LocalDateTime actualizadoEn;
 }

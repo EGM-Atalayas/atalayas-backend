@@ -6,20 +6,39 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.Set;
+import java.util.UUID;
 
+/**
+ * Vista de perfil del usuario autenticado (tabla usuario).
+ * Incluye nombre completo calculado para uso en UI.
+ */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserProfileResponse {
 
-    private Long id;
-    private String firstName;
-    private String lastName;
-    private String fullName;
+    private UUID usuarioId;
     private String email;
-    private Set<String> roles;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private String nombre;
+    private String apellidos;
+    private String nombreCompleto;   // nombre + " " + apellidos
+    private String avatarUrl;
+    private String puestoTrabajo;
+
+    // FK empresa
+    private UUID empresaId;
+    private String nombreEmpresa;
+
+    // FK rol
+    private UUID rolId;
+    private String codigoRol;
+    private String nombreRol;
+
+    private boolean activo;
+    private boolean terminosAceptados;
+
+    private LocalDateTime fechaRegistro;
+    private LocalDateTime ultimoLogin;
+    private LocalDateTime actualizadoEn;
 }

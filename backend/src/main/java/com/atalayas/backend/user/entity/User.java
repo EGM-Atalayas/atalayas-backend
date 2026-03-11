@@ -1,6 +1,6 @@
 package com.atalayas.backend.user.entity;
 
-import com.atalayas.backend.role.entity.Role;
+import com.atalayas.backend.role.entity.Rol;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -9,11 +9,14 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.List;
+import java.util.UUID;
 
+/**
+ * Entidad mapeada a la tabla usuario de PostgreSQL.
+ */
 @Entity
-@Table(name = "users")
+@Table(name = "usuario")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -22,66 +25,74 @@ import java.util.stream.Collectors;
 public class User implements UserDetails {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "usuario_id", updatable = false, nullable = false)
+    private UUID usuarioId;
 
-    @Column(nullable = false, length = 100)
-    private String firstName;
-
-    @Column(nullable = false, length = 100)
-    private String lastName;
-
-    @Column(nullable = false, unique = true, length = 150)
+    @Column(name = "email", nullable = false, unique = true, length = 255)
     private String email;
 
-    @Column(nullable = false)
+    @Column(name = "password_hash", nullable = false, length = 255)
     private String password;
 
-    @Column(nullable = false)
+    @Column(name = "nombre", nullable = false, length = 100)
+    private String nombre;
+
+    @Column(name = "apellidos", nullable = false, length = 100)
+    private String apellidos;
+
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
+    /** FK → empresa.empresa_id */
+    @Column(name = "empresa_id", nullable = false)
+    private UUID empresaId;
+
+    /** FK → rol (join para cargar datos del rol en memoria). */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "rol_id", nullable = false)
+    private Rol rol;
+
+    @Column(name = "intentos_fallidos", nullable = false)
     @Builder.Default
-    private boolean enabled = true;
+    private int intentosFallidos = 0;
 
-    @Column(nullable = false)
+    @Column(name = "terminos_aceptados", nullable = false)
     @Builder.Default
-    private boolean accountNonExpired = true;
+    private boolean terminosAceptados = false;
 
-    @Column(nullable = false)
+    @Column(name = "puesto_trabajo", length = 150)
+    private String puestoTrabajo;
+
+    @Column(name = "activo", nullable = false)
     @Builder.Default
-    private boolean accountNonLocked = true;
+    private boolean activo = true;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private boolean credentialsNonExpired = true;
+    @Column(name = "fecha_registro", updatable = false, nullable = false)
+    private LocalDateTime fechaRegistro;
 
-    @Column(updatable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "ultimo_login")
+    private LocalDateTime ultimoLogin;
 
-    private LocalDateTime updatedAt;
-
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-            name = "user_roles",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id")
-    )
-    private Set<Role> roles;
+    @Column(name = "actualizado_en", nullable = false)
+    private LocalDateTime actualizadoEn;
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
+        fechaRegistro = LocalDateTime.now();
+        actualizadoEn = LocalDateTime.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        actualizadoEn = LocalDateTime.now();
     }
+
+    // ── UserDetails ──────────────────────────────────────────────────────────
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return roles.stream()
-                .map(role -> new SimpleGrantedAuthority(role.getName().name()))
-                .collect(Collectors.toSet());
+        return List.of(new SimpleGrantedAuthority(rol.getCodigoRol()));
     }
 
     @Override
@@ -89,7 +100,27 @@ public class User implements UserDetails {
         return email;
     }
 
-    public String getFullName() {
-        return firstName + " " + lastName;
+    @Override
+    public boolean isEnabled() {
+        return activo;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return intentosFallidos < 5;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    public String getNombreCompleto() {
+        return nombre + " " + apellidos;
     }
 }

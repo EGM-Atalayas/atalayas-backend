@@ -1,41 +1,55 @@
 package com.atalayas.backend.user.mapper;
 
+import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.user.dto.UserProfileResponse;
 import com.atalayas.backend.user.dto.UserResponse;
 import com.atalayas.backend.user.entity.User;
 import org.springframework.stereotype.Component;
 
-import java.util.stream.Collectors;
-
 @Component
 public class UserMapper {
 
     public UserResponse toUserResponse(User user) {
+        Rol rol = user.getRol();
         return UserResponse.builder()
-                .id(user.getId())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
+                .usuarioId(user.getUsuarioId())
                 .email(user.getEmail())
-                .enabled(user.isEnabled())
-                .roles(user.getRoles().stream()
-                        .map(role -> role.getName().name())
-                        .collect(Collectors.toSet()))
-                .createdAt(user.getCreatedAt())
+                .nombre(user.getNombre())
+                .apellidos(user.getApellidos())
+                .avatarUrl(user.getAvatarUrl())
+                .empresaId(user.getEmpresaId())
+                .rolId(rol.getRolId())
+                .codigoRol(rol.getCodigoRol())
+                .nombreRol(rol.getNombreRol())
+                .puestoTrabajo(user.getPuestoTrabajo())
+                .activo(user.isActivo())
+                .terminosAceptados(user.isTerminosAceptados())
+                .intentosFallidos(user.getIntentosFallidos())
+                .fechaRegistro(user.getFechaRegistro())
+                .ultimoLogin(user.getUltimoLogin())
+                .actualizadoEn(user.getActualizadoEn())
                 .build();
     }
 
     public UserProfileResponse toUserProfileResponse(User user) {
+        Rol rol = user.getRol();
         return UserProfileResponse.builder()
-                .id(user.getId())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .fullName(user.getFullName())
+                .usuarioId(user.getUsuarioId())
                 .email(user.getEmail())
-                .roles(user.getRoles().stream()
-                        .map(role -> role.getName().name())
-                        .collect(Collectors.toSet()))
-                .createdAt(user.getCreatedAt())
-                .updatedAt(user.getUpdatedAt())
+                .nombre(user.getNombre())
+                .apellidos(user.getApellidos())
+                .nombreCompleto(user.getNombreCompleto())
+                .avatarUrl(user.getAvatarUrl())
+                .puestoTrabajo(user.getPuestoTrabajo())
+                .empresaId(user.getEmpresaId())
+                .rolId(rol.getRolId())
+                .codigoRol(rol.getCodigoRol())
+                .nombreRol(rol.getNombreRol())
+                .activo(user.isActivo())
+                .terminosAceptados(user.isTerminosAceptados())
+                .fechaRegistro(user.getFechaRegistro())
+                .ultimoLogin(user.getUltimoLogin())
+                .actualizadoEn(user.getActualizadoEn())
                 .build();
     }
 }

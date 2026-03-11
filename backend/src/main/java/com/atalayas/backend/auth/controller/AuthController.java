@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/auth")
+@CrossOrigin(origins = "*") // Permitir solicitudes desde cualquier origen (ajustar según necesidades)
 @RequiredArgsConstructor
 @Tag(name = "Autenticación", description = "Endpoints de login, registro y refresh token")
 public class AuthController {
@@ -34,10 +35,14 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
+
+
+
     @PostMapping("/refresh-token")
     @Operation(summary = "Refrescar el access token usando el refresh token")
     public ResponseEntity<AuthResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
         return ResponseEntity.ok(authService.refreshToken(request));
     }
 }
+
 
