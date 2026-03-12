@@ -39,10 +39,10 @@ public final class CookieUtil {
                                    boolean secure) {
         ResponseCookie cookie = ResponseCookie.from(name, "")
                 .httpOnly(true)
-                .secure(secure)
+                .secure(true)
                 .path("/")
                 .maxAge(0)
-                .sameSite("Strict")
+                .sameSite("None")
                 .build();
         response.addHeader("Set-Cookie", cookie.toString());
     }
