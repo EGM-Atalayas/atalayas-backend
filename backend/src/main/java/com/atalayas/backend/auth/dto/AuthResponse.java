@@ -13,10 +13,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class AuthResponse {
 
-    // ── Tokens ──────────────────────────────────────────────────────────────
-    private String accessToken;
-    private String refreshToken;
-    private String tokenType;
+    // Los tokens JWT viajan en cookies HttpOnly y NO se exponen en el body.
     private long expiresIn;
 
     // ── Datos del usuario autenticado (tabla usuario) ────────────────────────

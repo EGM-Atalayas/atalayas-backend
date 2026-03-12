@@ -2,7 +2,6 @@ package com.atalayas.backend.auth.service;
 
 import com.atalayas.backend.auth.dto.AuthResponse;
 import com.atalayas.backend.auth.dto.LoginRequest;
-import com.atalayas.backend.auth.dto.RefreshTokenRequest;
 import com.atalayas.backend.auth.dto.RegisterRequest;
 import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.role.repository.RoleRepository;
@@ -47,11 +46,7 @@ public class AuthService {
                 .build();
 
         userRepository.save(user);
-
-        String accessToken  = jwtService.generateAccessToken(user);
-        String refreshToken = jwtService.generateRefreshToken(user);
-
-        return buildAuthResponse(user, accessToken, refreshToken);
+        return buildAuthResponse(user);
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -62,34 +57,42 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
-        String accessToken  = jwtService.generateAccessToken(user);
-        String refreshToken = jwtService.generateRefreshToken(user);
-
-        return buildAuthResponse(user, accessToken, refreshToken);
+        return buildAuthResponse(user);
     }
 
-    public AuthResponse refreshToken(RefreshTokenRequest request) {
-        final String email = jwtService.extractUsername(request.getRefreshToken());
+    /**
+     * Valida el refresh token (leído desde la cookie) y devuelve los datos del usuario.
+     * El controller es quien genera los nuevos tokens y los escribe en las cookies.
+     */
+    public AuthResponse refreshToken(String rawRefreshToken) {
+        final String email = jwtService.extractUsername(rawRefreshToken);
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
-        if (!jwtService.isTokenValid(request.getRefreshToken(), user)) {
+        if (!jwtService.isTokenValid(rawRefreshToken, user)) {
             throw new IllegalArgumentException("Refresh token inválido o expirado");
         }
 
-        String newAccessToken  = jwtService.generateAccessToken(user);
-        String newRefreshToken = jwtService.generateRefreshToken(user);
-
-        return buildAuthResponse(user, newAccessToken, newRefreshToken);
+        return buildAuthResponse(user);
     }
 
-    private AuthResponse buildAuthResponse(User user, String accessToken, String refreshToken) {
+    /**
+     * Genera un par [accessToken, refreshToken] para el usuario autenticado.
+     * Lo usa el controller para escribir las cookies HttpOnly.
+     */
+    public String[] generateTokenPair(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        return new String[]{
+                jwtService.generateAccessToken(user),
+                jwtService.generateRefreshToken(user)
+        };
+    }
+
+    private AuthResponse buildAuthResponse(User user) {
         Rol rol = user.getRol();
         return AuthResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .tokenType("Bearer")
                 .expiresIn(SecurityConstants.ACCESS_TOKEN_EXPIRATION)
                 .usuarioId(user.getUsuarioId())
                 .email(user.getEmail())
