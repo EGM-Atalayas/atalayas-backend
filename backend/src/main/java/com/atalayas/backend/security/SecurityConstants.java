@@ -16,7 +16,10 @@ public final class SecurityConstants {
     // Endpoints públicos (Swagger protegido — eliminado de esta lista)
     public static final String[] PUBLIC_URLS = {
             "/api/v1/auth/**",
-            "/actuator/health"
+            "/v3/api-docs/**",
+            "/swagger-ui/**",
+            "/swagger-ui.html"
     };
+
 }
 
