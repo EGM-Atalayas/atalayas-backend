@@ -1,5 +1,6 @@
 package com.atalayas.backend.security;
 
+import com.atalayas.backend.user.entity.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 
 @Slf4j
@@ -34,13 +36,28 @@ public class JwtService {
     }
 
     private String buildToken(Map<String, Object> extraClaims, UserDetails userDetails, long expiration) {
+        Map<String, Object> claims = new HashMap<>(extraClaims);
+        // Incrustar empresaId para evitar ida a BD en validaciones externas.
+        // NOTA: la fuente de verdad sigue siendo la BD; el claim solo es informativo.
+        if (userDetails instanceof User user && user.getEmpresaId() != null) {
+            claims.put("empresaId", user.getEmpresaId().toString());
+        }
         return Jwts.builder()
-                .claims(extraClaims)
+                .claims(claims)
                 .subject(userDetails.getUsername())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey())
                 .compact();
+    }
+
+    /**
+     * Extrae el empresaId del claim del token.
+     * Devuelve {@code null} si el claim no existe (tokens emitidos antes de esta versión).
+     */
+    public UUID extractEmpresaId(String token) {
+        String raw = extractClaim(token, claims -> claims.get("empresaId", String.class));
+        return raw != null ? UUID.fromString(raw) : null;
     }
 
     public String extractUsername(String token) {
