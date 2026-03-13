@@ -47,7 +47,7 @@ public final class SecurityUtils {
      * @throws UnauthorizedException si no hay sesión activa.
      */
     public static boolean isSuperAdmin() {
-        return getCurrentUser().getRol().getRoleType() == RoleType.SUPER_ADMIN;
+        return getCurrentUser().getRol().getRoleType() == RoleType.ROLE_ADMIN;
     }
 }
 
