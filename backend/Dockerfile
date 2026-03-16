@@ -5,13 +5,13 @@ FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
 
 # Copiamos pom.xml y dependencias primero para cachear
-COPY pom.xml .
+COPY backend/pom.xml .
 
 # Instala dependencias (cachea para builds futuros)
 RUN mvn dependency:go-offline
 
 # Copiamos el código fuente
-COPY src ./src
+COPY backend/src ./src
 
 # Compilamos el JAR sin tests (más rápido)
 RUN mvn clean package -DskipTests
