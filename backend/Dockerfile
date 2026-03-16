@@ -1,18 +1,28 @@
-# 1. Etapa de Construcción (Usamos una imagen con Maven y Java 21)
+# Etapa 1: Build
 FROM maven:3.9.6-eclipse-temurin-21 AS build
+
+# Directorio de trabajo
 WORKDIR /app
-# Copiamos el pom y el código fuente
+
+# Copiamos pom.xml y dependencias primero para cachear
 COPY pom.xml .
+
+# Instala dependencias (cachea para builds futuros)
+RUN mvn dependency:go-offline
+
+# Copiamos el código fuente
 COPY src ./src
-# Compilamos saltando los tests para ir más rápido
+
+# Compilamos el JAR sin tests (más rápido)
 RUN mvn clean package -DskipTests
 
-# 2. Etapa de Ejecución (Una imagen más ligera solo con Java)
+# Etapa 2: Imagen de producción
 FROM eclipse-temurin:21-jre
+
 WORKDIR /app
-# Copiamos el archivo .jar que se generó en el paso anterior
-COPY --from=build /app/target/backend-0.0.1-SNAPSHOT.jar app.jar
-# Exponemos el puerto
-EXPOSE 8080
-# Comando para encender el motor
-ENTRYPOINT ["java", "-jar", "app.jar"]
+
+# Copiamos el JAR construido
+COPY --from=build /app/target/*.jar app.jar
+
+# Comando para ejecutar la app
+CMD ["java", "-jar", "app.jar"]
