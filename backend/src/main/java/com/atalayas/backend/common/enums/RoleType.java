@@ -8,13 +8,13 @@ package com.atalayas.backend.common.enums;
 public enum RoleType {
 
     /** Administrador global de la plataforma EGM. */
-    ROLE_ADMIN,
+    SUPER_ADMIN,
 
     /** Administrador de una empresa cliente. */
-    ROLE_ADMIN_EMPRESA,
+    ADMIN,
 
     /** Empleado estándar de una empresa cliente. */
-    ROLE_EMPLEADO;
+    EMPLEADO;
 
     /**
      * Resuelve un RoleType a partir del codigo_rol almacenado en BD.

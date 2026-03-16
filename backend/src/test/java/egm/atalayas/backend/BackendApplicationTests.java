@@ -1,4 +1,4 @@
-package com.atalayas.backend;
+package egm.atalayas.backend;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
