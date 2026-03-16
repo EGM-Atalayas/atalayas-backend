@@ -2,8 +2,9 @@
 FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
 # Copiamos el pom y el código fuente
-COPY pom.xml .
-COPY src ./src
+COPY atalayas-backend/pom.xml .
+RUN mvn dependency:go-offline
+COPY atalayas-backend/src ./src
 # Compilamos saltando los tests para ir más rápido
 RUN mvn clean package -DskipTests
 
@@ -16,3 +17,4 @@ COPY --from=build /app/target/backend-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080
 # Comando para encender el motor
 ENTRYPOINT ["java", "-jar", "app.jar"]
+
