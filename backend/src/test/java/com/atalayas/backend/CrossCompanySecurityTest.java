@@ -53,11 +53,11 @@ class CrossCompanySecurityTest {
         userRepository.deleteAll();
         roleRepository.deleteAll();
         Rol rolEmpleado = roleRepository.save(Rol.builder()
-                .nombreRol("Empleado").codigoRol("EMPLEADO").build());
+                .nombreRol("Empleado").codigoRol("ROLE_EMPLEADO").build());
         Rol rolAdmin = roleRepository.save(Rol.builder()
-                .nombreRol("Administrador").codigoRol("ADMIN").build());
+                .nombreRol("Administrador").codigoRol("ROLE_ADMIN_EMPRESA").build());
         Rol rolSuperAdmin = roleRepository.save(Rol.builder()
-                .nombreRol("Super Administrador").codigoRol("SUPER_ADMIN").build());
+                .nombreRol("Super Administrador").codigoRol("ROLE_ADMIN").build());
         empleadoA = userRepository.save(User.builder()
                 .nombre("Empleado").apellidos("EmpresaA")
                 .email("empleado@empresaa.test")
@@ -102,24 +102,24 @@ class CrossCompanySecurityTest {
     }
     // ── EMPLEADO intenta endpoints de admin ──────────────────────────────────
     @Nested
-    @DisplayName("EMPLEADO accede a endpoints solo para ADMIN/SUPER_ADMIN")
+    @DisplayName("ROLE_EMPLEADO accede a endpoints solo para ADMIN/SUPER_ADMIN")
     class EmpleadoSinPermisos {
         @Test
-        @DisplayName("GET /users/{id} con EMPLEADO -> 403 Forbidden")
+        @DisplayName("GET /users/{id} con ROLE_EMPLEADO -> 403 Forbidden")
         void empleado_getUserById_retorna403() throws Exception {
             mockMvc.perform(get("/api/v1/users/{id}", empleadoB.getUsuarioId())
                             .header("Authorization", bearerToken(empleadoA)))
                     .andExpect(status().isForbidden());
         }
         @Test
-        @DisplayName("GET /users con EMPLEADO -> 403 Forbidden")
+        @DisplayName("GET /users con ROLE_EMPLEADO -> 403 Forbidden")
         void empleado_getAllUsers_retorna403() throws Exception {
             mockMvc.perform(get("/api/v1/users")
                             .header("Authorization", bearerToken(empleadoA)))
                     .andExpect(status().isForbidden());
         }
         @Test
-        @DisplayName("DELETE /users/{id}/desactivar con EMPLEADO -> 403 Forbidden")
+        @DisplayName("DELETE /users/{id}/desactivar con ROLE_EMPLEADO -> 403 Forbidden")
         void empleado_desactivarUsuario_retorna403() throws Exception {
             mockMvc.perform(delete("/api/v1/users/{id}/desactivar", empleadoB.getUsuarioId())
                             .header("Authorization", bearerToken(empleadoA)))
@@ -128,24 +128,24 @@ class CrossCompanySecurityTest {
     }
     // ── ADMIN empresa A accede a empresa B (404 enmascarado) ─────────────────
     @Nested
-    @DisplayName("ADMIN empresa A intenta acceder a datos de empresa B")
+    @DisplayName("ROLE_ADMIN empresa A intenta acceder a datos de empresa B")
     class AdminCrossCompany {
         @Test
-        @DisplayName("GET /users/{idEmpresaB} con ADMIN empresa A -> 404 enmascarado")
+        @DisplayName("GET /users/{idEmpresaB} con ROLE_ADMIN empresa A -> 404 enmascarado")
         void adminA_getUserDeEmpresaB_retorna404() throws Exception {
             mockMvc.perform(get("/api/v1/users/{id}", empleadoB.getUsuarioId())
                             .header("Authorization", bearerToken(adminA)))
                     .andExpect(status().isNotFound());
         }
         @Test
-        @DisplayName("DELETE /users/{idEmpresaB}/desactivar con ADMIN empresa A -> 404 enmascarado")
+        @DisplayName("DELETE /users/{idEmpresaB}/desactivar con ROLE_ADMIN empresa A -> 404 enmascarado")
         void adminA_desactivarUsuarioDeEmpresaB_retorna404() throws Exception {
             mockMvc.perform(delete("/api/v1/users/{id}/desactivar", empleadoB.getUsuarioId())
                             .header("Authorization", bearerToken(adminA)))
                     .andExpect(status().isNotFound());
         }
         @Test
-        @DisplayName("GET /users con ADMIN empresa A -> solo lista usuarios de empresa A")
+        @DisplayName("GET /users con ROLE_ADMIN empresa A -> solo lista usuarios de empresa A")
         void adminA_getAllUsers_soloVeSuEmpresa() throws Exception {
             mockMvc.perform(get("/api/v1/users")
                             .header("Authorization", bearerToken(adminA))
@@ -159,10 +159,10 @@ class CrossCompanySecurityTest {
     }
     // ── SUPER_ADMIN accede a cualquier empresa ────────────────────────────────
     @Nested
-    @DisplayName("SUPER_ADMIN accede a datos de cualquier empresa")
+    @DisplayName("ROLE_SUPER_ADMIN accede a datos de cualquier empresa")
     class SuperAdminAccesoTotal {
         @Test
-        @DisplayName("GET /users/{idEmpresaB} con SUPER_ADMIN -> 200 OK")
+        @DisplayName("GET /users/{idEmpresaB} con ROLE_SUPER_ADMIN -> 200 OK")
         void superAdmin_getUserDeEmpresaB_retorna200() throws Exception {
             mockMvc.perform(get("/api/v1/users/{id}", empleadoB.getUsuarioId())
                             .header("Authorization", bearerToken(superAdmin)))
