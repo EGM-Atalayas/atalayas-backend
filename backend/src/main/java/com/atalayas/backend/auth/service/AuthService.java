@@ -3,6 +3,7 @@ package com.atalayas.backend.auth.service;
 import com.atalayas.backend.auth.dto.AuthResponse;
 import com.atalayas.backend.auth.dto.LoginRequest;
 import com.atalayas.backend.auth.dto.RegisterRequest;
+import com.atalayas.backend.common.util.SecurityUtils;
 import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.role.repository.RoleRepository;
 import com.atalayas.backend.security.JwtService;
@@ -75,6 +76,19 @@ public class AuthService {
         }
 
         return buildAuthResponse(user);
+    }
+
+    /**
+     * Devuelve los datos del usuario autenticado en el contexto de seguridad.
+     * Lo usa el endpoint GET /auth/me.
+     */
+    @Transactional(readOnly = true)
+    public AuthResponse getCurrentUserInfo() {
+        User user = SecurityUtils.getCurrentUser();
+        // Recargar desde BD para garantizar datos frescos (evita stale del SecurityContext)
+        return userRepository.findByEmail(user.getEmail())
+                .map(this::buildAuthResponse)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario autenticado no encontrado en BD"));
     }
 
     /**

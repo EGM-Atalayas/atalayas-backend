@@ -8,6 +8,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -58,6 +59,13 @@ public class GlobalExceptionHandler {
         body.put("error", "Validación fallida");
         body.put("fieldErrors", fieldErrors);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    // Evita que rutas inexistentes generen 500 por el catch-all de Exception
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNoHandlerFound(NoHandlerFoundException ex) {
+        return buildResponse(HttpStatus.NOT_FOUND,
+                "Endpoint no encontrado: " + ex.getHttpMethod() + " " + ex.getRequestURL());
     }
 
     @ExceptionHandler(Exception.class)

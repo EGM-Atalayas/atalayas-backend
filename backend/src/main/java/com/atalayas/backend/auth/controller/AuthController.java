@@ -98,4 +98,10 @@ public class AuthController {
         CookieUtil.clearCookie(response, SecurityConstants.REFRESH_TOKEN_COOKIE, cookieSecure);
         return ResponseEntity.ok(Map.of("message", "Sesión cerrada correctamente"));
     }
+
+    @GetMapping("/me")
+    @Operation(summary = "Obtener datos del usuario autenticado (requiere accessToken)")
+    public ResponseEntity<AuthResponse> me() {
+        return ResponseEntity.ok(authService.getCurrentUserInfo());
+    }
 }

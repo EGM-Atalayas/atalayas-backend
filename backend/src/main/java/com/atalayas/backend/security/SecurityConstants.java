@@ -13,9 +13,12 @@ public final class SecurityConstants {
     public static final String ACCESS_TOKEN_COOKIE  = "accessToken";
     public static final String REFRESH_TOKEN_COOKIE = "refreshToken";
 
-    // Endpoints públicos (Swagger protegido — eliminado de esta lista)
+    // Endpoints públicos — rutas explícitas para no exponer /me ni futuros endpoints protegidos
     public static final String[] PUBLIC_URLS = {
-            "/api/v1/auth/**",
+            "/api/v1/auth/login",
+            "/api/v1/auth/register",
+            "/api/v1/auth/refresh-token",
+            "/api/v1/auth/logout",
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html"
