@@ -1,43 +1,38 @@
 package com.atalayas.backend.company.dto;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-import java.util.UUID;
-
 /**
- * Payload para crear o actualizar una empresa (tabla empresa).
+ * Payload para crear una empresa (solo SUPER_ADMIN).
+ * Los campos coinciden exactamente con las columnas editables de la tabla empresa.
  */
 @Data
 public class CompanyRequest {
 
     @NotBlank(message = "El nombre de la empresa es obligatorio")
-    @Size(max = 255)
+    @Size(max = 200)
     private String nombreEmpresa;
-
-    @Size(max = 255)
-    private String razonSocial;
 
     @NotBlank(message = "El CIF es obligatorio")
     @Size(max = 20)
     private String cif;
 
-    @NotNull(message = "El sector es obligatorio")
-    private UUID sectorId;
+    @Size(max = 100)
+    private String sector;
 
-    @Size(max = 500)
-    private String logoUrl;
+    @NotBlank(message = "El email de contacto es obligatorio")
+    @Email(message = "El email de contacto no tiene un formato válido")
+    @Size(max = 255)
+    private String emailContacto;
 
-    private String mision;
-    private String vision;
-    private String valores;
-    private String descripcionIa;
+    @Size(max = 20)
+    private String telefonoContacto;
 
-    /** Contexto industrial en formato JSON libre (JSONB en BD). */
-    private IndustrialContextDto contextoIndustrial;
-
-    private boolean esEgm = false;
+    private String descripcion;
 }
+
+
 
