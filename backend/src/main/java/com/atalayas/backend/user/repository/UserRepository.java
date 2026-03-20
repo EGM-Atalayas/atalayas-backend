@@ -28,4 +28,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * Usado por ADMIN y EMPLEADO; SUPER_ADMIN usa findAll().
      */
     List<User> findAllByEmpresaId(UUID empresaId);
+
+    /**
+     * Devuelve los usuarios inactivos de una empresa.
+     * Usado al aprobar/rechazar una solicitud para activar o notificar al admin.
+     */
+    List<User> findAllByEmpresaIdAndActivoFalse(UUID empresaId);
 }
