@@ -1,7 +1,8 @@
 package com.atalayas.backend.company.controller;
 
-import com.atalayas.backend.company.dto.CompanyRequest;
 import com.atalayas.backend.company.dto.CompanyResponse;
+import com.atalayas.backend.company.dto.SolicitudAltaEmpresaRequest;
+import com.atalayas.backend.company.dto.SolicitudAltaEmpresaResponse;
 import com.atalayas.backend.company.service.CompanyService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -26,8 +27,8 @@ public class CompanyController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Solicitar alta de empresa — público, sin autenticación previa")
-    public ResponseEntity<CompanyResponse> crear(@Valid @RequestBody CompanyRequest request) {
+    @Operation(summary = "Solicitar alta de empresa — público, sin autenticación previa. Crea la empresa (PENDIENTE) y su usuario admin (inactivo)")
+    public ResponseEntity<SolicitudAltaEmpresaResponse> crear(@Valid @RequestBody SolicitudAltaEmpresaRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(companyService.crearEmpresa(request));
     }
 
@@ -56,7 +57,7 @@ public class CompanyController {
     @PatchMapping("/{id}/aprobar")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @SecurityRequirement(name = "bearerAuth")
-    @Operation(summary = "Aprobar solicitud de empresa (SUPER_ADMIN)")
+    @Operation(summary = "Aprobar solicitud de empresa (SUPER_ADMIN) — activa el usuario admin y envía email")
     public ResponseEntity<CompanyResponse> aprobar(@PathVariable UUID id) {
         return ResponseEntity.ok(companyService.aprobar(id));
     }
@@ -64,7 +65,7 @@ public class CompanyController {
     @PatchMapping("/{id}/rechazar")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @SecurityRequirement(name = "bearerAuth")
-    @Operation(summary = "Rechazar solicitud de empresa (SUPER_ADMIN)")
+    @Operation(summary = "Rechazar solicitud de empresa (SUPER_ADMIN) — el usuario queda inactivo en BD y recibe email")
     public ResponseEntity<CompanyResponse> rechazar(@PathVariable UUID id) {
         return ResponseEntity.ok(companyService.rechazar(id));
     }
