@@ -25,7 +25,7 @@ public class CompanyController {
 
     private final CompanyService companyService;
 
-    @PostMapping
+    @PostMapping("/solicitud")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Solicitar alta de empresa — público, sin autenticación previa. Crea la empresa (PENDIENTE) y su usuario admin (inactivo)")
     public ResponseEntity<SolicitudAltaEmpresaResponse> crear(@Valid @RequestBody SolicitudAltaEmpresaRequest request) {
