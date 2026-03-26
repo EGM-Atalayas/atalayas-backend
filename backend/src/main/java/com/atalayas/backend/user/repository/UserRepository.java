@@ -34,4 +34,12 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * Usado al aprobar/rechazar una solicitud para activar o notificar al admin.
      */
     List<User> findAllByEmpresaIdAndActivoFalse(UUID empresaId);
+
+    // ── Conteos para el dashboard ─────────────────────────────────────────
+
+    /** Usuarios activos de una empresa — resumen del admin de empresa. */
+    long countByEmpresaIdAndActivoTrue(UUID empresaId);
+
+    /** Usuarios inactivos de una empresa — resumen del admin de empresa. */
+    long countByEmpresaIdAndActivoFalse(UUID empresaId);
 }

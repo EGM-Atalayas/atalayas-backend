@@ -19,5 +19,8 @@ public interface CompanyRepository extends JpaRepository<Company, UUID> {
 
     /** Validación de unicidad de CIF antes de insertar. */
     boolean existsByCif(String cif);
+
+    /** Conteo de empresas por estado — usado en el resumen del superadmin. */
+    long countByEstadoSolicitud(EstadoSolicitud estadoSolicitud);
 }
 
