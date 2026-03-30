@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * Respuesta con los datos de un comunicado (tabla comunicado).
+ * Respuesta con los datos de un anuncio (tabla anuncio).
  */
 @Data
 @Builder
@@ -17,21 +17,19 @@ import java.util.UUID;
 @AllArgsConstructor
 public class AnnouncementResponse {
 
-    private UUID comunicadoId;
+    private UUID anuncioId;
 
-    // FK empresa (opcional)
+    /** null cuando esGlobal = true */
     private UUID empresaId;
-    private String nombreEmpresa;
-
-    // FK usuario creador (opcional)
-    private UUID creadoPor;
-    private String nombreCreador;
 
     private String titulo;
-    private String mensaje;
+    private String contenido;
+    private boolean esGlobal;
+    private boolean activo;
 
-    private LocalDateTime fechaPublicacion;
-    private LocalDateTime fechaExpiracion;
+    /** ID del usuario que creó el anuncio */
+    private UUID creadoPor;
+
+    private LocalDateTime creadoEn;
     private LocalDateTime actualizadoEn;
 }
-

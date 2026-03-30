@@ -1,33 +1,26 @@
 package com.atalayas.backend.communication.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-import java.time.LocalDateTime;
-import java.util.UUID;
-
 /**
- * Payload para crear o actualizar un comunicado (tabla comunicado).
+ * Payload para crear un anuncio (tabla anuncio).
+ * empresaId y creadoPor se obtienen del usuario autenticado, nunca del body.
  */
 @Data
 public class AnnouncementRequest {
 
-    /** Empresa destinataria del comunicado (null = todas las empresas). */
-    private UUID empresaId;
-
-    /** Usuario que crea el comunicado (null = sistema). */
-    private UUID creadoPor;
-
     @NotBlank(message = "El título es obligatorio")
+    @Size(max = 255, message = "El título no puede superar los 255 caracteres")
     private String titulo;
 
-    @NotBlank(message = "El mensaje es obligatorio")
-    private String mensaje;
+    @NotBlank(message = "El contenido es obligatorio")
+    private String contenido;
 
-    /** Fecha a partir de la cual el comunicado es visible. Por defecto NOW() en BD. */
-    private LocalDateTime fechaPublicacion;
-
-    /** Fecha límite de visibilidad (null = sin expiración). */
-    private LocalDateTime fechaExpiracion;
+    /**
+     * Solo ROLE_ADMIN puede crear con esGlobal=true.
+     * Si el usuario es ROLE_ADMIN_EMPRESA este campo se ignora y se fuerza a false.
+     */
+    private boolean esGlobal = false;
 }
-
