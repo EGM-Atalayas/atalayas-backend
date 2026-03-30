@@ -22,6 +22,12 @@ public interface AnnouncementRepository extends JpaRepository<Announcement, UUID
     List<Announcement> findAllByActivoTrue();
 
     /**
+     * Fallback para usuarios sin empresa asignada (empresaId == null):
+     * solo devuelve los anuncios globales activos.
+     */
+    List<Announcement> findAllByEsGlobalTrueAndActivoTrue();
+
+    /**
      * Para validar propiedad antes de desactivar (ROLE_ADMIN_EMPRESA).
      * Solo devuelve resultado si el anuncio pertenece a esa empresa.
      */

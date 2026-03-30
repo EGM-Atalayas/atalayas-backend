@@ -9,6 +9,7 @@ import com.atalayas.backend.exception.BusinessException;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.user.entity.User;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AnnouncementService {
@@ -43,14 +45,29 @@ public class AnnouncementService {
 
     /**
      * GET /api/v1/anuncios — Listar anuncios visibles para el usuario.
-     * - ROLE_ADMIN: todos los activos de la plataforma.
-     * - Cualquier otro rol: los de su empresa + los globales activos.
+     * - ROLE_ADMIN:           todos los activos de la plataforma.
+     * - empresaId presente:   los de su empresa + los globales activos.
+     * - empresaId null:       fallback seguro → solo los globales activos.
      */
     @Transactional(readOnly = true)
     public List<AnnouncementResponse> listar(User user) {
-        List<Announcement> announcements = isSuperAdmin(user)
-                ? announcementRepository.findAllByActivoTrue()
-                : announcementRepository.findVisiblesParaEmpresa(user.getEmpresaId());
+        boolean superAdmin = isSuperAdmin(user);
+        UUID empresaId = user.getEmpresaId();
+
+        log.debug("Listando anuncios — usuarioId={} superAdmin={} empresaId={}",
+                user.getUsuarioId(), superAdmin, empresaId);
+
+        List<Announcement> announcements;
+        if (superAdmin) {
+            announcements = announcementRepository.findAllByActivoTrue();
+        } else if (empresaId != null) {
+            announcements = announcementRepository.findVisiblesParaEmpresa(empresaId);
+        } else {
+            // Usuario sin empresa asignada: solo ver globales
+            log.warn("Usuario {} no tiene empresaId — devolviendo solo anuncios globales",
+                    user.getUsuarioId());
+            announcements = announcementRepository.findAllByEsGlobalTrueAndActivoTrue();
+        }
 
         return announcements.stream()
                 .map(announcementMapper::toResponse)
