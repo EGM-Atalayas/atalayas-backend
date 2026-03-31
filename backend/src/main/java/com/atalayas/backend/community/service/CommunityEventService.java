@@ -1,8 +1,10 @@
 package com.atalayas.backend.community.service;
 
+import com.atalayas.backend.common.enums.RoleType;
 import com.atalayas.backend.community.dto.CommunityEventRequest;
 import com.atalayas.backend.community.dto.CommunityEventResponse;
 import com.atalayas.backend.community.entity.CommunityEvent;
+import com.atalayas.backend.community.mapper.CommunityEventMapper;
 import com.atalayas.backend.community.repository.CommunityEventRepository;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.exception.UnauthorizedException;
@@ -31,42 +33,28 @@ import java.util.stream.Collectors;
 public class CommunityEventService {
 
     private final CommunityEventRepository communityEventRepository;
+    private final CommunityEventMapper communityEventMapper;
 
 
     // ── CREAR ────────────────────────────────────────────────────────────────
     /**
      * Crea un evento de comunidad
-     * Admin empresa siempre crea en su empresa y no puede crear globales
+     * Admin empresa siempre crea en su empresa y no puede marcar esGlobal
      * Superadmin puede crear eventos globales visibles para toda la plataforma
      */
     @Transactional
     public CommunityEventResponse crear(CommunityEventRequest request, User user) {
-        String rol = user.getRol().getCodigoRol();
+        RoleType rol = user.getRol().getRoleType();
 
         // Admin empresa no puede crear eventos globales ni de otra empresa
-        UUID empresaId = request.getEmpresaId();
-        boolean esGlobal = request.isEsGlobal();
+        UUID empresaId = (rol == RoleType.ROLE_ADMIN_EMPRESA) ? user.getEmpresaId() : request.getEmpresaId();
+        boolean esGlobal = (rol == RoleType.ROLE_ADMIN_EMPRESA) ? false : request.isEsGlobal();
 
-        if ("ROLE_ADMIN_EMPRESA".equals(rol)) {
-            empresaId = user.getEmpresaId();
-            esGlobal = false;
-        }
+        CommunityEvent guardado = communityEventRepository.save(
+                communityEventMapper.toEntity(request, empresaId, esGlobal, user.getUsuarioId()));
 
-        CommunityEvent evento = CommunityEvent.builder()
-                .titulo(request.getTitulo())
-                .descripcion(request.getDescripcion())
-                .empresaId(empresaId)
-                .esGlobal(esGlobal)
-                .fechaInicio(request.getFechaInicio())
-                .fechaFin(request.getFechaFin())
-                .creadoPor(user.getUsuarioId())
-                .activo(true)
-                .build();
-
-        CommunityEvent guardado = communityEventRepository.save(evento);
         log.info("Evento creado: {} por usuario: {}", guardado.getEventoId(), user.getEmail());
-
-        return toResponse(guardado);
+        return communityEventMapper.toResponse(guardado);
     }
 
 
@@ -74,36 +62,36 @@ public class CommunityEventService {
     /**
      * Devuelve los eventos visibles según el rol:
      *   - Superadmin: todos los activos de la plataforma
-     *   - Admin empresa: los de su empresa (activos e inactivos) + globales activos
-     *   - Empleado: activos de su empresa + globales activos
+     *   - Admin empresa: todos los de su empresa + globales activos
+     *   - Empleado: activos de su empresa + globales activos (una sola query)
      */
     public List<CommunityEventResponse> listar(User user) {
-        String rol = user.getRol().getCodigoRol();
+        RoleType rol = user.getRol().getRoleType();
 
-        if ("ROLE_ADMIN".equals(rol)) {
+        if (rol == RoleType.ROLE_ADMIN) {
             return communityEventRepository.findByActivoTrueOrderByFechaInicioAsc()
-                    .stream().map(this::toResponse).collect(Collectors.toList());
+                    .stream().map(communityEventMapper::toResponse).collect(Collectors.toList());
         }
 
-        if ("ROLE_ADMIN_EMPRESA".equals(rol)) {
-            // Admin ve todos los de su empresa para gestionar + globales activos
+        if (rol == RoleType.ROLE_ADMIN_EMPRESA) {
+            // Admin ve todos los de su empresa (activos e inactivos) para gestionar
             List<CommunityEvent> todos = communityEventRepository
                     .findByEmpresaIdOrderByFechaInicioAsc(user.getEmpresaId());
-            List<CommunityEvent> globales = communityEventRepository
-                    .findByActivoTrueOrderByFechaInicioAsc()
-                    .stream().filter(CommunityEvent::isEsGlobal).collect(Collectors.toList());
-            todos.addAll(globales);
-            return todos.stream().map(this::toResponse).collect(Collectors.toList());
+            // Añade los globales activos que no sean ya de su empresa
+            communityEventRepository.findByActivoTrueOrderByFechaInicioAsc()
+                    .stream()
+                    .filter(CommunityEvent::isEsGlobal)
+                    .forEach(todos::add);
+            return todos.stream().map(communityEventMapper::toResponse).collect(Collectors.toList());
         }
 
-        // Empleado: su empresa + globales activos en una sola query
-        return communityEventRepository
-                .findVisiblesParaEmpresa(user.getEmpresaId())
-                .stream().map(this::toResponse).collect(Collectors.toList());
+        // Empleado: su empresa + globales activos en una sola query optimizada
+        return communityEventRepository.findVisiblesParaEmpresa(user.getEmpresaId())
+                .stream().map(communityEventMapper::toResponse).collect(Collectors.toList());
     }
 
 
-    // ── OBTENER ID ───────────────────────────────────────────────────────
+    // ── OBTENER POR ID ───────────────────────────────────────────────────────
     /**
      * Devuelve un evento por ID validando que el usuario tiene acceso
      */
@@ -112,13 +100,14 @@ public class CommunityEventService {
                 .orElseThrow(() -> new ResourceNotFoundException("Evento no encontrado: " + eventoId));
 
         validarAccesoLectura(evento, user);
-        return toResponse(evento);
+        return communityEventMapper.toResponse(evento);
     }
 
 
     // ── ACTUALIZAR ───────────────────────────────────────────────────────────
     /**
      * Actualiza un evento existente
+     * Solo superadmin puede cambiar el flag esGlobal
      * Admin empresa solo puede editar eventos de su propia empresa
      */
     @Transactional
@@ -133,13 +122,13 @@ public class CommunityEventService {
         evento.setFechaInicio(request.getFechaInicio());
         evento.setFechaFin(request.getFechaFin());
 
-        // Solo superadmin puede cambiar el flag global
-        if ("ROLE_ADMIN".equals(user.getRol().getCodigoRol())) {
+        // Solo superadmin puede promocionar o degradar un evento a global
+        if (user.getRol().getRoleType() == RoleType.ROLE_ADMIN) {
             evento.setEsGlobal(request.isEsGlobal());
         }
 
         log.info("Evento actualizado: {} por usuario: {}", eventoId, user.getEmail());
-        return toResponse(communityEventRepository.save(evento));
+        return communityEventMapper.toResponse(communityEventRepository.save(evento));
     }
 
 
@@ -147,6 +136,7 @@ public class CommunityEventService {
     /**
      * Soft delete del evento
      * Admin empresa solo puede desactivar eventos de su empresa
+     * Lanza IllegalStateException si ya estaba desactivado - el GlobalExceptionHandler lo convierte en 400
      */
     @Transactional
     public CommunityEventResponse desactivar(UUID eventoId, User user) {
@@ -161,15 +151,15 @@ public class CommunityEventService {
 
         evento.setActivo(false);
         log.info("Evento desactivado: {} por usuario: {}", eventoId, user.getEmail());
-        return toResponse(communityEventRepository.save(evento));
+        return communityEventMapper.toResponse(communityEventRepository.save(evento));
     }
 
 
     // ── VALIDACIONES DE ACCESO ───────────────────────────────────────────────
 
     private void validarAccesoLectura(CommunityEvent evento, User user) {
-        String rol = user.getRol().getCodigoRol();
-        if ("ROLE_ADMIN".equals(rol)) return;
+        RoleType rol = user.getRol().getRoleType();
+        if (rol == RoleType.ROLE_ADMIN) return;
 
         boolean esGlobal = evento.isEsGlobal();
         boolean esDeSuEmpresa = user.getEmpresaId().equals(evento.getEmpresaId());
@@ -180,8 +170,8 @@ public class CommunityEventService {
     }
 
     private void validarAccesoEscritura(CommunityEvent evento, User user) {
-        String rol = user.getRol().getCodigoRol();
-        if ("ROLE_ADMIN".equals(rol)) return;
+        RoleType rol = user.getRol().getRoleType();
+        if (rol == RoleType.ROLE_ADMIN) return;
 
         if (evento.isEsGlobal()) {
             throw new UnauthorizedException("Solo el superadmin puede modificar eventos globales");
@@ -190,24 +180,5 @@ public class CommunityEventService {
         if (!user.getEmpresaId().equals(evento.getEmpresaId())) {
             throw new UnauthorizedException("No puedes modificar eventos de otra empresa");
         }
-    }
-
-
-    // ── MAPPER INTERNO ───────────────────────────────────────────────────────
-
-    private CommunityEventResponse toResponse(CommunityEvent e) {
-        return CommunityEventResponse.builder()
-                .eventoId(e.getEventoId())
-                .empresaId(e.getEmpresaId())
-                .creadoPor(e.getCreadoPor())
-                .titulo(e.getTitulo())
-                .descripcion(e.getDescripcion())
-                .esGlobal(e.isEsGlobal())
-                .activo(e.isActivo())
-                .fechaInicio(e.getFechaInicio())
-                .fechaFin(e.getFechaFin())
-                .creadoEn(e.getCreadoEn())
-                .actualizadoEn(e.getActualizadoEn())
-                .build();
     }
 }

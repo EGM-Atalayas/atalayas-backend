@@ -1,8 +1,10 @@
 package com.atalayas.backend.content.service;
 
+import com.atalayas.backend.common.enums.RoleType;
 import com.atalayas.backend.content.dto.*;
 import com.atalayas.backend.content.entity.ContentItem;
 import com.atalayas.backend.content.entity.Question;
+import com.atalayas.backend.content.mapper.ContentMapper;
 import com.atalayas.backend.content.repository.ContentRepository;
 import com.atalayas.backend.content.repository.QuestionRepository;
 import com.atalayas.backend.exception.ResourceNotFoundException;
@@ -33,65 +35,48 @@ public class ContentService {
 
     private final ContentRepository contentRepository;
     private final QuestionRepository questionRepository;
+    private final ContentMapper contentMapper;
 
 
-    // ── CREAR CONTENIDO ──────────────────────────────────────────────────────
+    // ── CRAER CONTENIDO ──────────────────────────────────────────────────────
     /**
      * Crea un nuevo contenido dentro de un módulo
      * Admin empresa siempre crea en su empresa - no puede crear contenido global
      */
     @Transactional
     public ContentResponse crear(ContentRequest request, User user) {
-        String rol = user.getRol().getCodigoRol();
+        RoleType rol = user.getRol().getRoleType();
 
-        // Admin empresa no puede asignar contenido a otra empresa
-        UUID empresaId = request.getEmpresaId();
-        if ("ROLE_ADMIN_EMPRESA".equals(rol)) {
-            empresaId = user.getEmpresaId();
-        }
+        // Admin empresa no puede asignar contenido a otra empresa ni crear global
+        UUID empresaId = (rol == RoleType.ROLE_ADMIN_EMPRESA)
+                ? user.getEmpresaId()
+                : request.getEmpresaId();
 
-        ContentItem contenido = ContentItem.builder()
-                .moduloId(request.getModuloId())
-                .empresaId(empresaId)
-                .titulo(request.getTitulo())
-                .descripcion(request.getDescripcion())
-                .tipoContenido(request.getTipoContenido())
-                .urlRecurso(request.getUrlRecurso())
-                .cuerpoTexto(request.getCuerpoTexto())
-                .orden(request.getOrden())
-                .version(request.getVersion())
-                .minutosEstimados(request.getMinutosEstimados())
-                .esIaGenerado(request.isEsIaGenerado())
-                .activo(request.isActivo())
-                .build();
-
-        ContentItem guardado = contentRepository.save(contenido);
+        ContentItem guardado = contentRepository.save(contentMapper.toEntity(request, empresaId));
         log.info("Contenido creado: {} en módulo: {} por: {}",
                 guardado.getContenidoId(), guardado.getModuloId(), user.getEmail());
 
-        // Las preguntas se añaden después via endpoint específico de preguntas
-        return toResponse(guardado, List.of());
+        // Las preguntas se añaden después via endpoint específico
+        return contentMapper.toResponse(guardado, List.of());
     }
 
 
     // ── LISTAR POR MÓDULO ────────────────────────────────────────────────────
     /**
      * Devuelve los contenidos de un módulo según el rol:
-     *   - Admin y admin empresa: ven todos (activos e inactivos) para gestionar
-     *   - Empleado: solo ve los activos
+     *   - Admin y admin empresa: todos (activos e inactivos) para gestionar
+     *   - Empleado: solo los activos
      */
     public List<ContentResponse> listarPorModulo(UUID moduloId, User user) {
-        String rol = user.getRol().getCodigoRol();
+        RoleType rol = user.getRol().getRoleType();
 
-        List<ContentItem> contenidos;
-        if ("ROLE_ADMIN".equals(rol) || "ROLE_ADMIN_EMPRESA".equals(rol)) {
-            contenidos = contentRepository.findByModuloIdOrderByOrdenAsc(moduloId);
-        } else {
-            contenidos = contentRepository.findByModuloIdAndActivoTrueOrderByOrdenAsc(moduloId);
-        }
+        List<ContentItem> contenidos = (rol == RoleType.ROLE_EMPLEADO)
+                ? contentRepository.findByModuloIdAndActivoTrueOrderByOrdenAsc(moduloId)
+                : contentRepository.findByModuloIdOrderByOrdenAsc(moduloId);
 
         return contenidos.stream()
-                .map(c -> toResponse(c, questionRepository.findByContenidoIdOrderByPreguntaId(c.getContenidoId())))
+                .map(c -> contentMapper.toResponse(c,
+                        questionRepository.findByContenidoIdOrderByPreguntaId(c.getContenidoId())))
                 .collect(Collectors.toList());
     }
 
@@ -108,15 +93,15 @@ public class ContentService {
         validarAccesoLectura(contenido, user);
 
         List<Question> preguntas = questionRepository.findByContenidoIdOrderByPreguntaId(contenidoId);
-        return toResponse(contenido, preguntas);
+        return contentMapper.toResponse(contenido, preguntas);
     }
 
 
     // ── ACTUALIZAR CONTENIDO ─────────────────────────────────────────────────
     /**
      * Actualiza un contenido existente
-     * Incrementa la versión automáticamente para invalidar trazabilidad anterior
-     * si el cuerpo del contenido cambia
+     * Incrementa la versión automáticamente si cambia el cuerpo o la URL
+     * para que la trazabilidad detecte empleados que necesitan releer
      */
     @Transactional
     public ContentResponse actualizar(UUID contenidoId, ContentRequest request, User user) {
@@ -125,9 +110,9 @@ public class ContentService {
 
         validarAccesoEscritura(contenido, user);
 
-        // Si cambia el cuerpo del contenido, incrementamos versión automáticamente
-        boolean cuerpoModificado = !equals(contenido.getCuerpoTexto(), request.getCuerpoTexto())
-                || !equals(contenido.getUrlRecurso(), request.getUrlRecurso());
+        // Si el cuerpo del contenido cambia, forzamos versión nueva
+        boolean cuerpoModificado = !nullSafeEquals(contenido.getCuerpoTexto(), request.getCuerpoTexto())
+                || !nullSafeEquals(contenido.getUrlRecurso(), request.getUrlRecurso());
 
         contenido.setTitulo(request.getTitulo());
         contenido.setDescripcion(request.getDescripcion());
@@ -141,18 +126,19 @@ public class ContentService {
 
         if (cuerpoModificado) {
             contenido.setVersion(contenido.getVersion() + 1);
-            log.info("Contenido {} actualizado con nueva versión: {}", contenidoId, contenido.getVersion());
+            log.info("Contenido {} actualizado a versión: {}", contenidoId, contenido.getVersion());
         }
 
         List<Question> preguntas = questionRepository.findByContenidoIdOrderByPreguntaId(contenidoId);
-        return toResponse(contentRepository.save(contenido), preguntas);
+        return contentMapper.toResponse(contentRepository.save(contenido), preguntas);
     }
 
 
     // ── DESACTIVAR CONTENIDO ─────────────────────────────────────────────────
     /**
      * Soft delete del contenido
-     * La trazabilidad histórica se conserva intacta en trazabilidad_lectura
+     * La trazabilidad histórica en trazabilidad_lectura se conserva intacta
+     * Lanza IllegalStateException si ya estaba desactivado - el GlobalExceptionHandler lo convierte en 400
      */
     @Transactional
     public ContentResponse desactivar(UUID contenidoId, User user) {
@@ -169,18 +155,17 @@ public class ContentService {
         log.info("Contenido desactivado: {} por: {}", contenidoId, user.getEmail());
 
         List<Question> preguntas = questionRepository.findByContenidoIdOrderByPreguntaId(contenidoId);
-        return toResponse(contentRepository.save(contenido), preguntas);
+        return contentMapper.toResponse(contentRepository.save(contenido), preguntas);
     }
 
 
     // ── PREGUNTAS DE EVALUACIÓN ──────────────────────────────────────────────
     /**
      * Añade una pregunta a un contenido de tipo EVALUACION
-     * Solo admins pueden gestionar preguntas
+     * Valida que el contenido padre existe y que el usuario tiene acceso de escritura
      */
     @Transactional
     public QuestionResponse crearPregunta(QuestionRequest request, User user) {
-        // Verificamos que el contenido existe antes de crear la pregunta
         ContentItem contenido = contentRepository.findById(request.getContenidoId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Contenido no encontrado: " + request.getContenidoId()));
@@ -196,21 +181,21 @@ public class ContentService {
         Question guardada = questionRepository.save(pregunta);
         log.info("Pregunta creada: {} en contenido: {}", guardada.getPreguntaId(), request.getContenidoId());
 
-        return toQuestionResponse(guardada);
+        return contentMapper.toQuestionResponse(guardada);
     }
 
 
     /**
      * Elimina una pregunta de evaluación por ID
+     * Valida acceso de escritura sobre el contenido padre antes de eliminar
      */
     @Transactional
     public void eliminarPregunta(UUID preguntaId, User user) {
         Question pregunta = questionRepository.findById(preguntaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pregunta no encontrada: " + preguntaId));
 
-        // Validamos acceso sobre el contenido padre
         ContentItem contenido = contentRepository.findById(pregunta.getContenidoId())
-                .orElseThrow(() -> new ResourceNotFoundException("Contenido no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Contenido padre no encontrado"));
 
         validarAccesoEscritura(contenido, user);
         questionRepository.delete(pregunta);
@@ -221,8 +206,8 @@ public class ContentService {
     // ── VALIDACIONES DE ACCESO ───────────────────────────────────────────────
 
     private void validarAccesoLectura(ContentItem contenido, User user) {
-        String rol = user.getRol().getCodigoRol();
-        if ("ROLE_ADMIN".equals(rol)) return;
+        RoleType rol = user.getRol().getRoleType();
+        if (rol == RoleType.ROLE_ADMIN) return;
 
         boolean esGlobal = contenido.getEmpresaId() == null;
         boolean esDeSuEmpresa = user.getEmpresaId().equals(contenido.getEmpresaId());
@@ -233,8 +218,8 @@ public class ContentService {
     }
 
     private void validarAccesoEscritura(ContentItem contenido, User user) {
-        String rol = user.getRol().getCodigoRol();
-        if ("ROLE_ADMIN".equals(rol)) return;
+        RoleType rol = user.getRol().getRoleType();
+        if (rol == RoleType.ROLE_ADMIN) return;
 
         if (contenido.getEmpresaId() == null) {
             throw new UnauthorizedException("Solo el superadmin puede modificar contenido global");
@@ -246,46 +231,15 @@ public class ContentService {
     }
 
 
-    // ── HELPERS ──────────────────────────────────────────────────────────────
-
-    // Comparación null-safe para detectar cambios en el contenido
-    private boolean equals(String a, String b) {
+    // ── HELPER ───────────────────────────────────────────────────────────────
+    /**
+     * Comparación null-safe de dos strings
+     * Necesaria para detectar cambios en campos opcionales como cuerpoTexto o urlRecurso
+     * sin lanzar NullPointerException si alguno de los dos es null
+     */
+    private boolean nullSafeEquals(String a, String b) {
         if (a == null && b == null) return true;
         if (a == null || b == null) return false;
         return a.equals(b);
-    }
-
-
-    // ── MAPPERS INTERNOS ─────────────────────────────────────────────────────
-
-    private ContentResponse toResponse(ContentItem c, List<Question> preguntas) {
-        return ContentResponse.builder()
-                .contenidoId(c.getContenidoId())
-                .moduloId(c.getModuloId())
-                .empresaId(c.getEmpresaId())
-                .titulo(c.getTitulo())
-                .descripcion(c.getDescripcion())
-                .tipoContenido(c.getTipoContenido())
-                .urlRecurso(c.getUrlRecurso())
-                .cuerpoTexto(c.getCuerpoTexto())
-                .orden(c.getOrden())
-                .version(c.getVersion())
-                .minutosEstimados(c.getMinutosEstimados())
-                .esIaGenerado(c.isEsIaGenerado())
-                .activo(c.isActivo())
-                .preguntas(preguntas.stream().map(this::toQuestionResponse).collect(Collectors.toList()))
-                .fechaCreacion(c.getFechaCreacion())
-                .actualizadoEn(c.getActualizadoEn())
-                .build();
-    }
-
-    private QuestionResponse toQuestionResponse(Question q) {
-        return QuestionResponse.builder()
-                .preguntaId(q.getPreguntaId())
-                .contenidoId(q.getContenidoId())
-                .enunciado(q.getEnunciado())
-                .respuestaCorrecta(q.getRespuestaCorrecta())
-                .actualizadoEn(q.getActualizadoEn())
-                .build();
     }
 }

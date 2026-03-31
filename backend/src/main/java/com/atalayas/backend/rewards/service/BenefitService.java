@@ -1,10 +1,12 @@
 package com.atalayas.backend.rewards.service;
 
+import com.atalayas.backend.common.enums.RoleType;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.exception.UnauthorizedException;
 import com.atalayas.backend.rewards.dto.BenefitRequest;
 import com.atalayas.backend.rewards.dto.BenefitResponse;
 import com.atalayas.backend.rewards.entity.Benefit;
+import com.atalayas.backend.rewards.mapper.BenefitMapper;
 import com.atalayas.backend.rewards.repository.BenefitRepository;
 import com.atalayas.backend.user.entity.User;
 import lombok.RequiredArgsConstructor;
@@ -31,54 +33,48 @@ import java.util.stream.Collectors;
 public class BenefitService {
 
     private final BenefitRepository benefitRepository;
+    private final BenefitMapper benefitMapper;
 
 
     // ── CREAR ────────────────────────────────────────────────────────────────
     /**
      * Crea un beneficio
-     * Admin empresa siempre crea en su empresa
-     * Superadmin puede crear beneficios globales (empresaId = null)
+     * Admin empresa siempre crea en su empresa — no puede crear beneficios globales
+     * Superadmin puede crear beneficios globales dejando empresaId como null
      */
     @Transactional
     public BenefitResponse crear(BenefitRequest request, User user) {
-        String rol = user.getRol().getCodigoRol();
+        RoleType rol = user.getRol().getRoleType();
 
-        UUID empresaId = request.getEmpresaId();
-        if ("ROLE_ADMIN_EMPRESA".equals(rol)) {
-            empresaId = user.getEmpresaId();
-        }
+        UUID empresaId = (rol == RoleType.ROLE_ADMIN_EMPRESA)
+                ? user.getEmpresaId()
+                : request.getEmpresaId();
 
-        Benefit beneficio = Benefit.builder()
-                .titulo(request.getTitulo())
-                .descripcion(request.getDescripcion())
-                .urlInfo(request.getUrlInfo())
-                .empresaId(empresaId)
-                .creadoPor(user.getUsuarioId())
-                .activo(true)
-                .build();
+        Benefit guardado = benefitRepository.save(
+                benefitMapper.toEntity(request, empresaId, user.getUsuarioId()));
 
-        Benefit guardado = benefitRepository.save(beneficio);
         log.info("Beneficio creado: {} por usuario: {}", guardado.getBeneficioId(), user.getEmail());
-
-        return toResponse(guardado);
+        return benefitMapper.toResponse(guardado);
     }
 
 
     // ── LISTAR ───────────────────────────────────────────────────────────────
     /**
-     * Devuelve los beneficios visibles según el rol del usuario
+     * Devuelve los beneficios visibles según el rol:
+     *   - Superadmin: todos los activos de la plataforma
+     *   - Admin empresa y empleado: los de su empresa + globales activos
      */
     public List<BenefitResponse> listar(User user) {
-        String rol = user.getRol().getCodigoRol();
+        RoleType rol = user.getRol().getRoleType();
 
-        if ("ROLE_ADMIN".equals(rol)) {
+        if (rol == RoleType.ROLE_ADMIN) {
             return benefitRepository.findByActivoTrueOrderByCreadoEnDesc()
-                    .stream().map(this::toResponse).collect(Collectors.toList());
+                    .stream().map(benefitMapper::toResponse).collect(Collectors.toList());
         }
 
-        // Admin empresa y empleados ven los de su empresa + globales
+        // Admin empresa y empleados comparten la misma query de visibilidad
         return benefitRepository.findVisiblesParaEmpresa(user.getEmpresaId())
-                .stream().map(this::toResponse).collect(Collectors.toList());
+                .stream().map(benefitMapper::toResponse).collect(Collectors.toList());
     }
 
 
@@ -99,7 +95,7 @@ public class BenefitService {
         beneficio.setUrlInfo(request.getUrlInfo());
 
         log.info("Beneficio actualizado: {} por usuario: {}", beneficioId, user.getEmail());
-        return toResponse(benefitRepository.save(beneficio));
+        return benefitMapper.toResponse(benefitRepository.save(beneficio));
     }
 
 
@@ -107,6 +103,7 @@ public class BenefitService {
     /**
      * Soft delete del beneficio
      * Admin empresa solo puede desactivar los de su empresa
+     * Lanza IllegalStateException si ya estaba desactivado - el GlobalExceptionHandler lo convierte en 400
      */
     @Transactional
     public BenefitResponse desactivar(UUID beneficioId, User user) {
@@ -121,15 +118,15 @@ public class BenefitService {
 
         beneficio.setActivo(false);
         log.info("Beneficio desactivado: {} por usuario: {}", beneficioId, user.getEmail());
-        return toResponse(benefitRepository.save(beneficio));
+        return benefitMapper.toResponse(benefitRepository.save(beneficio));
     }
 
 
     // ── VALIDACIONES DE ACCESO ───────────────────────────────────────────────
 
     private void validarAccesoEscritura(Benefit beneficio, User user) {
-        String rol = user.getRol().getCodigoRol();
-        if ("ROLE_ADMIN".equals(rol)) return;
+        RoleType rol = user.getRol().getRoleType();
+        if (rol == RoleType.ROLE_ADMIN) return;
 
         if (beneficio.getEmpresaId() == null) {
             throw new UnauthorizedException("Solo el superadmin puede modificar beneficios globales");
@@ -138,22 +135,5 @@ public class BenefitService {
         if (!user.getEmpresaId().equals(beneficio.getEmpresaId())) {
             throw new UnauthorizedException("No puedes modificar beneficios de otra empresa");
         }
-    }
-
-
-    // ── MAPPER INTERNO ───────────────────────────────────────────────────────
-
-    private BenefitResponse toResponse(Benefit b) {
-        return BenefitResponse.builder()
-                .beneficioId(b.getBeneficioId())
-                .empresaId(b.getEmpresaId())
-                .creadoPor(b.getCreadoPor())
-                .titulo(b.getTitulo())
-                .descripcion(b.getDescripcion())
-                .urlInfo(b.getUrlInfo())
-                .activo(b.isActivo())
-                .creadoEn(b.getCreadoEn())
-                .actualizadoEn(b.getActualizadoEn())
-                .build();
     }
 }
