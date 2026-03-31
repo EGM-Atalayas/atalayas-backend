@@ -1,6 +1,7 @@
 package com.atalayas.backend.module.service;
 
 import com.atalayas.backend.common.enums.RoleType;
+import com.atalayas.backend.communication.service.NotificacionService;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.exception.UnauthorizedException;
 import com.atalayas.backend.module.dto.ModuleRequest;
@@ -9,6 +10,7 @@ import com.atalayas.backend.module.entity.TrainingModule;
 import com.atalayas.backend.module.mapper.ModuleMapper;
 import com.atalayas.backend.module.repository.ModuleRepository;
 import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,8 @@ public class ModuleService {
 
     private final ModuleRepository moduleRepository;
     private final ModuleMapper moduleMapper;
+    private final NotificacionService notificacionService;
+    private final UserRepository userRepository;
 
 
     // ── CREAR ────────────────────────────────────────────────────────────────
@@ -53,6 +57,21 @@ public class ModuleService {
 
         TrainingModule guardado = moduleRepository.save(moduleMapper.toEntity(request, empresaId));
         log.info("Módulo creado: {} por usuario: {}", guardado.getModuloId(), user.getEmail());
+
+
+        // ── Notificar a los empleados activos de la empresa ───────────────────
+        // Solo para módulos de empresa (empresaId != null)
+        // Los módulos globales los gestiona EGM directamente y no generan notif aquí
+        if (empresaId != null) {
+            userRepository.findAllByEmpresaIdAndActivoTrue(empresaId).forEach(empleado ->
+                    notificacionService.crearInterna(
+                            empleado.getUsuarioId(),
+                            "MODULO_NUEVO",
+                            "Nuevo módulo disponible: \"" + guardado.getNombre() + "\". ¡Empieza cuando quieras!",
+                            "/formacion/modulo/" + guardado.getModuloId()
+                    )
+            );
+        }
 
         return moduleMapper.toResponse(guardado);
     }

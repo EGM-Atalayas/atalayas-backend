@@ -15,31 +15,37 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     boolean existsByEmail(String email);
 
-    // ── Consultas multi-tenant ────────────────────────────────────────────
 
+    // ── CONSULTAR MULTI-TENANT ───────────────────────────────────────────────
     /**
-     * Busca un usuario por su ID solo si pertenece a la empresa indicada.
-     * Devuelve vacío si el ID existe pero pertenece a otra empresa (enmascarado como 404).
+     * Busca un usuario por su ID solo si pertenece a la empresa indicada
+     * Devuelve vacío si el ID existe pero pertenece a otra empresa (enmascarado como 404)
      */
     Optional<User> findByUsuarioIdAndEmpresaId(UUID usuarioId, UUID empresaId);
 
     /**
-     * Devuelve todos los usuarios de una empresa concreta.
-     * Usado por ADMIN y EMPLEADO; SUPER_ADMIN usa findAll().
+     * Devuelve todos los usuarios de una empresa concreta
+     * Usado por ADMIN_EMPRESA; ROLE_ADMIN usa findAll()
      */
     List<User> findAllByEmpresaId(UUID empresaId);
 
     /**
-     * Devuelve los usuarios inactivos de una empresa.
-     * Usado al aprobar/rechazar una solicitud para activar o notificar al admin.
+     * Devuelve los usuarios activos de una empresa
+     * Usado al publicar un módulo para notificar a todos los empleados
+     */
+    List<User> findAllByEmpresaIdAndActivoTrue(UUID empresaId);
+
+    /**
+     * Devuelve los usuarios inactivos de una empresa
+     * Usado al aprobar/rechazar una solicitud para activar o notificar al admin
      */
     List<User> findAllByEmpresaIdAndActivoFalse(UUID empresaId);
 
-    // ── Conteos para el dashboard ─────────────────────────────────────────
 
-    /** Usuarios activos de una empresa — resumen del admin de empresa. */
+    // ── CONTEOS PARA EL DASHBOARD ────────────────────────────────────────────
+    /** Usuarios activos de una empresa - resumen del admin de empresa */
     long countByEmpresaIdAndActivoTrue(UUID empresaId);
 
-    /** Usuarios inactivos de una empresa — resumen del admin de empresa. */
+    /** Usuarios inactivos de una empresa - resumen del admin de empresa */
     long countByEmpresaIdAndActivoFalse(UUID empresaId);
 }

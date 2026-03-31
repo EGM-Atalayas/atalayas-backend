@@ -3,6 +3,7 @@ package com.atalayas.backend.company.service;
 import com.atalayas.backend.common.enums.EstadoSolicitud;
 import com.atalayas.backend.common.enums.RoleType;
 import com.atalayas.backend.communication.service.EmailService;
+import com.atalayas.backend.communication.service.NotificacionService;
 import com.atalayas.backend.company.dto.CompanyResponse;
 import com.atalayas.backend.company.dto.SolicitudAltaEmpresaRequest;
 import com.atalayas.backend.company.dto.SolicitudAltaEmpresaResponse;
@@ -35,12 +36,15 @@ public class CompanyService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final NotificacionService notificacionService;
 
+
+    // ── SOLICITUD DE ALTA ────────────────────────────────────────────────────
     /**
      * POST /empresas — solicitud de alta pública.
-     * Crea la empresa en estado PENDIENTE y su usuario admin con activo=false.
+     * Crea la empresa en estado PENDIENTE y su usuario admin con activo=false
      * Ambas entidades se persisten en la misma transacción; si falla alguna
-     * operación se hace rollback completo.
+     * operación se hace rollback completo
      */
     @Transactional
     public SolicitudAltaEmpresaResponse crearEmpresa(SolicitudAltaEmpresaRequest request) {
@@ -51,17 +55,17 @@ public class CompanyService {
             throw new BusinessException("Ya existe un usuario registrado con el email: " + request.getEmailAdmin());
         }
 
-        // 1 — Guardar empresa
+        // 1 - Guardar empresa
         Company company = companyMapper.toEntityFromSolicitud(request);
         company = companyRepository.save(company);
 
-        // 2 — Buscar el rol ADMIN_EMPRESA
+        // 2 - Buscar el rol ADMIN_EMPRESA
         Rol rolAdminEmpresa = roleRepository.findByCodigoRol(RoleType.ROLE_ADMIN_EMPRESA.name())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Rol no encontrado en BD: " + RoleType.ROLE_ADMIN_EMPRESA.name() +
-                        ". Asegúrate de que existe la fila correspondiente en la tabla rol."));
+                                ". Asegúrate de que existe la fila correspondiente en la tabla rol"));
 
-        // 3 — Crear usuario inactivo vinculado a la empresa recién creada
+        // 3 - Crear usuario inactivo vinculado a la empresa recién creada
         User adminUser = User.builder()
                 .nombre(request.getNombre())
                 .apellidos(request.getApellidos())
@@ -76,7 +80,9 @@ public class CompanyService {
         return companyMapper.toSolicitudResponse(company, adminUser);
     }
 
-    /** GET /empresas — todas las empresas (SUPER_ADMIN). */
+
+    // ── CONSULTAS ────────────────────────────────────────────────────────────
+    /** GET /empresas — todas las empresas (SUPER_ADMIN) */
     @Transactional(readOnly = true)
     public List<CompanyResponse> getAll() {
         return companyRepository.findAll().stream()
@@ -84,7 +90,7 @@ public class CompanyService {
                 .collect(Collectors.toList());
     }
 
-    /** GET /empresas/pendientes — solo las pendientes de resolución (SUPER_ADMIN). */
+    /** GET /empresas/pendientes — solo las pendientes de resolución (SUPER_ADMIN) */
     @Transactional(readOnly = true)
     public List<CompanyResponse> getPendientes() {
         return companyRepository.findAllByEstadoSolicitud(EstadoSolicitud.PENDIENTE).stream()
@@ -92,7 +98,7 @@ public class CompanyService {
                 .collect(Collectors.toList());
     }
 
-    /** GET /empresas/aprobadas — aprobadas y activas (endpoint público para selector de registro). */
+    /** GET /empresas/aprobadas — aprobadas y activas (endpoint público para selector de registro) */
     @Transactional(readOnly = true)
     public List<CompanyResponse> getAprobadas() {
         return companyRepository.findAllByEstadoSolicitudAndActivoTrue(EstadoSolicitud.APROBADA).stream()
@@ -100,30 +106,47 @@ public class CompanyService {
                 .collect(Collectors.toList());
     }
 
+
+    // ── RESOLUCIÓN DE SOLICITUDES ────────────────────────────────────────────
     /**
-     * PATCH /empresas/{id}/aprobar — aprueba la solicitud (SUPER_ADMIN).
-     * Activa todos los usuarios inactivos de la empresa y envía email de bienvenida.
+     * PATCH /empresas/{id}/aprobar — aprueba la solicitud (SUPER_ADMIN)
+     * Activa todos los usuarios inactivos de la empresa y envía email de bienvenida
      */
     @Transactional
     public CompanyResponse aprobar(UUID id) {
         Company company = findOrThrow(id);
+
         if (company.getEstadoSolicitud() == EstadoSolicitud.APROBADA) {
             throw new BusinessException("La empresa ya está aprobada");
         }
+
         company.setEstadoSolicitud(EstadoSolicitud.APROBADA);
         company.setFechaResolucion(LocalDateTime.now());
         companyRepository.save(company);
 
-        // Activar usuarios pendientes y notificar
+        // Activar usuarios pendientes, notificar por email y por plataforma
         List<User> usuariosPendientes = userRepository.findAllByEmpresaIdAndActivoFalse(company.getEmpresaId());
         for (User u : usuariosPendientes) {
             u.setActivo(true);
             userRepository.save(u);
+
+            // Email de aprobación (ya existía)
             emailService.enviarAprobacion(u.getEmail(), u.getNombre(), company.getNombreEmpresa());
+
+            // ── Notificación de bienvenida en plataforma ──────────────────────
+            // El usuario acaba de ser activado — es su primer acceso posible
+            notificacionService.crearInterna(
+                    u.getUsuarioId(),
+                    "BIENVENIDA",
+                    "¡Bienvenido/a a Atalayas, " + u.getNombre() + "!" +
+                            " Tu empresa \"" + company.getNombreEmpresa() + "\" ha sido activada. Empieza tu formación",
+                    "/dashboard"
+            );
         }
 
         return companyMapper.toResponse(company);
     }
+
 
     /**
      * PATCH /empresas/{id}/rechazar — rechaza la solicitud (SUPER_ADMIN).
@@ -132,14 +155,16 @@ public class CompanyService {
     @Transactional
     public CompanyResponse rechazar(UUID id) {
         Company company = findOrThrow(id);
+
         if (company.getEstadoSolicitud() == EstadoSolicitud.RECHAZADA) {
             throw new BusinessException("La empresa ya está rechazada");
         }
+
         company.setEstadoSolicitud(EstadoSolicitud.RECHAZADA);
         company.setFechaResolucion(LocalDateTime.now());
         companyRepository.save(company);
 
-        // Notificar a los usuarios inactivos de la empresa rechazada
+        // Solo email - el usuario nunca tuvo acceso, no tiene sentido notif en plataforma
         List<User> usuariosPendientes = userRepository.findAllByEmpresaIdAndActivoFalse(company.getEmpresaId());
         for (User u : usuariosPendientes) {
             emailService.enviarRechazo(u.getEmail(), u.getNombre(), company.getNombreEmpresa());
@@ -148,11 +173,11 @@ public class CompanyService {
         return companyMapper.toResponse(company);
     }
 
-    // ── Helper ────────────────────────────────────────────────────────────────
+
+    // ── HELPER ───────────────────────────────────────────────────────────────
 
     private Company findOrThrow(UUID id) {
         return companyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada con id: " + id));
     }
 }
-
