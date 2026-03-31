@@ -14,45 +14,103 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+
+/**
+ * Manejador global de excepciones para toda la aplicación
+ *
+ * Convierte cada tipo de excepción en una respuesta HTTP estructurada
+ * con timestamp, status, error y message — nunca expone stack traces al cliente
+ *
+ * Orden de captura: de más específico a más general.
+ * El catch-all de Exception está al final para evitar que un error
+ * inesperado devuelva un 500 sin estructura
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+
+    /**
+     * 404 - Recurso no encontrado en base de datos
+     * Se lanza desde cualquier service cuando un findById no encuentra resultado
+     */
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleResourceNotFound(ResourceNotFoundException ex) {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
+
+    /**
+     * 400 - Regla de negocio violada.
+     * Ejemplo: intentar aprobar una empresa ya aprobada
+     */
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<Map<String, Object>> handleBusiness(BusinessException ex) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
+
+    /**
+     * 400 - Estado inválido para la operación solicitada
+     * Ejemplo: intentar desactivar un módulo, contenido o evento que ya está desactivado
+     * Se lanza con IllegalStateException en los soft deletes de todos los servicios
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException ex) {
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+
+    /**
+     * 401 - Usuario autenticado sin permisos sobre el recurso solicitado.
+     * Ejemplo: empleado intentando ver módulos de otra empresa
+     */
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<Map<String, Object>> handleUnauthorized(UnauthorizedException ex) {
         return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
+
+    /**
+     * 401 - Credenciales de login incorrectas
+     * Spring Security lanza esta excepción cuando email o password no coinciden
+     */
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<Map<String, Object>> handleBadCredentials(BadCredentialsException ex) {
         return buildResponse(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
     }
 
+
+    /**
+     * 403 — Acceso denegado por Spring Security
+     * Se lanza cuando un @PreAuthorize falla - el usuario no tiene el rol requerido
+     */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
         return buildResponse(HttpStatus.FORBIDDEN, "No tienes permisos para realizar esta acción");
     }
 
+
+    /**
+     * 400 - Argumento inválido en una operación.
+     * Ejemplo: RoleType.fromCodigo() recibe un código de rol desconocido
+     */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
+
+    /**
+     * 400 - Validación de campos del request fallida (@Valid en el controller)
+     * Devuelve un mapa con cada campo inválido y su mensaje de error correspondiente
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
         Map<String, String> fieldErrors = new HashMap<>();
         for (FieldError error : ex.getBindingResult().getFieldErrors()) {
             fieldErrors.put(error.getField(), error.getDefaultMessage());
         }
+
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());
@@ -61,18 +119,34 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
-    // Evita que rutas inexistentes generen 500 por el catch-all de Exception
+
+    /**
+     * 404 - Ruta no registrada en la aplicación
+     * Evita que una URL inexistente caiga en el catch-all y devuelva un 500
+     */
     @ExceptionHandler(NoHandlerFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNoHandlerFound(NoHandlerFoundException ex) {
         return buildResponse(HttpStatus.NOT_FOUND,
                 "Endpoint no encontrado: " + ex.getHttpMethod() + " " + ex.getRequestURL());
     }
 
+
+    /**
+     * 500 - Cualquier excepción no controlada que llegue hasta aquí
+     * No expone el mensaje original para no filtrar información interna al cliente
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor");
     }
 
+
+    // ── BUILDER DE RESPUESTA ESTRUCTURADA ────────────────────────────────────
+    /**
+     * Construye el cuerpo de respuesta de error estándar de la plataforma
+     * Todos los errores tienen la misma estructura para que el frontend
+     * pueda procesarlos de forma uniforme
+     */
     private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
