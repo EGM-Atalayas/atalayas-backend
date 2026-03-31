@@ -13,7 +13,9 @@ import java.util.UUID;
 @AllArgsConstructor
 public class AuthResponse {
 
-    // Los tokens JWT viajan en cookies HttpOnly y NO se exponen en el body.
+    // Access token expuesto en el body para soportar Authorization: Bearer
+    // (necesario cuando las cookies cross-site son bloqueadas por el navegador)
+    private String accessToken;
     private long expiresIn;
 
     // ── Datos del usuario autenticado (tabla usuario) ────────────────────────
