@@ -1,6 +1,8 @@
 package com.atalayas.backend.progress.service;
 
 import com.atalayas.backend.common.enums.ProgressStatus;
+import com.atalayas.backend.communication.service.NotificacionService;
+import com.atalayas.backend.content.repository.ContentRepository;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.exception.UnauthorizedException;
 import com.atalayas.backend.progress.dto.CompleteContentRequest;
@@ -36,6 +38,9 @@ import java.util.stream.Collectors;
 public class ProgressService {
 
     private final ProgressRepository progressRepository;
+    private final NotificacionService notificacionService;
+    private final ContentRepository contentRepository;
+
 
     // ── REGISTRAR O ACTUALIZAR PROGRESO ──────────────────────────────────────
     /**
@@ -45,6 +50,7 @@ public class ProgressService {
      * Si no existe, lo crea, esto evita duplicados y permite acumular tiempo
      *
      * Un empleado solo puede registrar su propio progreso - no el de otros
+     * Cuando el contenido se completa por primera vez se dispara una notificación
      */
     @Transactional
     public ProgressResponse registrarProgreso(CompleteContentRequest request, User user) {
@@ -74,6 +80,20 @@ public class ProgressService {
             progreso.setCompletado(true);
             progreso.setFechaCompletado(LocalDateTime.now());
             log.info("Contenido {} completado por usuario {}", request.getContenidoId(), request.getUsuarioId());
+
+            // ── Notificación de contenido completado ──────────────────────────
+            // Lee el título del contenido para personalizar el mensaje
+            // Si no existe (raro, pero defensivo) usamos un literal genérico.
+            String tituloContenido = contentRepository.findById(request.getContenidoId())
+                    .map(c -> c.getTitulo())
+                    .orElse("un contenido formativo");
+
+            notificacionService.crearInterna(
+                    request.getUsuarioId(),
+                    "CONTENIDO_COMPLETADO",
+                    "¡Has completado \"" + tituloContenido + "\"! Sigue así.",
+                    "/formacion/contenido/" + request.getContenidoId()
+            );
         }
 
         return toResponse(progressRepository.save(progreso));
