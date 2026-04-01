@@ -74,5 +74,21 @@ public class AnnouncementController {
             @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(announcementService.desactivar(id, user));
     }
-}
 
+    /**
+     * DELETE /api/v1/anuncios/{id}
+     * Alias REST semántico de PATCH /{id}/desactivar — realiza soft-delete (activo = false).
+     * El frontend usa este verbo; la lógica de negocio es idéntica.
+     * - Anuncio no existe    → 404
+     * - Ya desactivado       → 400
+     * - Anuncio de otra emp  → 403
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
+    @Operation(summary = "Desactivar anuncio (soft-delete) — alias REST de PATCH /{id}/desactivar")
+    public ResponseEntity<AnnouncementResponse> desactivarDelete(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(announcementService.desactivar(id, user));
+    }
+}

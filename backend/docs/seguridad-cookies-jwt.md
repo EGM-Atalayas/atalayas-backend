@@ -233,6 +233,21 @@ springdoc.swagger-ui.disable-swagger-default-url=true
 | `POST` | `/api/v1/auth/login` | `LoginRequest` | ✅ `accessToken` + `refreshToken` | Datos del usuario |
 | `POST` | `/api/v1/auth/refresh-token` | *(ninguno)* | ✅ `accessToken` + `refreshToken` nuevos | Datos del usuario |
 | `POST` | `/api/v1/auth/logout` | *(ninguno)* | ✅ Ambas cookies con `maxAge=0` | `{ "message": "..." }` |
+| `GET` | `/api/v1/auth/me` | *(ninguno)* | ❌ | Datos del usuario autenticado |
+
+> ℹ️ `GET /auth/me` acepta tanto **cookie `accessToken`** como **header `Authorization: Bearer <token>`**.  
+> Útil cuando el navegador bloquea cookies cross-origin (Chrome en desarrollo con dominios distintos).
+
+---
+
+## Endpoints de anuncios — métodos aceptados
+
+| Método | Endpoint | Roles | Notas |
+|---|---|---|---|
+| `POST` | `/api/v1/anuncios` | `ROLE_ADMIN`, `ROLE_ADMIN_EMPRESA` | Crea anuncio |
+| `GET` | `/api/v1/anuncios` | Cualquier autenticado | Lista visibles para el usuario |
+| `PATCH` | `/api/v1/anuncios/{id}/desactivar` | `ROLE_ADMIN`, `ROLE_ADMIN_EMPRESA` | Soft-delete |
+| `DELETE` | `/api/v1/anuncios/{id}` | `ROLE_ADMIN`, `ROLE_ADMIN_EMPRESA` | Alias REST de PATCH — recomendado para el frontend |
 
 ---
 
@@ -276,4 +291,3 @@ axios.defaults.baseURL = 'http://localhost:8080';
 - **CSRF**: En desarrollo (`SameSite=Lax`) las cookies no se envían en peticiones cross-site iniciadas automáticamente (p. ej. `<img>` o `<form>`), lo que mitiga la mayoría de ataques CSRF. En producción (`SameSite=None; Secure`) se confía en el origen controlado por CORS (`allowCredentials=true` + `allowedOrigins` explícitos). Si se requiere máxima protección CSRF en producción, considera añadir un CSRF token.
 - **HTTPS en producción**: El flag `Secure` garantiza que las cookies nunca viajen en texto plano. Activar con `app.cookie.secure=true`.
 - **Expiración automática**: Si el servidor se reinicia o el usuario no actúa en 7 días, el `refreshToken` expira y el usuario debe volver a autenticarse.
-
