@@ -31,7 +31,7 @@ public class AuthController {
     private final AuthService authService;
 
     /** En dev puedes poner app.cookie.secure=false en application.properties */
-    @Value("${app.cookie.secure:true}")
+    @Value("${app.cookie.secure:false}")
     private boolean cookieSecure;
 
     // ── Helpers ────────────────────────────────────────────────────────────
