@@ -1,5 +1,6 @@
 package com.atalayas.backend.company.controller;
 
+import com.atalayas.backend.company.dto.CambioEstadoRequest;
 import com.atalayas.backend.company.dto.CompanyResponse;
 import com.atalayas.backend.company.dto.SolicitudAltaEmpresaRequest;
 import com.atalayas.backend.company.dto.SolicitudAltaEmpresaResponse;
@@ -54,20 +55,22 @@ public class CompanyController {
         return ResponseEntity.ok(companyService.getAprobadas());
     }
 
-    @PatchMapping("/{id}/aprobar")
+    @PatchMapping("/{id}/estado")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @SecurityRequirement(name = "bearerAuth")
-    @Operation(summary = "Aprobar solicitud de empresa (SUPER_ADMIN) — activa el usuario admin y envía email")
-    public ResponseEntity<CompanyResponse> aprobar(@PathVariable UUID id) {
-        return ResponseEntity.ok(companyService.aprobar(id));
-    }
-
-    @PatchMapping("/{id}/rechazar")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    @SecurityRequirement(name = "bearerAuth")
-    @Operation(summary = "Rechazar solicitud de empresa (SUPER_ADMIN) — el usuario queda inactivo en BD y recibe email")
-    public ResponseEntity<CompanyResponse> rechazar(@PathVariable UUID id) {
-        return ResponseEntity.ok(companyService.rechazar(id));
+    @Operation(summary = "Cambiar estado de empresa (SUPER_ADMIN)",
+               description = """
+                   Transiciones válidas:
+                   - PENDIENTE → APROBADA: activa usuarios, envía email de bienvenida y notificación interna
+                   - PENDIENTE → RECHAZADA: envía email de rechazo, desactiva empresa
+                   - RECHAZADA → PENDIENTE: reset sin efectos secundarios
+                   - APROBADA → cualquier estado: PROHIBIDO
+                   - RECHAZADA → APROBADA: PROHIBIDO (debe pasar antes por PENDIENTE)
+                   """)
+    public ResponseEntity<CompanyResponse> cambiarEstado(
+            @PathVariable UUID id,
+            @Valid @RequestBody CambioEstadoRequest request) {
+        return ResponseEntity.ok(companyService.cambiarEstado(id, request));
     }
 }
 
