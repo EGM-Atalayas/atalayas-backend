@@ -98,7 +98,7 @@ CookieUtil.clearCookie(response, nombre, secure);
 |---|---|---|
 | `HttpOnly` | `true` | **Inaccesible desde JavaScript** |
 | `Secure` | `true` en prod / `false` en dev | Solo se envía por HTTPS |
-| `SameSite` | `Strict` | Solo se envía en peticiones del mismo origen |
+| `SameSite` | `None` en prod / `Lax` en dev | `None` permite cross-site en HTTPS; `Lax` es compatible con HTTP local |
 | `Path` | `/` | Válida para toda la aplicación |
 | `MaxAge` | Configurable | Expiración automática |
 
@@ -218,10 +218,10 @@ springdoc.swagger-ui.disable-swagger-default-url=true
 
 | Cookie | Contenido | MaxAge | Flags |
 |---|---|---|---|
-| `accessToken` | JWT de acceso | 1 hora (3600 seg) | `HttpOnly`, `Secure`*, `SameSite=Strict` |
-| `refreshToken` | JWT de refresco | 7 días (604800 seg) | `HttpOnly`, `Secure`*, `SameSite=Strict` |
+| `accessToken` | JWT de acceso | 1 hora (3600 seg) | `HttpOnly`, `Secure`*, `SameSite=None`* / `SameSite=Lax` |
+| `refreshToken` | JWT de refresco | 7 días (604800 seg) | `HttpOnly`, `Secure`*, `SameSite=None`* / `SameSite=Lax` |
 
-*\* Solo en producción con `app.cookie.secure=true`*
+*\* Solo en producción con `app.cookie.secure=true`. En ese caso `SameSite=None` (permite peticiones cross-site sobre HTTPS). En desarrollo (`secure=false`) se usa `SameSite=Lax` para compatibilidad con HTTP.*
 
 ---
 
@@ -233,6 +233,21 @@ springdoc.swagger-ui.disable-swagger-default-url=true
 | `POST` | `/api/v1/auth/login` | `LoginRequest` | ✅ `accessToken` + `refreshToken` | Datos del usuario |
 | `POST` | `/api/v1/auth/refresh-token` | *(ninguno)* | ✅ `accessToken` + `refreshToken` nuevos | Datos del usuario |
 | `POST` | `/api/v1/auth/logout` | *(ninguno)* | ✅ Ambas cookies con `maxAge=0` | `{ "message": "..." }` |
+| `GET` | `/api/v1/auth/me` | *(ninguno)* | ❌ | Datos del usuario autenticado |
+
+> ℹ️ `GET /auth/me` acepta tanto **cookie `accessToken`** como **header `Authorization: Bearer <token>`**.  
+> Útil cuando el navegador bloquea cookies cross-origin (Chrome en desarrollo con dominios distintos).
+
+---
+
+## Endpoints de anuncios — métodos aceptados
+
+| Método | Endpoint | Roles | Notas |
+|---|---|---|---|
+| `POST` | `/api/v1/anuncios` | `ROLE_ADMIN`, `ROLE_ADMIN_EMPRESA` | Crea anuncio |
+| `GET` | `/api/v1/anuncios` | Cualquier autenticado | Lista visibles para el usuario |
+| `PATCH` | `/api/v1/anuncios/{id}/desactivar` | `ROLE_ADMIN`, `ROLE_ADMIN_EMPRESA` | Soft-delete |
+| `DELETE` | `/api/v1/anuncios/{id}` | `ROLE_ADMIN`, `ROLE_ADMIN_EMPRESA` | Alias REST de PATCH — recomendado para el frontend |
 
 ---
 
@@ -273,7 +288,6 @@ axios.defaults.baseURL = 'http://localhost:8080';
 
 ## Consideraciones de seguridad adicionales
 
-- **CSRF**: Con `SameSite=Strict` las cookies no se envían en peticiones cross-site, lo que mitiga ataques CSRF sin necesidad de tokens adicionales.
+- **CSRF**: En desarrollo (`SameSite=Lax`) las cookies no se envían en peticiones cross-site iniciadas automáticamente (p. ej. `<img>` o `<form>`), lo que mitiga la mayoría de ataques CSRF. En producción (`SameSite=None; Secure`) se confía en el origen controlado por CORS (`allowCredentials=true` + `allowedOrigins` explícitos). Si se requiere máxima protección CSRF en producción, considera añadir un CSRF token.
 - **HTTPS en producción**: El flag `Secure` garantiza que las cookies nunca viajen en texto plano. Activar con `app.cookie.secure=true`.
 - **Expiración automática**: Si el servidor se reinicia o el usuario no actúa en 7 días, el `refreshToken` expira y el usuario debe volver a autenticarse.
-

@@ -3,6 +3,8 @@ package com.atalayas.backend.auth.service;
 import com.atalayas.backend.auth.dto.AuthResponse;
 import com.atalayas.backend.auth.dto.LoginRequest;
 import com.atalayas.backend.auth.dto.RegisterRequest;
+import com.atalayas.backend.common.util.SecurityUtils;
+import com.atalayas.backend.communication.service.NotificacionService;
 import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.role.repository.RoleRepository;
 import com.atalayas.backend.security.JwtService;
@@ -25,6 +27,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final NotificacionService notificacionService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -45,9 +48,24 @@ public class AuthService {
                 .puestoTrabajo(request.getPuestoTrabajo())
                 .build();
 
-        userRepository.save(user);
+        user = userRepository.save(user);
+
+        // ── NOTIFICACIÓN DE BIENVENIDA ────────────────────────────────────────
+        // Se envía solo si el usuario quedó activo (registro directo)
+        // Los usuarios creados vía solicitud de empresa arrancan con activo=false
+        // y recibirán su bienvenida cuando CompanyService los active al aprobar
+        if (user.isActivo()) {
+            notificacionService.crearInterna(
+                    user.getUsuarioId(),
+                    "BIENVENIDA",
+                    "¡Bienvenido/a a la plataforma, " + user.getNombre() + "! Explora tus módulos formativos.",
+                    "/dashboard"
+            );
+        }
+
         return buildAuthResponse(user);
     }
+
 
     public AuthResponse login(LoginRequest request) {
         authenticationManager.authenticate(
@@ -60,9 +78,10 @@ public class AuthService {
         return buildAuthResponse(user);
     }
 
+
     /**
-     * Valida el refresh token (leído desde la cookie) y devuelve los datos del usuario.
-     * El controller es quien genera los nuevos tokens y los escribe en las cookies.
+     * Valida el refresh token (leído desde la cookie) y devuelve los datos del usuario
+     * El controller es quien genera los nuevos tokens y los escribe en las cookies
      */
     public AuthResponse refreshToken(String rawRefreshToken) {
         final String email = jwtService.extractUsername(rawRefreshToken);
@@ -77,9 +96,23 @@ public class AuthService {
         return buildAuthResponse(user);
     }
 
+
     /**
-     * Genera un par [accessToken, refreshToken] para el usuario autenticado.
-     * Lo usa el controller para escribir las cookies HttpOnly.
+     * Devuelve los datos del usuario autenticado en el contexto de seguridad
+     * Lo usa el endpoint GET /auth/me
+     */
+    @Transactional(readOnly = true)
+    public AuthResponse getCurrentUserInfo() {
+        User user = SecurityUtils.getCurrentUser();
+        return userRepository.findByEmail(user.getEmail())
+                .map(this::buildAuthResponse)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario autenticado no encontrado en BD"));
+    }
+
+
+    /**
+     * Genera un par [accessToken, refreshToken] para el usuario autenticado
+     * Lo usa el controller para escribir las cookies HttpOnly
      */
     public String[] generateTokenPair(String email) {
         User user = userRepository.findByEmail(email)

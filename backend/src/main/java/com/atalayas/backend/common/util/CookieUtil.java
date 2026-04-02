@@ -23,10 +23,10 @@ public final class CookieUtil {
                                       boolean secure) {
         ResponseCookie cookie = ResponseCookie.from(name, value)
                 .httpOnly(true)
-                .secure(true)
+                .secure(secure)                   // usar el parámetro (true en prod/HTTPS, false en dev/HTTP)
                 .path("/")
                 .maxAge(maxAgeSec)
-                .sameSite("None")
+                .sameSite(secure ? "None" : "Lax") // SameSite=None requiere Secure=true; en dev usamos Lax
                 .build();
         response.addHeader("Set-Cookie", cookie.toString());
     }
@@ -39,10 +39,10 @@ public final class CookieUtil {
                                    boolean secure) {
         ResponseCookie cookie = ResponseCookie.from(name, "")
                 .httpOnly(true)
-                .secure(true)
+                .secure(secure)                   // usar el parámetro
                 .path("/")
                 .maxAge(0)
-                .sameSite("None")
+                .sameSite(secure ? "None" : "Lax") // consistente con addTokenCookie
                 .build();
         response.addHeader("Set-Cookie", cookie.toString());
     }

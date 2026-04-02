@@ -31,12 +31,18 @@ public class AuthController {
     private final AuthService authService;
 
     /** En dev puedes poner app.cookie.secure=false en application.properties */
-    @Value("${app.cookie.secure:true}")
+    @Value("${app.cookie.secure:false}")
     private boolean cookieSecure;
 
     // ── Helpers ────────────────────────────────────────────────────────────
 
-    private void writeAuthCookies(HttpServletResponse response, String email) {
+    /**
+     * Genera el par de tokens, escribe las cookies HttpOnly y devuelve el
+     * accessToken para que también pueda incluirse en el body de la respuesta.
+     * Así el frontend puede usarlo como Authorization: Bearer cuando el
+     * navegador bloquee cookies cross-site (ej. Chrome con localhost ↔ railway.app).
+     */
+    private String writeAuthCookies(HttpServletResponse response, String email) {
         String[] tokens = authService.generateTokenPair(email);
         CookieUtil.addTokenCookie(response,
                 SecurityConstants.ACCESS_TOKEN_COOKIE,
@@ -48,6 +54,7 @@ public class AuthController {
                 tokens[1],
                 SecurityConstants.REFRESH_TOKEN_EXPIRATION / 1000,
                 cookieSecure);
+        return tokens[0]; // accessToken
     }
 
     private Optional<String> extractCookie(HttpServletRequest request, String name) {
@@ -66,16 +73,18 @@ public class AuthController {
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request,
                                                  HttpServletResponse response) {
         AuthResponse body = authService.register(request);
-        writeAuthCookies(response, body.getEmail());
+        String accessToken = writeAuthCookies(response, body.getEmail());
+        body.setAccessToken(accessToken);
         return ResponseEntity.status(HttpStatus.CREATED).body(body);
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Iniciar sesión — tokens enviados en cookies HttpOnly")
+    @Operation(summary = "Iniciar sesión — tokens enviados en cookies HttpOnly y en el body")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request,
                                               HttpServletResponse response) {
         AuthResponse body = authService.login(request);
-        writeAuthCookies(response, body.getEmail());
+        String accessToken = writeAuthCookies(response, body.getEmail());
+        body.setAccessToken(accessToken);
         return ResponseEntity.ok(body);
     }
 
@@ -87,7 +96,8 @@ public class AuthController {
                 .orElseThrow(() -> new IllegalArgumentException("Cookie refreshToken no encontrada"));
 
         AuthResponse body = authService.refreshToken(rawRefreshToken);
-        writeAuthCookies(response, body.getEmail());
+        String accessToken = writeAuthCookies(response, body.getEmail());
+        body.setAccessToken(accessToken);
         return ResponseEntity.ok(body);
     }
 
@@ -97,5 +107,11 @@ public class AuthController {
         CookieUtil.clearCookie(response, SecurityConstants.ACCESS_TOKEN_COOKIE, cookieSecure);
         CookieUtil.clearCookie(response, SecurityConstants.REFRESH_TOKEN_COOKIE, cookieSecure);
         return ResponseEntity.ok(Map.of("message", "Sesión cerrada correctamente"));
+    }
+
+    @GetMapping("/me")
+    @Operation(summary = "Obtener datos del usuario autenticado (requiere accessToken)")
+    public ResponseEntity<AuthResponse> me() {
+        return ResponseEntity.ok(authService.getCurrentUserInfo());
     }
 }
