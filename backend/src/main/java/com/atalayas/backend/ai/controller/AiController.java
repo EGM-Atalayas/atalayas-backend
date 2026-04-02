@@ -8,6 +8,10 @@ import com.atalayas.backend.ai.service.AiSummaryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -36,7 +40,17 @@ public class AiController {
      */
     @PostMapping("/generar-contenido")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
-    @Operation(summary = "Generar contenido formativo con IA")
+    @Operation(summary = "Generar contenido formativo con IA",
+               description = "Genera contenido formativo completo para un módulo usando Gemini 2.0 Flash. Requiere `tema` y `tipoModulo`.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Contenido generado correctamente"),
+        @ApiResponse(responseCode = "400", description = "Tema o tipoModulo vacíos",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "403", description = "Rol insuficiente",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "500", description = "Error en la API de Gemini",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<AiResponse> generarContenido(
             @Valid @RequestBody AiPromptRequest request) {
 
@@ -61,7 +75,15 @@ public class AiController {
      */
     @PostMapping("/generar-preguntas")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
-    @Operation(summary = "Generar preguntas de evaluación con IA")
+    @Operation(summary = "Generar preguntas de evaluación con IA",
+               description = "Genera preguntas de tipo test para un contenido dado. `numPreguntas` es opcional (por defecto 5).")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Preguntas generadas correctamente"),
+        @ApiResponse(responseCode = "400", description = "Prompt vacío",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "500", description = "Error en la API de Gemini",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<AiResponse> generarPreguntas(
             @Valid @RequestBody AiPromptRequest request) {
 
@@ -82,7 +104,15 @@ public class AiController {
      * Todos los usuarios autenticados pueden usarlo
      */
     @PostMapping("/chat")
-    @Operation(summary = "Chatbot de consulta para empleados")
+    @Operation(summary = "Chatbot de consulta para empleados",
+               description = "Chatbot IA accesible a todos los usuarios autenticados. Acepta `prompt`, `nombreEmpresa` (contexto) y `contexto` adicional.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Respuesta del chatbot"),
+        @ApiResponse(responseCode = "400", description = "Prompt vacío",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "500", description = "Error en la API de Gemini",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<AiResponse> chat(
             @Valid @RequestBody AiPromptRequest request) {
 
@@ -107,7 +137,15 @@ public class AiController {
      */
     @PostMapping("/resumir")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
-    @Operation(summary = "Resumir texto o documento con IA")
+    @Operation(summary = "Resumir texto o documento con IA",
+               description = "Genera un resumen estructurado de un texto largo. El texto se envía en el campo `prompt`.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Resumen generado correctamente"),
+        @ApiResponse(responseCode = "400", description = "Texto vacío",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "500", description = "Error en la API de Gemini",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<AiResponse> resumir(
             @Valid @RequestBody AiPromptRequest request) {
 

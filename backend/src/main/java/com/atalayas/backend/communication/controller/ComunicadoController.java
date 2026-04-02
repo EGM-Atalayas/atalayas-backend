@@ -7,6 +7,10 @@ import com.atalayas.backend.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -37,6 +41,11 @@ public class ComunicadoController {
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Operation(summary = "Crear comunicado oficial - solo ROLE_ADMIN")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Comunicado creado"),
+        @ApiResponse(responseCode = "403", description = "Rol insuficiente — requiere ROLE_ADMIN",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<ComunicadoResponse> crear(
             @Valid @RequestBody ComunicadoRequest request,
             @AuthenticationPrincipal User user) {
@@ -53,7 +62,9 @@ public class ComunicadoController {
      * - Sin sesión - 401
      */
     @GetMapping
-    @Operation(summary = "Listar comunicados - todos los autenticados ven los vigentes, ROLE_ADMIN ve el histórico")
+    @Operation(summary = "Listar comunicados - todos los autenticados ven los vigentes, ROLE_ADMIN ve el histórico",
+               description = "Usuarios autenticados ven comunicados activos y vigentes. ROLE_ADMIN ve el histórico completo incluyendo expirados y desactivados.")
+    @ApiResponse(responseCode = "200", description = "Lista de comunicados")
     public ResponseEntity<List<ComunicadoResponse>> listar(
             @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(comunicadoService.listar(user));
@@ -70,6 +81,15 @@ public class ComunicadoController {
     @PatchMapping("/{id}/desactivar")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Operation(summary = "Desactivar comunicado - solo ROLE_ADMIN")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Comunicado desactivado"),
+        @ApiResponse(responseCode = "400", description = "El comunicado ya estaba desactivado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "403", description = "Rol insuficiente",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Comunicado no encontrado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<ComunicadoResponse> desactivar(
             @PathVariable UUID id,
             @AuthenticationPrincipal User user) {

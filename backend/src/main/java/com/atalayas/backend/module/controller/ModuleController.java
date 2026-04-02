@@ -5,6 +5,10 @@ import com.atalayas.backend.module.dto.ModuleResponse;
 import com.atalayas.backend.module.service.ModuleService;
 import com.atalayas.backend.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -46,6 +50,15 @@ public class ModuleController {
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
     @Operation(summary = "Crear módulo - admin empresa crea en su empresa, superadmin puede crear globales")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Módulo creado"),
+        @ApiResponse(responseCode = "400", description = "Datos inválidos o módulo de empresa ajena",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "401", description = "Sin autenticación",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "403", description = "Rol insuficiente",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<ModuleResponse> crear(
             @Valid @RequestBody ModuleRequest request,
             @AuthenticationPrincipal User user) {
@@ -63,7 +76,13 @@ public class ModuleController {
      *   Superadmin: todos los activos de la plataforma
      */
     @GetMapping
-    @Operation(summary = "Listar módulos visibles para el usuario autenticado")
+    @Operation(summary = "Listar módulos visibles para el usuario autenticado",
+               description = "Empleado: activos de su empresa + globales. Admin empresa: todos los suyos + globales. Superadmin: todos.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Lista de módulos"),
+        @ApiResponse(responseCode = "401", description = "Sin autenticación",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<List<ModuleResponse>> listar(
             @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(moduleService.listar(user));
@@ -77,6 +96,13 @@ public class ModuleController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "Obtener módulo por ID")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Módulo encontrado"),
+        @ApiResponse(responseCode = "403", description = "El módulo no pertenece a tu empresa",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Módulo no encontrado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<ModuleResponse> obtenerPorId(
             @PathVariable UUID id,
             @AuthenticationPrincipal User user) {
@@ -92,6 +118,13 @@ public class ModuleController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
     @Operation(summary = "Actualizar módulo — admin empresa solo puede editar los propios")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Módulo actualizado"),
+        @ApiResponse(responseCode = "403", description = "Módulo de otra empresa",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Módulo no encontrado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<ModuleResponse> actualizar(
             @PathVariable UUID id,
             @Valid @RequestBody ModuleRequest request,
@@ -108,6 +141,15 @@ public class ModuleController {
     @PatchMapping("/{id}/desactivar")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
     @Operation(summary = "Desactivar módulo (soft delete) - admin empresa solo puede desactivar los propios")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Módulo desactivado"),
+        @ApiResponse(responseCode = "400", description = "El módulo ya estaba desactivado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "403", description = "Módulo de otra empresa o global",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Módulo no encontrado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<ModuleResponse> desactivar(
             @PathVariable UUID id,
             @AuthenticationPrincipal User user) {

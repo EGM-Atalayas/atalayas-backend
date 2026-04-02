@@ -7,6 +7,10 @@ import com.atalayas.backend.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -37,6 +41,11 @@ public class AnnouncementController {
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
     @Operation(summary = "Crear anuncio — ROLE_ADMIN puede crear globales, ROLE_ADMIN_EMPRESA solo para su empresa")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Anuncio creado"),
+        @ApiResponse(responseCode = "403", description = "Rol insuficiente",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<AnnouncementResponse> crear(
             @Valid @RequestBody AnnouncementRequest request,
             @AuthenticationPrincipal User user) {
@@ -52,7 +61,9 @@ public class AnnouncementController {
      * - Sin sesión → 401
      */
     @GetMapping
-    @Operation(summary = "Listar anuncios visibles para el usuario autenticado")
+    @Operation(summary = "Listar anuncios visibles para el usuario autenticado",
+               description = "Cualquier usuario ve los de su empresa + globales. ROLE_ADMIN ve todos los activos de la plataforma.")
+    @ApiResponse(responseCode = "200", description = "Lista de anuncios")
     public ResponseEntity<List<AnnouncementResponse>> listar(
             @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(announcementService.listar(user));
@@ -69,6 +80,15 @@ public class AnnouncementController {
     @PatchMapping("/{id}/desactivar")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
     @Operation(summary = "Desactivar anuncio — ROLE_ADMIN_EMPRESA solo puede desactivar los propios")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Anuncio desactivado"),
+        @ApiResponse(responseCode = "400", description = "El anuncio ya estaba desactivado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "403", description = "Anuncio de otra empresa",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Anuncio no encontrado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<AnnouncementResponse> desactivar(
             @PathVariable UUID id,
             @AuthenticationPrincipal User user) {
@@ -86,6 +106,15 @@ public class AnnouncementController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
     @Operation(summary = "Desactivar anuncio (soft-delete) — alias REST de PATCH /{id}/desactivar")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Anuncio desactivado"),
+        @ApiResponse(responseCode = "400", description = "El anuncio ya estaba desactivado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "403", description = "Anuncio de otra empresa",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Anuncio no encontrado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<AnnouncementResponse> desactivarDelete(
             @PathVariable UUID id,
             @AuthenticationPrincipal User user) {

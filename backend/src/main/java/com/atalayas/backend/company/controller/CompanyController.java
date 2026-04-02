@@ -6,6 +6,10 @@ import com.atalayas.backend.company.dto.SolicitudAltaEmpresaRequest;
 import com.atalayas.backend.company.dto.SolicitudAltaEmpresaResponse;
 import com.atalayas.backend.company.service.CompanyService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -28,7 +32,14 @@ public class CompanyController {
 
     @PostMapping("/solicitud")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Solicitar alta de empresa — público, sin autenticación previa. Crea la empresa (PENDIENTE) y su usuario admin (inactivo)")
+    @Operation(summary = "Solicitar alta de empresa",
+               description = "Endpoint **público** — no requiere autenticación. Crea la empresa en estado `PENDIENTE` y su usuario administrador con `activo = false`. La cuenta se activa cuando el SUPER_ADMIN apruebe la solicitud.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Solicitud creada correctamente",
+                     content = @Content(schema = @Schema(implementation = SolicitudAltaEmpresaResponse.class))),
+        @ApiResponse(responseCode = "400", description = "CIF o email ya registrado / datos inválidos",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<SolicitudAltaEmpresaResponse> crear(@Valid @RequestBody SolicitudAltaEmpresaRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(companyService.crearEmpresa(request));
     }
@@ -60,13 +71,28 @@ public class CompanyController {
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Cambiar estado de empresa (SUPER_ADMIN)",
                description = """
-                   Transiciones válidas:
-                   - PENDIENTE → APROBADA: activa usuarios, envía email de bienvenida y notificación interna
-                   - PENDIENTE → RECHAZADA: envía email de rechazo, desactiva empresa
-                   - RECHAZADA → PENDIENTE: reset sin efectos secundarios
-                   - APROBADA → cualquier estado: PROHIBIDO
-                   - RECHAZADA → APROBADA: PROHIBIDO (debe pasar antes por PENDIENTE)
+                   Gestiona el ciclo de vida de una empresa. Transiciones válidas:
+
+                   | Desde | Hacia | Efecto |
+                   |---|---|---|
+                   | `PENDIENTE` | `APROBADA` | Activa usuarios, email bienvenida, notificación interna |
+                   | `PENDIENTE` | `RECHAZADA` | Desactiva empresa, email de rechazo |
+                   | `RECHAZADA` | `PENDIENTE` | Reset sin efectos secundarios |
+                   | `APROBADA` | cualquiera | **PROHIBIDO** — empresa ya operativa |
+                   | `RECHAZADA` | `APROBADA` | **PROHIBIDO** — debe pasar antes por `PENDIENTE` |
                    """)
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Estado actualizado correctamente",
+                     content = @Content(schema = @Schema(implementation = CompanyResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Transición no permitida o empresa en mismo estado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "401", description = "Sin autenticación",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "403", description = "Rol insuficiente — requiere ROLE_ADMIN",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Empresa no encontrada",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<CompanyResponse> cambiarEstado(
             @PathVariable UUID id,
             @Valid @RequestBody CambioEstadoRequest request) {
