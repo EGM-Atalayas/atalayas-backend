@@ -18,6 +18,18 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Lógica de negocio para la gestión de anuncios de empresa
+ *
+ * Los anuncios son comunicaciones de empresa a empleados, distintos de los
+ * comunicados oficiales de EGM (Comunicado), que son globales y solo los
+ * crea el superadmin.
+ *
+ * Reglas de acceso:
+ *   - ROLE_ADMIN         - puede crear anuncios globales y gestionar todos
+ *   - ROLE_ADMIN_EMPRESA - solo puede crear y gestionar anuncios de su empresa
+ *   - ROLE_EMPLEADO      - solo puede leer los anuncios de su empresa y los globales
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -26,16 +38,20 @@ public class AnnouncementService {
     private final AnnouncementRepository announcementRepository;
     private final AnnouncementMapper announcementMapper;
 
+
+    // ── CREAR ─────────────────────────────────────────────────────────────
     /**
-     * POST /api/v1/anuncios — Crear anuncio.
-     * - ROLE_ADMIN: puede crear anuncios globales (esGlobal=true, empresaId=null).
-     * - ROLE_ADMIN_EMPRESA: el campo esGlobal del request se ignora y se fuerza a false;
-     *   la empresa del anuncio se toma de su propio empresaId.
+     * Crea un nuevo anuncio
+     *
+     * Solo el superadmin puede marcar un anuncio como global.
+     * Si un admin empresa intenta crear un anuncio global, el flag se ignora
+     * y se fuerza a false.
      */
     @Transactional
     public AnnouncementResponse crear(AnnouncementRequest request, User user) {
         boolean isSuperAdmin = isSuperAdmin(user);
-        // Prevención de escalada de privilegios: solo el superadmin puede marcar global
+
+        // Resolvemos si el anuncio es global antes de pasarlo al mapper
         boolean esGlobal = isSuperAdmin && request.isEsGlobal();
 
         Announcement announcement = announcementMapper.toEntity(request, user, esGlobal);
@@ -43,28 +59,33 @@ public class AnnouncementService {
         return announcementMapper.toResponse(announcement);
     }
 
+
+    // ── LISTAR ────────────────────────────────────────────────────────────
     /**
-     * GET /api/v1/anuncios — Listar anuncios visibles para el usuario.
-     * - ROLE_ADMIN:           todos los activos de la plataforma.
-     * - empresaId presente:   los de su empresa + los globales activos.
-     * - empresaId null:       fallback seguro → solo los globales activos.
+     * Lista los anuncios visibles para el usuario autenticado
+     *
+     * La visibilidad depende del rol y la empresa del usuario:
+     *   - Superadmin       - todos los anuncios activos de la plataforma
+     *   - Con empresa      - los de su empresa + los globales activos
+     *   - Sin empresa      - solo los globales activos (caso borde defensivo)
      */
     @Transactional(readOnly = true)
     public List<AnnouncementResponse> listar(User user) {
         boolean superAdmin = isSuperAdmin(user);
         UUID empresaId = user.getEmpresaId();
 
-        log.debug("Listando anuncios — usuarioId={} superAdmin={} empresaId={}",
+        log.debug("Listando anuncios - usuarioId={} superAdmin={} empresaId={}",
                 user.getUsuarioId(), superAdmin, empresaId);
 
         List<Announcement> announcements;
+
         if (superAdmin) {
             announcements = announcementRepository.findAllByActivoTrue();
         } else if (empresaId != null) {
             announcements = announcementRepository.findVisiblesParaEmpresa(empresaId);
         } else {
-            // Usuario sin empresa asignada: solo ver globales
-            log.warn("Usuario {} no tiene empresaId — devolviendo solo anuncios globales",
+            // Caso defensivo: usuario sin empresa asignada — solo ve globales
+            log.warn("Usuario {} no tiene empresaId - devolviendo solo anuncios globales",
                     user.getUsuarioId());
             announcements = announcementRepository.findAllByEsGlobalTrueAndActivoTrue();
         }
@@ -74,12 +95,15 @@ public class AnnouncementService {
                 .collect(Collectors.toList());
     }
 
+
+    // ── DESACTIVAR ────────────────────────────────────────────────────────
     /**
-     * PATCH /api/v1/anuncios/{id}/desactivar — Soft-delete (activo = false).
-     * - ROLE_ADMIN: puede desactivar cualquier anuncio.
-     * - ROLE_ADMIN_EMPRESA: solo puede desactivar los propios (empresa_id coincide).
-     *   → 403 si intenta desactivar uno global o de otra empresa.
-     *   → 404 si el anuncio no existe en absoluto.
+     * Soft-delete de un anuncio, marca activo = false sin eliminar el registro
+     *
+     * Superadmin puede desactivar cualquier anuncio.
+     * Admin empresa solo puede desactivar los suyos propios:
+     *   - 403 si intenta desactivar uno global o de otra empresa
+     *   - 404 si el anuncio no existe en absoluto
      */
     @Transactional
     public AnnouncementResponse desactivar(UUID id, User user) {
@@ -90,11 +114,10 @@ public class AnnouncementService {
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Anuncio no encontrado con id: " + id));
         } else {
-            // ROLE_ADMIN_EMPRESA: buscar validando propiedad en una sola query
             announcement = announcementRepository
                     .findByAnuncioIdAndEmpresaId(id, user.getEmpresaId())
                     .orElseThrow(() -> {
-                        // Distinguir 404 (no existe) de 403 (existe pero no es suyo)
+                        // Distinguimos 404 (no existe) de 403 (existe pero no es suyo)
                         if (announcementRepository.existsById(id)) {
                             return new AccessDeniedException(
                                     "No tienes permisos para desactivar este anuncio");
@@ -113,11 +136,10 @@ public class AnnouncementService {
         return announcementMapper.toResponse(announcement);
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
 
+    // ── HELPERS ───────────────────────────────────────────────────────────
     private boolean isSuperAdmin(User user) {
         return user.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 }
-

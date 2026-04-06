@@ -6,28 +6,36 @@ import com.atalayas.backend.communication.entity.Announcement;
 import com.atalayas.backend.user.entity.User;
 import org.springframework.stereotype.Component;
 
+/**
+ * Mapper para convertir entre la entidad Announcement y sus DTOs
+ */
 @Component
 public class AnnouncementMapper {
 
     /**
      * Construye una entidad Announcement a partir del request y el usuario autenticado.
      *
-     * @param request   payload validado
-     * @param user      usuario autenticado (fuente de empresaId y creadoPor)
-     * @param esGlobal  valor ya resuelto por el service según el rol del usuario
+     * El flag esGlobal ya viene resuelto desde el servicio según el rol del usuario,
+     * aquí solo lo asignamos, no lo calculamos.
+     *
+     * Si el anuncio es global no se asocia a ninguna empresa (empresaId = null).
+     * Si no es global, heredamos el empresaId del usuario que lo crea.
      */
     public Announcement toEntity(AnnouncementRequest request, User user, boolean esGlobal) {
         return Announcement.builder()
                 .titulo(request.getTitulo())
                 .contenido(request.getContenido())
                 .esGlobal(esGlobal)
-                // Si es global no se asocia a ninguna empresa
                 .empresaId(esGlobal ? null : user.getEmpresaId())
                 .creadoPor(user.getUsuarioId())
                 .activo(true)
                 .build();
     }
 
+    /**
+     * Convierte una entidad Announcement en su DTO de respuesta.
+     * Expone todos los campos que el frontend necesita para mostrar el anuncio.
+     */
     public AnnouncementResponse toResponse(Announcement announcement) {
         return AnnouncementResponse.builder()
                 .anuncioId(announcement.getAnuncioId())
@@ -42,4 +50,3 @@ public class AnnouncementMapper {
                 .build();
     }
 }
-
