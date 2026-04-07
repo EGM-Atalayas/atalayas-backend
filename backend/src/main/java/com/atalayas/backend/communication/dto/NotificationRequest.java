@@ -7,18 +7,18 @@ import lombok.*;
 
 import java.util.UUID;
 
-
 /**
- * Payload para crear una notificación manual
- * destinatarioId debe venir siempre en el body
- * leido no se acepta en creación — siempre arranca en false
+ * Payload para crear una notificación manual desde el panel de admin
+ *
+ * El campo leido no se acepta en creación, siempre arranca en false
+ * Solo ROLE_ADMIN y ROLE_ADMIN_EMPRESA pueden crear notificaciones manuales
  */
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class NotificacionRequest {
+public class NotificationRequest {
 
     @NotNull(message = "El destinatario es obligatorio")
     private UUID destinatarioId;
@@ -30,6 +30,7 @@ public class NotificacionRequest {
     @NotBlank(message = "El mensaje no puede estar vacío")
     private String mensaje;
 
+    // Opcional — enlace al recurso al que hace referencia la notificación
     @Size(max = 500, message = "El enlace no puede superar 500 caracteres")
     private String enlace;
 }

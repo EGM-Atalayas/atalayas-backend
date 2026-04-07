@@ -4,10 +4,10 @@ import com.atalayas.backend.auth.dto.AuthResponse;
 import com.atalayas.backend.auth.dto.LoginRequest;
 import com.atalayas.backend.auth.dto.RegisterRequest;
 import com.atalayas.backend.common.util.SecurityUtils;
-import com.atalayas.backend.communication.service.NotificacionService;
+import com.atalayas.backend.communication.service.NotificationService;
 import com.atalayas.backend.company.entity.Company;
 import com.atalayas.backend.company.repository.CompanyRepository;
-import com.atalayas.backend.role.entity.Rol;
+import com.atalayas.backend.role.entity.Role;
 import com.atalayas.backend.role.repository.RoleRepository;
 import com.atalayas.backend.security.JwtService;
 import com.atalayas.backend.security.SecurityConstants;
@@ -21,10 +21,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Lógica de autenticación - login, registro, refresh y consulta de sesión activa
+ * Lógica de autenticación, login, registro, refresh y consulta de sesión activa
  *
- * Todos los métodos que devuelven AuthResponse, incluyen los datos de empresa
- * (nombre y logo) para que el front pueda construir el header sin
+ * Todos los métodos que devuelven AuthResponse incluyen los datos de empresa
+ * (nombre y logo) para que el frontend pueda construir el header sin
  * necesitar una segunda llamada al backend.
  */
 @Service
@@ -37,7 +37,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
-    private final NotificacionService notificacionService;
+    private final NotificationService notificationService;
 
 
     // ── REGISTRO ──────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ public class AuthService {
                     "Ya existe un usuario con el email: " + request.getEmail());
         }
 
-        Rol rol = roleRepository.findById(request.getRolId())
+        Role role = roleRepository.findById(request.getRolId())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Rol no encontrado con id: " + request.getRolId()));
 
@@ -58,19 +58,21 @@ public class AuthService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .empresaId(request.getEmpresaId())
-                .rol(rol)
+                .rol(role)
                 .puestoTrabajo(request.getPuestoTrabajo())
                 .build();
 
         user = userRepository.save(user);
 
-        // Notificación de bienvenida solo si el usuario quedó activo
+        // Notificación de bienvenida solo si el usuario quedó activo.
+        // Los usuarios creados vía solicitud de empresa arrancan con activo=false
+        // y recibirán su bienvenida cuando CompanyService los active al aprobar.
         if (user.isActivo()) {
-            notificacionService.crearInterna(
+            notificationService.crearInterna(
                     user.getUsuarioId(),
                     "BIENVENIDA",
                     "¡Bienvenido/a " + user.getNombre()
-                            + "! Explora tus módulos formativos",
+                            + "! Explora tus módulos formativos.",
                     "/dashboard"
             );
         }
@@ -80,8 +82,9 @@ public class AuthService {
 
 
     // ── LOGIN ─────────────────────────────────────────────────────────────
+
     public AuthResponse login(LoginRequest request) {
-        // Spring Security valida credenciales, lanza excepción si son incorrectas
+        // Spring Security valida credenciales — lanza excepción si son incorrectas
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(), request.getPassword())
@@ -96,6 +99,7 @@ public class AuthService {
 
 
     // ── REFRESH TOKEN ─────────────────────────────────────────────────────
+
     /**
      * Valida el refresh token leído desde la cookie y devuelve los datos del usuario.
      * El controller es quien genera los nuevos tokens y los escribe en las cookies.
@@ -116,6 +120,7 @@ public class AuthService {
 
 
     // ── SESIÓN ACTIVA ─────────────────────────────────────────────────────
+
     /**
      * Devuelve los datos del usuario autenticado en el contexto de seguridad.
      * Lo usa el endpoint GET /auth/me para que el frontend verifique la sesión.
@@ -131,6 +136,7 @@ public class AuthService {
 
 
     // ── GENERACIÓN DE TOKENS ──────────────────────────────────────────────
+
     /**
      * Genera un par [accessToken, refreshToken] para el usuario.
      * Lo usa el controller para escribir las cookies HttpOnly.
@@ -149,14 +155,14 @@ public class AuthService {
     // ── MAPPER INTERNO ────────────────────────────────────────────────────
     /**
      * Construye el AuthResponse con todos los datos del usuario y su empresa.
-     * Hacemos una sola consulta a Company para obtener nombre y logo,
-     * así el front no necesita una segunda llamada para construir el header.
+     * Hacemos una sola consulta a Company para obtener nombre y logo —
+     * así el frontend no necesita una segunda llamada para construir el header.
      */
     private AuthResponse buildAuthResponse(User user) {
-        Rol rol = user.getRol();
+        Role role = user.getRol();
 
-        // Cargamos los datos de la empresa si el usuario tiene una asignada
-        // El superadmin EGM puede no tener empresa propia, por eso es Optional
+        // Cargamos los datos de la empresa si el usuario tiene una asignada.
+        // El superadmin EGM puede no tener empresa propia, por eso es Optional.
         String nombreEmpresa = null;
         String logoEmpresaUrl = null;
 
@@ -177,9 +183,9 @@ public class AuthService {
                 .apellidos(user.getApellidos())
                 .avatarUrl(user.getAvatarUrl())
                 .puestoTrabajo(user.getPuestoTrabajo())
-                .rolId(rol.getRolId())
-                .codigoRol(rol.getCodigoRol())
-                .nombreRol(rol.getNombreRol())
+                .rolId(role.getRolId())
+                .codigoRol(role.getCodigoRol())
+                .nombreRol(role.getNombreRol())
                 .empresaId(user.getEmpresaId())
                 .nombreEmpresa(nombreEmpresa)
                 .logoEmpresaUrl(logoEmpresaUrl)

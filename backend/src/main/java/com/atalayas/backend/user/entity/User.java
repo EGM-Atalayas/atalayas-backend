@@ -1,19 +1,22 @@
 package com.atalayas.backend.user.entity;
 
-import com.atalayas.backend.role.entity.Rol;
+import com.atalayas.backend.role.entity.Role;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * Entidad mapeada a la tabla usuario de PostgreSQL.
+ * Entidad mapeada a la tabla 'usuario'
+ *
+ * El email actúa como username de autenticación
+ * El rol determina qué puede ver y hacer el usuario en la plataforma
  */
 @Entity
 @Table(name = "usuario")
@@ -44,15 +47,16 @@ public class User implements UserDetails {
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
 
-    /** FK → empresa.empresa_id */
-    @Column(name = "empresa_id", nullable = false)
+    // FK a la empresa a la que pertenece el usuario
+    @Column(name = "empresa_id")
     private UUID empresaId;
 
-    /** FK → rol (join para cargar datos del rol en memoria). */
+    // FK al rol
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "rol_id", nullable = false)
-    private Rol rol;
+    private Role rol;
 
+    // Contador de intentos fallidos de login bloquea la cuenta a partir de 5
     @Column(name = "intentos_fallidos", nullable = false)
     @Builder.Default
     private int intentosFallidos = 0;
@@ -61,34 +65,37 @@ public class User implements UserDetails {
     @Builder.Default
     private boolean terminosAceptados = false;
 
+    // Puesto de trabajo visible en el header debajo del nombre
     @Column(name = "puesto_trabajo", length = 150)
     private String puestoTrabajo;
 
+    // Soft delete, false significa que la cuenta está desactivada
     @Column(name = "activo", nullable = false)
     @Builder.Default
     private boolean activo = true;
 
-    @Column(name = "fecha_registro", updatable = false, nullable = false)
-    private LocalDateTime fechaRegistro;
+    @Column(name = "fecha_registro", updatable = false)
+    private OffsetDateTime fechaRegistro;
 
     @Column(name = "ultimo_login")
-    private LocalDateTime ultimoLogin;
+    private OffsetDateTime ultimoLogin;
 
     @Column(name = "actualizado_en", nullable = false)
-    private LocalDateTime actualizadoEn;
+    private OffsetDateTime actualizadoEn;
 
     @PrePersist
     protected void onCreate() {
-        fechaRegistro = LocalDateTime.now();
-        actualizadoEn = LocalDateTime.now();
+        fechaRegistro = OffsetDateTime.now();
+        actualizadoEn = OffsetDateTime.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        actualizadoEn = LocalDateTime.now();
+        actualizadoEn = OffsetDateTime.now();
     }
 
-    // ── UserDetails ──────────────────────────────────────────────────────────
+
+    // ── UserDetails, implementación requerida por Spring Security ─────────
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -107,6 +114,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
+        // La cuenta se bloquea automáticamente tras 5 intentos fallidos
         return intentosFallidos < 5;
     }
 
@@ -120,6 +128,7 @@ public class User implements UserDetails {
         return true;
     }
 
+    // Nombre completo para mostrar en notificaciones y comunicados
     public String getNombreCompleto() {
         return nombre + " " + apellidos;
     }

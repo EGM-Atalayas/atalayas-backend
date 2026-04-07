@@ -5,8 +5,12 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
+/**
+ * Respuesta estándar de cualquier operación de IA
+ * Incluye el contenido generado, el modelo usado y el momento de generación
+ */
 @Data
 @Builder
 @NoArgsConstructor
@@ -14,5 +18,5 @@ import java.time.LocalDateTime;
 public class AiResponse {
     private String contenido;
     private String modelo;
-    private LocalDateTime generadoEn;
+    private OffsetDateTime generadoEn;
 }

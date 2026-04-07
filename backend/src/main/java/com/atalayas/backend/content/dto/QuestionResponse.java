@@ -5,11 +5,11 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
- * Respuesta de una pregunta (tabla contenido_pregunta).
+ * Respuesta de una pregunta de evaluación (tabla contenido_pregunta)
  */
 @Data
 @Builder
@@ -21,6 +21,5 @@ public class QuestionResponse {
     private UUID contenidoId;
     private String enunciado;
     private String respuestaCorrecta;
-    private LocalDateTime actualizadoEn;
+    private OffsetDateTime actualizadoEn;
 }
-

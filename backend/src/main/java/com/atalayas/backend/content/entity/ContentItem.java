@@ -4,15 +4,15 @@ import com.atalayas.backend.common.enums.ContentType;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
-
 /**
- * Entidad que representa un contenido formativo en la tabla 'contenido'
+ * Entidad mapeada a la tabla 'contenido'
  *
- * Un contenido pertenece siempre a un módulo y opcionalmente a una empresa
+ * Representa un contenido formativo dentro de un módulo
  * Puede ser texto, vídeo, PDF, evaluación o contenido generado por IA
+ * Siempre pertenece a un módulo y opcionalmente a una empresa concreta
  */
 @Entity
 @Table(name = "contenido")
@@ -32,7 +32,7 @@ public class ContentItem {
     @Column(name = "modulo_id", nullable = false)
     private UUID moduloId;
 
-    // null = contenido global (visible para todas las empresas)
+    // null = contenido global visible para todas las empresas
     @Column(name = "empresa_id")
     private UUID empresaId;
 
@@ -49,7 +49,7 @@ public class ContentItem {
     @Column(name = "tipo_contenido", nullable = false, length = 50)
     private ContentType tipoContenido;
 
-    // URL externa del recurso (vídeo, PDF, etc.) - null si es TEXTO
+    // URL externa del recurso (vídeo, PDF, etc.)
     @Column(name = "url_recurso", length = 500)
     private String urlRecurso;
 
@@ -62,40 +62,42 @@ public class ContentItem {
     @Builder.Default
     private int orden = 0;
 
-    // Control de versiones: se incrementa al actualizar contenido importante
+    // Control de versiones, se incrementa al actualizar contenido importante
+    // Se usa en trazabilidad_lectura para detectar si el empleado tiene la versión actual
     @Column(name = "version", nullable = false)
     @Builder.Default
     private int version = 1;
 
-    // Tiempo estimado de lectura/visualización en minutos
+    // Tiempo estimado de lectura o visualización en minutos
     @Column(name = "minutos_estimados")
     private Integer minutosEstimados;
 
-    // Indica si este contenido fue generado por IA
+    // Indica si este contenido fue generado o asistido por IA
     @Column(name = "es_ia_generado", nullable = false)
     @Builder.Default
     private boolean esIaGenerado = false;
 
-    // Soft delete: conserva trazabilidad histórica aunque no sea visible
+    // Soft delete, conserva trazabilidad histórica aunque no sea visible
     @Column(name = "activo", nullable = false)
     @Builder.Default
     private boolean activo = true;
 
+    // Gestionado automáticamente
     @Column(name = "fecha_creacion", updatable = false, nullable = false)
-    private LocalDateTime fechaCreacion;
+    private OffsetDateTime fechaCreacion;
 
+    // Gestionado automáticamente
     @Column(name = "actualizado_en", nullable = false)
-    private LocalDateTime actualizadoEn;
-
+    private OffsetDateTime actualizadoEn;
 
     @PrePersist
     protected void onCreate() {
-        fechaCreacion = LocalDateTime.now();
-        actualizadoEn = LocalDateTime.now();
+        fechaCreacion = OffsetDateTime.now();
+        actualizadoEn = OffsetDateTime.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        actualizadoEn = LocalDateTime.now();
+        actualizadoEn = OffsetDateTime.now();
     }
 }
