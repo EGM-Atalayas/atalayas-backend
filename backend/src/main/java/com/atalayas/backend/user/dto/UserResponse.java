@@ -5,11 +5,12 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
  * Respuesta completa de un usuario (tabla usuario).
+ * Usada en listados administrativos y consultas por ID.
  */
 @Data
 @Builder
@@ -37,7 +38,7 @@ public class UserResponse {
     private boolean terminosAceptados;
     private int intentosFallidos;
 
-    private LocalDateTime fechaRegistro;
-    private LocalDateTime ultimoLogin;
-    private LocalDateTime actualizadoEn;
+    private OffsetDateTime fechaRegistro;
+    private OffsetDateTime ultimoLogin;
+    private OffsetDateTime actualizadoEn;
 }

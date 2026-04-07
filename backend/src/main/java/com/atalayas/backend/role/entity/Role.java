@@ -4,13 +4,14 @@ import com.atalayas.backend.common.enums.RoleType;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
- * Entidad mapeada a la tabla rol de PostgreSQL.
- * codigoRol se almacena como String en BD y se puede resolver
- * al enum RoleType mediante RoleType.fromCodigo(codigoRol).
+ * Entidad mapeada a la tabla 'rol' de la BBDD
+ *
+ * Cada usuario tiene un rol que determina qué puede
+ * ver y hacer dentro de la plataforma
  */
 @Entity
 @Table(name = "rol")
@@ -19,19 +20,20 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Rol {
+public class Role {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "rol_id", updatable = false, nullable = false)
     private UUID rolId;
 
+    // Nombre legible del rol
     @Column(name = "nombre_rol", nullable = false, unique = true, length = 50)
     private String nombreRol;
 
     /**
-     * Código técnico del rol. Debe coincidir con uno de los valores de RoleType.
-     * Se usa con RoleType.fromCodigo(codigoRol) en la capa de servicio.
+     * Código técnico del rol
+     * ROLE_ADMIN, ROLE_ADMIN_EMPRESA, ROLE_EMPLEADO
      */
     @Column(name = "codigo_rol", nullable = false, unique = true, length = 50)
     private String codigoRol;
@@ -39,19 +41,21 @@ public class Rol {
     @Column(name = "descripcion", columnDefinition = "TEXT")
     private String descripcion;
 
+    // Gestionado automáticamente
     @Column(name = "actualizado_en", nullable = false)
     @Builder.Default
-    private LocalDateTime actualizadoEn = LocalDateTime.now();
+    private OffsetDateTime actualizadoEn = OffsetDateTime.now();
 
     @PrePersist
     @PreUpdate
     protected void onUpdate() {
-        actualizadoEn = LocalDateTime.now();
+        actualizadoEn = OffsetDateTime.now();
     }
 
-    /** Resuelve el código a su enum RoleType correspondiente. */
+    /**
+     * Resuelve el código de rol a su enum RoleType equivalente.
+     */
     public RoleType getRoleType() {
         return RoleType.fromCodigo(codigoRol);
     }
 }
-

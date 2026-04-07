@@ -6,13 +6,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * Respuesta completa de un contenido (tabla contenido).
- * Incluye las preguntas asociadas de la tabla contenido_pregunta.
+ * Respuesta completa de un contenido formativo (tabla contenido)
+ * Incluye las preguntas asociadas de la tabla contenido_pregunta
  */
 @Data
 @Builder
@@ -26,7 +26,7 @@ public class ContentResponse {
     private UUID moduloId;
     private String nombreModulo;
 
-    // FK empresa (opcional)
+    // FK empresa
     private UUID empresaId;
     private String nombreEmpresa;
 
@@ -42,10 +42,9 @@ public class ContentResponse {
     private boolean esIaGenerado;
     private boolean activo;
 
-    /** Preguntas asociadas (tabla contenido_pregunta). */
+    // Preguntas del quiz asociadas (tabla contenido_pregunta)
     private List<QuestionResponse> preguntas;
 
-    private LocalDateTime fechaCreacion;
-    private LocalDateTime actualizadoEn;
+    private OffsetDateTime fechaCreacion;
+    private OffsetDateTime actualizadoEn;
 }
-

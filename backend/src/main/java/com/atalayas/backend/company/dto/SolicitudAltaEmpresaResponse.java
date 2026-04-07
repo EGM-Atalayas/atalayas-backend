@@ -6,13 +6,15 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
- * Respuesta al POST /api/v1/empresas.
- * Incluye los datos de la empresa creada (PENDIENTE) y del usuario administrador
- * provisional (activo=false) que espera la aprobación del SUPER_ADMIN.
+ * Respuesta al POST /api/v1/empresas (solicitud pública de alta)
+ *
+ * Devuelve los datos de la empresa recién creada en estado PENDIENTE
+ * y del usuario administrador provisional con activo=false,
+ * que quedará inactivo hasta que EGM apruebe la solicitud
  */
 @Data
 @Builder
@@ -20,7 +22,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class SolicitudAltaEmpresaResponse {
 
-    // ── Empresa ──────────────────────────────────────────────────────────────
+    // ── EMPRESA ───────────────────────────────────────────────────────────
     private UUID empresaId;
     private String nombreEmpresa;
     private String cif;
@@ -29,15 +31,14 @@ public class SolicitudAltaEmpresaResponse {
     private String telefonoContacto;
     private String descripcion;
     private EstadoSolicitud estadoSolicitud;
-    private LocalDateTime fechaSolicitud;
+    private OffsetDateTime fechaSolicitud;
 
-    // ── Usuario admin provisional ────────────────────────────────────────────
+    // ── USUARIO ADMIN PROVISIONAL ─────────────────────────────────────────
     private UUID usuarioId;
     private String nombreAdmin;
     private String apellidosAdmin;
     private String emailAdmin;
 
-    /** false hasta que el SUPER_ADMIN apruebe la solicitud. */
+    // false hasta que EGM apruebe la solicitud
     private boolean activoAdmin;
 }
-

@@ -1,16 +1,23 @@
 package com.atalayas.backend.user.mapper;
 
-import com.atalayas.backend.role.entity.Rol;
+import com.atalayas.backend.role.entity.Role;
 import com.atalayas.backend.user.dto.UserProfileResponse;
 import com.atalayas.backend.user.dto.UserResponse;
 import com.atalayas.backend.user.entity.User;
 import org.springframework.stereotype.Component;
 
+/**
+ * Mapper para convertir entre la entidad User y sus DTOs.
+ *
+ * toUserResponse() — vista completa para uso administrativo.
+ * toUserProfileResponse() — vista de perfil para el usuario autenticado,
+ * incluye nombreCompleto calculado para mostrar en la UI.
+ */
 @Component
 public class UserMapper {
 
     public UserResponse toUserResponse(User user) {
-        Rol rol = user.getRol();
+        Role role = user.getRol();
         return UserResponse.builder()
                 .usuarioId(user.getUsuarioId())
                 .email(user.getEmail())
@@ -18,9 +25,9 @@ public class UserMapper {
                 .apellidos(user.getApellidos())
                 .avatarUrl(user.getAvatarUrl())
                 .empresaId(user.getEmpresaId())
-                .rolId(rol.getRolId())
-                .codigoRol(rol.getCodigoRol())
-                .nombreRol(rol.getNombreRol())
+                .rolId(role.getRolId())
+                .codigoRol(role.getCodigoRol())
+                .nombreRol(role.getNombreRol())
                 .puestoTrabajo(user.getPuestoTrabajo())
                 .activo(user.isActivo())
                 .terminosAceptados(user.isTerminosAceptados())
@@ -32,7 +39,7 @@ public class UserMapper {
     }
 
     public UserProfileResponse toUserProfileResponse(User user) {
-        Rol rol = user.getRol();
+        Role role = user.getRol();
         return UserProfileResponse.builder()
                 .usuarioId(user.getUsuarioId())
                 .email(user.getEmail())
@@ -42,9 +49,9 @@ public class UserMapper {
                 .avatarUrl(user.getAvatarUrl())
                 .puestoTrabajo(user.getPuestoTrabajo())
                 .empresaId(user.getEmpresaId())
-                .rolId(rol.getRolId())
-                .codigoRol(rol.getCodigoRol())
-                .nombreRol(rol.getNombreRol())
+                .rolId(role.getRolId())
+                .codigoRol(role.getCodigoRol())
+                .nombreRol(role.getNombreRol())
                 .activo(user.isActivo())
                 .terminosAceptados(user.isTerminosAceptados())
                 .fechaRegistro(user.getFechaRegistro())

@@ -6,11 +6,12 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
- * Respuesta con datos completos de una empresa (tabla empresa).
+ * Respuesta con los datos completos de una empresa (tabla empresa).
+ * Se devuelve en listados y en la resolución de solicitudes.
  */
 @Data
 @Builder
@@ -22,15 +23,13 @@ public class CompanyResponse {
     private String nombreEmpresa;
     private String cif;
     private String sector;
+    private String logoUrl;
     private String emailContacto;
     private String telefonoContacto;
     private String descripcion;
     private EstadoSolicitud estadoSolicitud;
     private boolean activo;
-    private LocalDateTime fechaSolicitud;
-    private LocalDateTime fechaResolucion;
-    private LocalDateTime actualizadoEn;
+    private OffsetDateTime fechaSolicitud;
+    private OffsetDateTime fechaResolucion;
+    private OffsetDateTime actualizadoEn;
 }
-
-
-
