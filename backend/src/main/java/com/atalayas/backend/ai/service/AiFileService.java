@@ -1,6 +1,7 @@
 package com.atalayas.backend.ai.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
@@ -60,7 +61,7 @@ public class AiFileService {
     // -----------------------------------------------------------------------
 
     private String extraerDesdePdf(InputStream is) throws IOException {
-        try (PDDocument doc = PDDocument.load(is)) {
+        try (PDDocument doc = Loader.loadPDF(is.readAllBytes())) {
             PDFTextStripper stripper = new PDFTextStripper();
             String texto = stripper.getText(doc);
             log.debug("PDF extraído: {} caracteres", texto.length());
