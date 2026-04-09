@@ -29,4 +29,7 @@ public interface ModuleRepository extends JpaRepository<TrainingModule, UUID> {
 
     // Todos los módulos activos de la plataforma (para superadmin)
     List<TrainingModule> findByActivoTrueOrderByOrdenAsc();
+
+    /** Conteo de módulos activos — usado en el dashboard del superadmin. */
+    long countByActivoTrue();
 }
