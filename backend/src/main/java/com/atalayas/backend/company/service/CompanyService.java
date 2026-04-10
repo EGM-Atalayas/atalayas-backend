@@ -1,13 +1,16 @@
 package com.atalayas.backend.company.service;
 
+import com.atalayas.backend.audit.service.AuditService;
 import com.atalayas.backend.common.enums.EstadoSolicitud;
 import com.atalayas.backend.common.enums.RoleType;
 import com.atalayas.backend.communication.service.EmailService;
-import com.atalayas.backend.communication.service.NotificationService;
+import com.atalayas.backend.communication.service.NotificacionService;
+import com.atalayas.backend.company.dto.AccionSolicitudRequest;
 import com.atalayas.backend.company.dto.CambioEstadoRequest;
 import com.atalayas.backend.company.dto.CompanyResponse;
 import com.atalayas.backend.company.dto.SolicitudAltaEmpresaRequest;
 import com.atalayas.backend.company.dto.SolicitudAltaEmpresaResponse;
+import com.atalayas.backend.company.dto.SolicitudPendienteResponse;
 import com.atalayas.backend.company.entity.Company;
 import com.atalayas.backend.company.mapper.CompanyMapper;
 import com.atalayas.backend.company.repository.CompanyRepository;
@@ -46,7 +49,8 @@ public class CompanyService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
-    private final NotificationService notificationService;
+    private final NotificacionService notificacionService;
+    private final AuditService auditService;
 
 
     // ── SOLICITUD DE ALTA ─────────────────────────────────────────────────
@@ -217,7 +221,52 @@ public class CompanyService {
     }
 
 
-    // ── HELPERS ───────────────────────────────────────────────────────────
+    // ── SOLICITUDES (nuevo frontend superadmin) ──────────────────────────────
+
+    /**
+     * GET /api/v1/empresas/solicitudes
+     * Lista todas las empresas en estado PENDIENTE con datos de su admin provisional.
+     */
+    @Transactional(readOnly = true)
+    public List<SolicitudPendienteResponse> getSolicitudesPendientes() {
+        return companyRepository.findAllByEstadoSolicitud(EstadoSolicitud.PENDIENTE).stream()
+                .map(empresa -> {
+                    User admin = userRepository
+                            .findAllByEmpresaId(empresa.getEmpresaId()).stream()
+                            .findFirst()
+                            .orElse(null);
+                    return companyMapper.toSolicitudPendienteResponse(empresa, admin);
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * PATCH /api/v1/empresas/{id}/solicitud
+     * Aprueba o rechaza una solicitud mediante el campo {@code accion}: "aprobar" | "rechazar".
+     * Delega en {@link #cambiarEstado} reutilizando toda la lógica existente
+     * (emails, notificaciones, auditoría).
+     */
+    @Transactional
+    public void resolverSolicitud(UUID id, AccionSolicitudRequest request) {
+        EstadoSolicitud destino = "aprobar".equalsIgnoreCase(request.getAccion())
+                ? EstadoSolicitud.APROBADA
+                : EstadoSolicitud.RECHAZADA;
+
+        CambioEstadoRequest cambio = new CambioEstadoRequest();
+        cambio.setNuevoEstado(destino);
+        cambiarEstado(id, cambio);
+
+        // Traza de auditoría
+        Company empresa = findOrThrow(id);
+        String texto = "aprobar".equalsIgnoreCase(request.getAccion())
+                ? "Empresa \"" + empresa.getNombreEmpresa() + "\" aprobada"
+                : "Solicitud de \"" + empresa.getNombreEmpresa() + "\" rechazada";
+        auditService.registrar(texto,
+                "aprobar".equalsIgnoreCase(request.getAccion()) ? "success" : "warning");
+    }
+
+
+    // ── HELPER ───────────────────────────────────────────────────────────────
 
     private Company findOrThrow(UUID id) {
         return companyRepository.findById(id)

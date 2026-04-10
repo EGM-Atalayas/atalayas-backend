@@ -4,6 +4,7 @@ import com.atalayas.backend.company.dto.CompanyRequest;
 import com.atalayas.backend.company.dto.CompanyResponse;
 import com.atalayas.backend.company.dto.SolicitudAltaEmpresaRequest;
 import com.atalayas.backend.company.dto.SolicitudAltaEmpresaResponse;
+import com.atalayas.backend.company.dto.SolicitudPendienteResponse;
 import com.atalayas.backend.company.entity.Company;
 import com.atalayas.backend.user.entity.User;
 import org.springframework.stereotype.Component;
@@ -92,4 +93,22 @@ public class CompanyMapper {
                 .activoAdmin(adminUser.isActivo())
                 .build();
     }
+
+    /**
+     * Respuesta enriquecida para el listado de solicitudes pendientes.
+     * Combina empresa + primer usuario admin asociado.
+     */
+    public SolicitudPendienteResponse toSolicitudPendienteResponse(Company company, User adminUser) {
+        return SolicitudPendienteResponse.builder()
+                .empresaId(company.getEmpresaId())
+                .nombreEmpresa(company.getNombreEmpresa())
+                .cif(company.getCif())
+                .emailContacto(company.getEmailContacto())
+                .estadoSolicitud(company.getEstadoSolicitud())
+                .fechaSolicitud(company.getFechaSolicitud())
+                .nombreAdmin(adminUser != null ? adminUser.getNombre() + " " + adminUser.getApellidos() : null)
+                .emailAdmin(adminUser != null ? adminUser.getEmail() : null)
+                .build();
+    }
 }
+
