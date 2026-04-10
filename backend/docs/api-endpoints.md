@@ -58,10 +58,19 @@
 ## 2. Usuarios · `/api/v1/users`
 | Método | Ruta | Rol mínimo | Descripción |
 |--------|------|-----------|-------------|
+| `POST` | `/users` | `ADMIN_EMPRESA` | Crear usuario. ADMIN_EMPRESA crea en su propia empresa (no puede asignar `ROLE_ADMIN`). ADMIN puede crear en cualquier empresa (`empresaId` obligatorio). |
 | `GET` | `/users/me` | Cualquiera | Perfil completo del usuario autenticado. |
 | `GET` | `/users/{id}` | `ADMIN_EMPRESA` | Obtener usuario por ID. ADMIN_EMPRESA solo ve su empresa. |
 | `GET` | `/users` | `ADMIN_EMPRESA` | Listar usuarios. ADMIN_EMPRESA ve su empresa; ADMIN ve todos. |
 | `DELETE` | `/users/{id}/desactivar` | `ADMIN_EMPRESA` | Soft-delete de usuario (activo = false). |
+
+**`POST /users` — reglas de seguridad por rol:**
+| Quién llama | `empresaId` en body | Roles asignables | Resultado |
+|---|---|---|---|
+| `ROLE_ADMIN_EMPRESA` | Ignorado (usa el suyo) | `ROLE_EMPLEADO`, `ROLE_ADMIN_EMPRESA` | `201` |
+| `ROLE_ADMIN_EMPRESA` | — | `ROLE_ADMIN` | `403` |
+| `ROLE_ADMIN` | Obligatorio | Cualquiera | `201` |
+| `ROLE_ADMIN` | Ausente | — | `400` |
 ---
 ## 3. Empresas · `/api/v1/empresas`
 | Método | Ruta | Rol / Auth | Descripción |
