@@ -141,14 +141,36 @@ public class AuthController {
 
     @GetMapping("/me")
     @Operation(summary = "Datos del usuario autenticado",
-               description = "Devuelve el perfil del usuario actualmente autenticado. Requiere `accessToken` válido (cookie o Bearer).")
+               description = "Devuelve el perfil del usuario actualmente autenticado junto con el `accessToken` activo. "
+                           + "Útil para restaurar la sesión tras una recarga de página. "
+                           + "Requiere `accessToken` válido (cookie o Bearer).")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Datos del usuario",
+        @ApiResponse(responseCode = "200", description = "Datos del usuario + accessToken activo",
                      content = @Content(schema = @Schema(implementation = AuthResponse.class))),
         @ApiResponse(responseCode = "401", description = "Sin sesión activa o token expirado",
                      content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     })
-    public ResponseEntity<AuthResponse> me() {
-        return ResponseEntity.ok(authService.getCurrentUserInfo());
+    public ResponseEntity<AuthResponse> me(HttpServletRequest request) {
+        AuthResponse body = authService.getCurrentUserInfo();
+
+        // Devolver el token activo que llegó en la request (cookie o Bearer)
+        // para que el frontend pueda restaurar la sesión completa tras una recarga.
+        String token = resolveToken(request);
+        body.setAccessToken(token);
+
+        return ResponseEntity.ok(body);
+    }
+
+    /**
+     * Extrae el JWT de la request en el mismo orden que JwtAuthenticationFilter:
+     * 1. Header Authorization: Bearer <token>
+     * 2. Cookie HttpOnly "accessToken"
+     */
+    private String resolveToken(HttpServletRequest request) {
+        final String authHeader = request.getHeader(SecurityConstants.HEADER_STRING);
+        if (authHeader != null && authHeader.startsWith(SecurityConstants.TOKEN_PREFIX)) {
+            return authHeader.substring(SecurityConstants.TOKEN_PREFIX.length());
+        }
+        return extractCookie(request, SecurityConstants.ACCESS_TOKEN_COOKIE).orElse(null);
     }
 }

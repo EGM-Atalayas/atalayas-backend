@@ -40,11 +40,20 @@
 | `POST` | `/auth/login` | ❌ | Iniciar sesión. Devuelve tokens en cookies + body. |
 | `POST` | `/auth/refresh-token` | ❌ ¹ | Renueva el access token usando la cookie `refreshToken`. |
 | `POST` | `/auth/logout` | ❌ | Invalida (limpia) las cookies de tokens. |
-| `GET`  | `/auth/me` | ✅ | Datos del usuario autenticado actualmente. |
+| `GET`  | `/auth/me` | ✅ | Datos del usuario autenticado actualmente + `accessToken` activo en el body. Usar al iniciar la app para restaurar la sesión tras una recarga. |
 ¹ Requiere la cookie `refreshToken` válida.
 **Expiración de tokens:**
 - `accessToken`: **1 hora**
 - `refreshToken`: **7 días**
+
+**Flujo de restauración de sesión en el frontend (recarga de página):**
+```
+1. Al iniciar la app, llamar a GET /auth/me con credentials: 'include'
+   → 200: restaurar estado con los datos recibidos (incluyendo accessToken)
+   → 401: el accessToken expiró → llamar a POST /auth/refresh-token (con credentials: 'include')
+          → 200: sesión restaurada con nuevos tokens
+          → 400/401: sesión expirada → redirigir al login
+```
 ---
 ## 2. Usuarios · `/api/v1/users`
 | Método | Ruta | Rol mínimo | Descripción |
