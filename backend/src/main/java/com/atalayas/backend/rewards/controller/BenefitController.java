@@ -7,6 +7,10 @@ import com.atalayas.backend.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -45,6 +49,11 @@ public class BenefitController {
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
     @Operation(summary = "Crear beneficio - superadmin puede crear globales, admin empresa solo los suyos")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Beneficio creado"),
+        @ApiResponse(responseCode = "403", description = "Rol insuficiente",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<BenefitResponse> crear(
             @Valid @RequestBody BenefitRequest request,
             @AuthenticationPrincipal User user) {
@@ -61,7 +70,9 @@ public class BenefitController {
      * Superadmin: todos los activos de la plataforma
      */
     @GetMapping
-    @Operation(summary = "Listar beneficios visibles para el usuario autenticado")
+    @Operation(summary = "Listar beneficios visibles para el usuario autenticado",
+               description = "Empleado: activos de su empresa + globales. Superadmin: todos los activos.")
+    @ApiResponse(responseCode = "200", description = "Lista de beneficios")
     public ResponseEntity<List<BenefitResponse>> listar(
             @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(benefitService.listar(user));
@@ -76,6 +87,13 @@ public class BenefitController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
     @Operation(summary = "Actualizar beneficio - admin empresa solo puede editar los propios")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Beneficio actualizado"),
+        @ApiResponse(responseCode = "403", description = "Beneficio de otra empresa o global",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Beneficio no encontrado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<BenefitResponse> actualizar(
             @PathVariable UUID id,
             @Valid @RequestBody BenefitRequest request,
@@ -92,6 +110,15 @@ public class BenefitController {
     @PatchMapping("/{id}/desactivar")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
     @Operation(summary = "Desactivar beneficio (soft delete) - admin empresa solo puede desactivar los propios")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Beneficio desactivado"),
+        @ApiResponse(responseCode = "400", description = "El beneficio ya estaba desactivado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "403", description = "Beneficio de otra empresa o global",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Beneficio no encontrado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<BenefitResponse> desactivar(
             @PathVariable UUID id,
             @AuthenticationPrincipal User user) {

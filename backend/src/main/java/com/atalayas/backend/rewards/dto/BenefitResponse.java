@@ -5,11 +5,11 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
- * Respuesta de un beneficio del área empresarial
+ * Respuesta de un beneficio del área empresarial (tabla beneficio)
  */
 @Data
 @Builder
@@ -24,6 +24,6 @@ public class BenefitResponse {
     private String descripcion;
     private String urlInfo;
     private boolean activo;
-    private LocalDateTime creadoEn;
-    private LocalDateTime actualizadoEn;
+    private OffsetDateTime creadoEn;
+    private OffsetDateTime actualizadoEn;
 }

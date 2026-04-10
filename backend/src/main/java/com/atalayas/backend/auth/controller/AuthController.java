@@ -7,6 +7,10 @@ import com.atalayas.backend.auth.service.AuthService;
 import com.atalayas.backend.common.util.CookieUtil;
 import com.atalayas.backend.security.SecurityConstants;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -69,7 +73,16 @@ public class AuthController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Registrar nuevo usuario")
+    @Operation(summary = "Registrar nuevo usuario",
+               description = "Crea un nuevo usuario empleado en la empresa indicada. Devuelve los tokens en cookies HttpOnly y en el body.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Usuario registrado correctamente",
+                     content = @Content(schema = @Schema(implementation = AuthResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Email ya registrado o datos inválidos",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Empresa no encontrada",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request,
                                                  HttpServletResponse response) {
         AuthResponse body = authService.register(request);
@@ -79,7 +92,16 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Iniciar sesión — tokens enviados en cookies HttpOnly y en el body")
+    @Operation(summary = "Iniciar sesión",
+               description = "Autentica al usuario y devuelve los tokens en cookies HttpOnly (`accessToken`, `refreshToken`) y también en el body. El campo `accessToken` del body puede usarse como Bearer token.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Login correcto — cookies y token en el body",
+                     content = @Content(schema = @Schema(implementation = AuthResponse.class))),
+        @ApiResponse(responseCode = "401", description = "Credenciales incorrectas",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "400", description = "Usuario inactivo / empresa no aprobada",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request,
                                               HttpServletResponse response) {
         AuthResponse body = authService.login(request);
@@ -89,7 +111,13 @@ public class AuthController {
     }
 
     @PostMapping("/refresh-token")
-    @Operation(summary = "Refrescar el access token usando la cookie refreshToken")
+    @Operation(summary = "Refrescar el access token",
+               description = "Usa la cookie `refreshToken` (HttpOnly) para emitir un nuevo par de tokens. El refresh token expira a los **7 días**.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Tokens renovados correctamente"),
+        @ApiResponse(responseCode = "400", description = "Cookie refreshToken no encontrada o inválida",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<AuthResponse> refreshToken(HttpServletRequest request,
                                                      HttpServletResponse response) {
         String rawRefreshToken = extractCookie(request, SecurityConstants.REFRESH_TOKEN_COOKIE)
@@ -102,7 +130,9 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "Cerrar sesión — invalida las cookies de tokens")
+    @Operation(summary = "Cerrar sesión",
+               description = "Limpia las cookies `accessToken` y `refreshToken`. No requiere token en el body.")
+    @ApiResponse(responseCode = "200", description = "Sesión cerrada. Respuesta: `{ \"message\": \"Sesión cerrada correctamente\" }`")
     public ResponseEntity<Map<String, String>> logout(HttpServletResponse response) {
         CookieUtil.clearCookie(response, SecurityConstants.ACCESS_TOKEN_COOKIE, cookieSecure);
         CookieUtil.clearCookie(response, SecurityConstants.REFRESH_TOKEN_COOKIE, cookieSecure);
@@ -110,8 +140,37 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    @Operation(summary = "Obtener datos del usuario autenticado (requiere accessToken)")
-    public ResponseEntity<AuthResponse> me() {
-        return ResponseEntity.ok(authService.getCurrentUserInfo());
+    @Operation(summary = "Datos del usuario autenticado",
+               description = "Devuelve el perfil del usuario actualmente autenticado junto con el `accessToken` activo. "
+                           + "Útil para restaurar la sesión tras una recarga de página. "
+                           + "Requiere `accessToken` válido (cookie o Bearer).")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Datos del usuario + accessToken activo",
+                     content = @Content(schema = @Schema(implementation = AuthResponse.class))),
+        @ApiResponse(responseCode = "401", description = "Sin sesión activa o token expirado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
+    public ResponseEntity<AuthResponse> me(HttpServletRequest request) {
+        AuthResponse body = authService.getCurrentUserInfo();
+
+        // Devolver el token activo que llegó en la request (cookie o Bearer)
+        // para que el frontend pueda restaurar la sesión completa tras una recarga.
+        String token = resolveToken(request);
+        body.setAccessToken(token);
+
+        return ResponseEntity.ok(body);
+    }
+
+    /**
+     * Extrae el JWT de la request en el mismo orden que JwtAuthenticationFilter:
+     * 1. Header Authorization: Bearer <token>
+     * 2. Cookie HttpOnly "accessToken"
+     */
+    private String resolveToken(HttpServletRequest request) {
+        final String authHeader = request.getHeader(SecurityConstants.HEADER_STRING);
+        if (authHeader != null && authHeader.startsWith(SecurityConstants.TOKEN_PREFIX)) {
+            return authHeader.substring(SecurityConstants.TOKEN_PREFIX.length());
+        }
+        return extractCookie(request, SecurityConstants.ACCESS_TOKEN_COOKIE).orElse(null);
     }
 }

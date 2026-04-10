@@ -1,11 +1,17 @@
 package com.atalayas.backend.company.controller;
 
+import com.atalayas.backend.company.dto.AccionSolicitudRequest;
 import com.atalayas.backend.company.dto.CambioEstadoRequest;
 import com.atalayas.backend.company.dto.CompanyResponse;
 import com.atalayas.backend.company.dto.SolicitudAltaEmpresaRequest;
 import com.atalayas.backend.company.dto.SolicitudAltaEmpresaResponse;
+import com.atalayas.backend.company.dto.SolicitudPendienteResponse;
 import com.atalayas.backend.company.service.CompanyService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -28,7 +34,14 @@ public class CompanyController {
 
     @PostMapping("/solicitud")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Solicitar alta de empresa — público, sin autenticación previa. Crea la empresa (PENDIENTE) y su usuario admin (inactivo)")
+    @Operation(summary = "Solicitar alta de empresa",
+               description = "Endpoint **público** — no requiere autenticación. Crea la empresa en estado `PENDIENTE` y su usuario administrador con `activo = false`. La cuenta se activa cuando el SUPER_ADMIN apruebe la solicitud.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Solicitud creada correctamente",
+                     content = @Content(schema = @Schema(implementation = SolicitudAltaEmpresaResponse.class))),
+        @ApiResponse(responseCode = "400", description = "CIF o email ya registrado / datos inválidos",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<SolicitudAltaEmpresaResponse> crear(@Valid @RequestBody SolicitudAltaEmpresaRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(companyService.crearEmpresa(request));
     }
@@ -60,17 +73,78 @@ public class CompanyController {
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Cambiar estado de empresa (SUPER_ADMIN)",
                description = """
-                   Transiciones válidas:
-                   - PENDIENTE → APROBADA: activa usuarios, envía email de bienvenida y notificación interna
-                   - PENDIENTE → RECHAZADA: envía email de rechazo, desactiva empresa
-                   - RECHAZADA → PENDIENTE: reset sin efectos secundarios
-                   - APROBADA → cualquier estado: PROHIBIDO
-                   - RECHAZADA → APROBADA: PROHIBIDO (debe pasar antes por PENDIENTE)
+                   Gestiona el ciclo de vida de una empresa. Transiciones válidas:
+
+                   | Desde | Hacia | Efecto |
+                   |---|---|---|
+                   | `PENDIENTE` | `APROBADA` | Activa usuarios, email bienvenida, notificación interna |
+                   | `PENDIENTE` | `RECHAZADA` | Desactiva empresa, email de rechazo |
+                   | `RECHAZADA` | `PENDIENTE` | Reset sin efectos secundarios |
+                   | `APROBADA` | cualquiera | **PROHIBIDO** — empresa ya operativa |
+                   | `RECHAZADA` | `APROBADA` | **PROHIBIDO** — debe pasar antes por `PENDIENTE` |
                    """)
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Estado actualizado correctamente",
+                     content = @Content(schema = @Schema(implementation = CompanyResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Transición no permitida o empresa en mismo estado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "401", description = "Sin autenticación",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "403", description = "Rol insuficiente — requiere ROLE_ADMIN",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Empresa no encontrada",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<CompanyResponse> cambiarEstado(
             @PathVariable UUID id,
             @Valid @RequestBody CambioEstadoRequest request) {
         return ResponseEntity.ok(companyService.cambiarEstado(id, request));
+    }
+
+    /**
+     * GET /api/v1/empresas/solicitudes
+     * Lista empresas en estado PENDIENTE con datos del admin provisional.
+     * Usada en la pantalla de solicitudes del superadmin.
+     */
+    @GetMapping("/solicitudes")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Listar solicitudes pendientes de aprobación (SUPER_ADMIN)",
+               description = "Devuelve las empresas en estado `PENDIENTE` con el nombre y email del admin provisional.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Lista de solicitudes pendientes"),
+        @ApiResponse(responseCode = "401", description = "Sin autenticación",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "403", description = "Rol insuficiente",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
+    public ResponseEntity<List<SolicitudPendienteResponse>> getSolicitudesPendientes() {
+        return ResponseEntity.ok(companyService.getSolicitudesPendientes());
+    }
+
+    /**
+     * PATCH /api/v1/empresas/{id}/solicitud
+     * Aprueba o rechaza una solicitud de alta.
+     * Body: { "accion": "aprobar" } o { "accion": "rechazar" }
+     * Respuesta: 200 OK sin cuerpo.
+     */
+    @PatchMapping("/{id}/solicitud")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Aprobar o rechazar una solicitud de empresa (SUPER_ADMIN)",
+               description = "Envía `accion: \"aprobar\"` o `accion: \"rechazar\"`. Devuelve 200 sin cuerpo.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Acción aplicada correctamente"),
+        @ApiResponse(responseCode = "400", description = "Acción inválida o transición no permitida",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Empresa no encontrada",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
+    public ResponseEntity<Void> resolverSolicitud(
+            @PathVariable UUID id,
+            @Valid @RequestBody AccionSolicitudRequest request) {
+        companyService.resolverSolicitud(id, request);
+        return ResponseEntity.ok().build();
     }
 }
 

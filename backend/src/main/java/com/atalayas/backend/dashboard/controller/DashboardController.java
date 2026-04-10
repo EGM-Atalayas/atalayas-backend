@@ -1,9 +1,14 @@
 package com.atalayas.backend.dashboard.controller;
 
 import com.atalayas.backend.dashboard.dto.AdminEmpresaResumenResponse;
+import com.atalayas.backend.dashboard.dto.SuperAdminDashboardResponse;
 import com.atalayas.backend.dashboard.dto.SuperAdminResumenResponse;
 import com.atalayas.backend.dashboard.service.DashboardService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -25,9 +30,6 @@ public class DashboardController {
     /**
      * GET /api/v1/dashboard/admin/resumen
      * Solo accesible para ROLE_ADMIN_EMPRESA.
-     * - Sin sesión        → 401 (AuthEntryPointJwt)
-     * - Rol incorrecto    → 403 (GlobalExceptionHandler)
-     * - Empresa no existe → 404 (ResourceNotFoundException)
      */
     @GetMapping("/admin/resumen")
     @PreAuthorize("hasAuthority('ROLE_ADMIN_EMPRESA')")
@@ -38,15 +40,39 @@ public class DashboardController {
 
     /**
      * GET /api/v1/dashboard/superadmin/resumen
-     * Solo accesible para ROLE_ADMIN (superadmin EGM).
-     * - Sin sesión        → 401 (AuthEntryPointJwt)
-     * - Rol incorrecto    → 403 (GlobalExceptionHandler)
+     * Solo accesible para ROLE_ADMIN (superadmin EGM). Endpoint legado.
      */
     @GetMapping("/superadmin/resumen")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    @Operation(summary = "Resumen del dashboard para el superadmin EGM — datos agregados de toda la plataforma")
+    @Operation(summary = "Resumen legado del dashboard para el superadmin EGM")
     public ResponseEntity<SuperAdminResumenResponse> getSuperAdminResumen() {
         return ResponseEntity.ok(dashboardService.getSuperAdminResumen());
+    }
+
+    /**
+     * GET /api/v1/dashboard/superadmin
+     * Dashboard completo del superadmin EGM con todas las métricas y actividad reciente.
+     * - Sin sesión     → 401
+     * - Rol incorrecto → 403
+     */
+    @GetMapping("/superadmin")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @Operation(
+        summary = "Dashboard principal del superadmin EGM",
+        description = """
+            Devuelve métricas globales de la plataforma:
+            empresas, empleados, módulos publicados, incidencias abiertas y actividad reciente.
+            El campo `tipo` de cada actividad es uno de: `info`, `success`, `warning`, `error`.
+            """)
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Métricas devueltas correctamente"),
+        @ApiResponse(responseCode = "401", description = "Sin sesión activa",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "403", description = "Rol insuficiente — requiere ROLE_ADMIN",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
+    public ResponseEntity<SuperAdminDashboardResponse> getSuperAdminDashboard() {
+        return ResponseEntity.ok(dashboardService.getSuperAdminDashboard());
     }
 }
 

@@ -5,12 +5,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
  * Vista de perfil del usuario autenticado (tabla usuario).
- * Incluye nombre completo calculado para uso en UI.
+ *
+ * Incluye nombreCompleto calculado para mostrar en la cabecera
+ * y en la página de perfil sin necesitar concatenarlo en el frontend.
  */
 @Data
 @Builder
@@ -22,7 +24,7 @@ public class UserProfileResponse {
     private String email;
     private String nombre;
     private String apellidos;
-    private String nombreCompleto;   // nombre + " " + apellidos
+    private String nombreCompleto;
     private String avatarUrl;
     private String puestoTrabajo;
 
@@ -38,7 +40,7 @@ public class UserProfileResponse {
     private boolean activo;
     private boolean terminosAceptados;
 
-    private LocalDateTime fechaRegistro;
-    private LocalDateTime ultimoLogin;
-    private LocalDateTime actualizadoEn;
+    private OffsetDateTime fechaRegistro;
+    private OffsetDateTime ultimoLogin;
+    private OffsetDateTime actualizadoEn;
 }

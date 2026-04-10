@@ -5,17 +5,16 @@ import lombok.*;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-
 /**
- * Respuesta pública de una notificación
- * Se devuelve tanto en creación como en listado y marcado de lectura
+ * Respuesta con los datos de una notificación
+ * Se devuelve en creación, listado y marcado de lectura
  */
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class NotificacionResponse {
+public class NotificationResponse {
 
     private UUID notificacionId;
     private UUID destinatarioId;

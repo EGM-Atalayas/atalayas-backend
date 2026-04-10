@@ -22,5 +22,7 @@ public interface CompanyRepository extends JpaRepository<Company, UUID> {
 
     /** Conteo de empresas por estado — usado en el resumen del superadmin. */
     long countByEstadoSolicitud(EstadoSolicitud estadoSolicitud);
-}
 
+    /** Empresas cuya fecha de solicitud es posterior a la fecha dada — "nuevas este mes". */
+    long countByFechaSolicitudAfter(java.time.OffsetDateTime fecha);
+}

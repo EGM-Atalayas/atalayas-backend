@@ -4,6 +4,10 @@ import com.atalayas.backend.content.dto.*;
 import com.atalayas.backend.content.service.ContentService;
 import com.atalayas.backend.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -44,6 +48,15 @@ public class ContentController {
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
     @Operation(summary = "Crear contenido - admin empresa crea en su empresa, superadmin puede crear globales")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Contenido creado"),
+        @ApiResponse(responseCode = "400", description = "Datos inválidos o módulo de empresa ajena",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "403", description = "Rol insuficiente",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Módulo no encontrado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<ContentResponse> crear(
             @Valid @RequestBody ContentRequest request,
             @AuthenticationPrincipal User user) {
@@ -59,7 +72,15 @@ public class ContentController {
      * Empleado: solo activos. Admin y admin empresa: todos para gestionar
      */
     @GetMapping("/modulo/{moduloId}")
-    @Operation(summary = "Listar contenidos de un módulo")
+    @Operation(summary = "Listar contenidos de un módulo",
+               description = "Empleado solo ve contenidos activos. Admin y admin empresa ven todos para gestionar.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Lista de contenidos"),
+        @ApiResponse(responseCode = "403", description = "Módulo de otra empresa",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Módulo no encontrado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<List<ContentResponse>> listarPorModulo(
             @PathVariable UUID moduloId,
             @AuthenticationPrincipal User user) {
@@ -74,6 +95,13 @@ public class ContentController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "Obtener contenido por ID - incluye preguntas si es EVALUACION")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Contenido encontrado"),
+        @ApiResponse(responseCode = "403", description = "Contenido de otra empresa",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Contenido no encontrado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<ContentResponse> obtenerPorId(
             @PathVariable UUID id,
             @AuthenticationPrincipal User user) {
@@ -89,6 +117,13 @@ public class ContentController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
     @Operation(summary = "Actualizar contenido - versión se incrementa si cambia el cuerpo")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Contenido actualizado"),
+        @ApiResponse(responseCode = "403", description = "Contenido de otra empresa",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Contenido no encontrado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<ContentResponse> actualizar(
             @PathVariable UUID id,
             @Valid @RequestBody ContentRequest request,
@@ -105,6 +140,15 @@ public class ContentController {
     @PatchMapping("/{id}/desactivar")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
     @Operation(summary = "Desactivar contenido (soft delete) - trazabilidad histórica se conserva")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Contenido desactivado"),
+        @ApiResponse(responseCode = "400", description = "El contenido ya estaba desactivado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "403", description = "Contenido de otra empresa",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Contenido no encontrado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<ContentResponse> desactivar(
             @PathVariable UUID id,
             @AuthenticationPrincipal User user) {
@@ -120,6 +164,13 @@ public class ContentController {
     @PostMapping("/preguntas")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
     @Operation(summary = "Añadir pregunta a un contenido de evaluación")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Pregunta añadida"),
+        @ApiResponse(responseCode = "400", description = "El contenido no es de tipo EVALUACION",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Contenido no encontrado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<QuestionResponse> crearPregunta(
             @Valid @RequestBody QuestionRequest request,
             @AuthenticationPrincipal User user) {
@@ -137,6 +188,13 @@ public class ContentController {
     @DeleteMapping("/preguntas/{preguntaId}")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
     @Operation(summary = "Eliminar pregunta de evaluación")
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Pregunta eliminada"),
+        @ApiResponse(responseCode = "403", description = "Pregunta de otra empresa",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Pregunta no encontrada",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     public ResponseEntity<Void> eliminarPregunta(
             @PathVariable UUID preguntaId,
             @AuthenticationPrincipal User user) {

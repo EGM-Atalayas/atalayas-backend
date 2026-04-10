@@ -4,14 +4,17 @@ import com.atalayas.backend.common.enums.ModuleType;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
-
 /**
- * Entidad que representa un módulo formativo en la tabla 'modulo'
- * Un módulo puede ser global (empresaId = null) o pertenecer a una empresa concreta
- * Agrupa contenidos formativos por tipo y orden de visualización
+ * Entidad mapeada a la tabla 'modulo'
+ *
+ * Un módulo agrupa contenidos formativos por tipo y orden de visualización
+ * Puede ser global (empresaId = null) y visible para todas las empresas,
+ * o específico de una empresa concreta
+ *
+ * Los módulos globales los gestiona EGM, los de empresa, el admin empresa
  */
 @Entity
 @Table(name = "modulo")
@@ -22,7 +25,6 @@ import java.util.UUID;
 @Builder
 public class TrainingModule {
 
-
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "modulo_id", updatable = false, nullable = false)
@@ -32,20 +34,20 @@ public class TrainingModule {
     @Column(name = "nombre", nullable = false, length = 200)
     private String nombre;
 
-    // Descripción opcional para dar contexto al empleado
+    // Descripción opcional para dar contexto al empleado antes de entrar
     @Column(name = "descripcion", columnDefinition = "TEXT")
     private String descripcion;
 
-    // null = módulo global disponible para todas las empresas
+    // null = módulo global disponible para todas las empresas del parque
     @Column(name = "empresa_id")
     private UUID empresaId;
 
-    // Tipo que determina la categoría y visibilidad del módulo
+    // Tipo que determina la categoría del módulo — INCORPORACION, FORMACION, etc.
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_modulo", nullable = false, length = 50)
     private ModuleType tipoModulo;
 
-    // Posición del módulo en el listado de la empresa
+    // Posición del módulo en el listado — ordena la visualización en Mi formación
     @Column(name = "orden")
     private Integer orden;
 
@@ -54,26 +56,27 @@ public class TrainingModule {
     @Builder.Default
     private boolean esEspecializadoIa = false;
 
-    // Soft delete: false = oculto para empleados pero conserva datos históricos
+    // Soft delete — false oculta el módulo para empleados pero conserva datos históricos
     @Column(name = "activo", nullable = false)
     @Builder.Default
     private boolean activo = true;
 
+    // Gestionado automáticamente
     @Column(name = "fecha_creacion", updatable = false, nullable = false)
-    private LocalDateTime fechaCreacion;
+    private OffsetDateTime fechaCreacion;
 
+    // Gestionado automáticamente
     @Column(name = "actualizado_en", nullable = false)
-    private LocalDateTime actualizadoEn;
+    private OffsetDateTime actualizadoEn;
 
     @PrePersist
     protected void onCreate() {
-        fechaCreacion = LocalDateTime.now();
-        actualizadoEn = LocalDateTime.now();
+        fechaCreacion = OffsetDateTime.now();
+        actualizadoEn = OffsetDateTime.now();
     }
-
 
     @PreUpdate
     protected void onUpdate() {
-        actualizadoEn = LocalDateTime.now();
+        actualizadoEn = OffsetDateTime.now();
     }
 }
