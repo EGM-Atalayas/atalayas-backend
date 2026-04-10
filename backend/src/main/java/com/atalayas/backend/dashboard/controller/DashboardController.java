@@ -1,6 +1,7 @@
 package com.atalayas.backend.dashboard.controller;
 
 import com.atalayas.backend.dashboard.dto.AdminEmpresaResumenResponse;
+import com.atalayas.backend.dashboard.dto.DashboardChartsResponse;
 import com.atalayas.backend.dashboard.dto.SuperAdminDashboardResponse;
 import com.atalayas.backend.dashboard.dto.SuperAdminResumenResponse;
 import com.atalayas.backend.dashboard.service.DashboardService;
@@ -74,5 +75,34 @@ public class DashboardController {
     public ResponseEntity<SuperAdminDashboardResponse> getSuperAdminDashboard() {
         return ResponseEntity.ok(dashboardService.getSuperAdminDashboard());
     }
-}
 
+    /**
+     * GET /api/v1/dashboard/superadmin/graficas
+     * Datos para los tres gráficos del dashboard del superadmin.
+     */
+    @GetMapping("/superadmin/graficas")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @Operation(
+        summary = "Datos de gráficos para el dashboard del superadmin",
+        description = """
+            Devuelve tres conjuntos de datos listos para renderizar directamente en el frontend:
+
+            - **evolucion**: totales acumulados de empresas y empleados al final de cada uno \
+            de los últimos 6 meses. Ideal para un gráfico de líneas.
+            - **sectores**: distribución de empresas agrupadas por sector. \
+            Ideal para un gráfico de tarta.
+            - **modulos**: top 10 módulos activos con sus conteos de contenidos \
+            completados y pendientes. Ideal para un gráfico de barras.
+            """)
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Datos de gráficos devueltos correctamente",
+                     content = @Content(schema = @Schema(implementation = DashboardChartsResponse.class))),
+        @ApiResponse(responseCode = "401", description = "Sin sesión activa",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "403", description = "Rol insuficiente — requiere ROLE_ADMIN",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
+    public ResponseEntity<DashboardChartsResponse> getDashboardCharts() {
+        return ResponseEntity.ok(dashboardService.getDashboardCharts());
+    }
+}

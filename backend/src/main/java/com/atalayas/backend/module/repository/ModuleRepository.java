@@ -1,7 +1,9 @@
 package com.atalayas.backend.module.repository;
 
+import com.atalayas.backend.dashboard.dto.ModuloEstadisticaProjection;
 import com.atalayas.backend.module.entity.TrainingModule;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -32,4 +34,22 @@ public interface ModuleRepository extends JpaRepository<TrainingModule, UUID> {
 
     /** Conteo de módulos activos — usado en el dashboard del superadmin. */
     long countByActivoTrue();
+
+    /**
+     * Estadísticas de completado por módulo activo para el gráfico de barras.
+     * Incluye módulos sin ningún progreso registrado (LEFT JOIN).
+     * Limita a los 10 módulos con más actividad (completados DESC).
+     */
+    @Query(value = """
+            SELECT m.nombre AS nombre,
+                   COUNT(CASE WHEN p.completado = true THEN 1 END)  AS completados,
+                   COUNT(CASE WHEN p.completado = false THEN 1 END) AS pendientes
+            FROM modulo m
+            LEFT JOIN trazabilidad_lectura p ON p.modulo_id = m.modulo_id
+            WHERE m.activo = true
+            GROUP BY m.modulo_id, m.nombre
+            ORDER BY completados DESC
+            LIMIT 10
+            """, nativeQuery = true)
+    List<ModuloEstadisticaProjection> findModuloEstadisticas();
 }

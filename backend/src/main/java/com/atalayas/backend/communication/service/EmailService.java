@@ -69,5 +69,28 @@ public class EmailService {
         );
         mailSender.send(mensaje);
     }
-}
 
+    /**
+     * Notifica al usuario recién creado por un admin que su cuenta ya está lista.
+     *
+     * @param emailDestino  email del nuevo usuario
+     * @param nombre        nombre del nuevo usuario
+     * @param nombreEmpresa nombre de la empresa a la que pertenece
+     */
+    public void enviarBienvenidaUsuarioCreado(String emailDestino, String nombre, String nombreEmpresa) {
+        SimpleMailMessage mensaje = new SimpleMailMessage();
+        mensaje.setFrom(remitente);
+        mensaje.setTo(emailDestino);
+        mensaje.setSubject("Tu cuenta en Atalayas está lista");
+        mensaje.setText(
+                "Hola " + nombre + ",\n\n" +
+                "Un administrador de \"" + nombreEmpresa + "\" ha creado tu cuenta en la plataforma Atalayas.\n\n" +
+                "Puedes iniciar sesión con este email (" + emailDestino + ") y la contraseña " +
+                "que el administrador te ha comunicado.\n\n" +
+                "Te recomendamos cambiar tu contraseña tras el primer inicio de sesión.\n\n" +
+                "Un saludo,\n" +
+                "El equipo de Atalayas"
+        );
+        mailSender.send(mensaje);
+    }
+}

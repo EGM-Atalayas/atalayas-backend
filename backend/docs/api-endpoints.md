@@ -58,10 +58,19 @@
 ## 2. Usuarios · `/api/v1/users`
 | Método | Ruta | Rol mínimo | Descripción |
 |--------|------|-----------|-------------|
+| `POST` | `/users` | `ADMIN_EMPRESA` | Crear usuario. ADMIN_EMPRESA crea en su propia empresa (no puede asignar `ROLE_ADMIN`). ADMIN puede crear en cualquier empresa (`empresaId` obligatorio). |
 | `GET` | `/users/me` | Cualquiera | Perfil completo del usuario autenticado. |
 | `GET` | `/users/{id}` | `ADMIN_EMPRESA` | Obtener usuario por ID. ADMIN_EMPRESA solo ve su empresa. |
 | `GET` | `/users` | `ADMIN_EMPRESA` | Listar usuarios. ADMIN_EMPRESA ve su empresa; ADMIN ve todos. |
 | `DELETE` | `/users/{id}/desactivar` | `ADMIN_EMPRESA` | Soft-delete de usuario (activo = false). |
+
+**`POST /users` — reglas de seguridad por rol:**
+| Quién llama | `empresaId` en body | Roles asignables | Resultado |
+|---|---|---|---|
+| `ROLE_ADMIN_EMPRESA` | Ignorado (usa el suyo) | `ROLE_EMPLEADO`, `ROLE_ADMIN_EMPRESA` | `201` |
+| `ROLE_ADMIN_EMPRESA` | — | `ROLE_ADMIN` | `403` |
+| `ROLE_ADMIN` | Obligatorio | Cualquiera | `201` |
+| `ROLE_ADMIN` | Ausente | — | `400` |
 ---
 ## 3. Empresas · `/api/v1/empresas`
 | Método | Ruta | Rol / Auth | Descripción |
@@ -88,8 +97,22 @@
 ## 4. Dashboard · `/api/v1/dashboard`
 | Método | Ruta | Rol | Descripción |
 |--------|------|-----|-------------|
-| `GET` | `/dashboard/admin/resumen` | `ADMIN_EMPRESA` | Métricas de la empresa: usuarios, módulos, progreso. |
-| `GET` | `/dashboard/superadmin/resumen` | `ADMIN` | Métricas globales de toda la plataforma. |
+| `GET` | `/dashboard/admin/resumen` | `ADMIN_EMPRESA` | Métricas de la empresa: usuarios activos e inactivos. |
+| `GET` | `/dashboard/superadmin/resumen` | `ADMIN` | Métricas globales de toda la plataforma (legado). |
+| `GET` | `/dashboard/superadmin` | `ADMIN` | Dashboard completo: métricas, incidencias y actividad reciente. |
+| `GET` | `/dashboard/superadmin/graficas` | `ADMIN` | Datos para los tres gráficos: evolución mensual, sectores y estadísticas de módulos. |
+
+**`GET /dashboard/superadmin/graficas` — estructura de respuesta:**
+```json
+{
+  "evolucion": [{ "mes": "Nov", "empresas": 4,  "empleados": 120 }],
+  "sectores":  [{ "name": "Tecnología", "value": 5 }],
+  "modulos":   [{ "nombre": "Onboarding", "completados": 450, "pendientes": 120 }]
+}
+```
+- **evolucion**: totales acumulados al final de cada uno de los últimos 6 meses (ordenado de más antiguo a más reciente).
+- **sectores**: empresas agrupadas por sector, ordenadas por volumen DESC. No incluye empresas sin sector asignado.
+- **modulos**: top 10 módulos activos ordenados por `completados DESC`.
 ---
 ## 5. Módulos · `/api/v1/modulos`
 > Los módulos pueden ser de **empresa** o **globales** (`empresaId = null`, solo creables por `ADMIN`).
