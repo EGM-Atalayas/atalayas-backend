@@ -50,5 +50,5 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     long countByEmpresaIdAndActivoFalse(UUID empresaId);
 
     /** Usuarios cuya fecha de registro es posterior a la fecha dada — "nuevos este mes". */
-    long countByFechaRegistroAfter(java.time.LocalDateTime fecha);
+    long countByFechaRegistroAfter(java.time.OffsetDateTime fecha);
 }

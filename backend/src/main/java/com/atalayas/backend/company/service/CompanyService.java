@@ -4,7 +4,7 @@ import com.atalayas.backend.audit.service.AuditService;
 import com.atalayas.backend.common.enums.EstadoSolicitud;
 import com.atalayas.backend.common.enums.RoleType;
 import com.atalayas.backend.communication.service.EmailService;
-import com.atalayas.backend.communication.service.NotificacionService;
+import com.atalayas.backend.communication.service.NotificationService;
 import com.atalayas.backend.company.dto.AccionSolicitudRequest;
 import com.atalayas.backend.company.dto.CambioEstadoRequest;
 import com.atalayas.backend.company.dto.CompanyResponse;
@@ -49,7 +49,7 @@ public class CompanyService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
-    private final NotificacionService notificacionService;
+    private final NotificationService notificationService;
     private final AuditService auditService;
 
 

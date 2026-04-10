@@ -24,6 +24,5 @@ public interface CompanyRepository extends JpaRepository<Company, UUID> {
     long countByEstadoSolicitud(EstadoSolicitud estadoSolicitud);
 
     /** Empresas cuya fecha de solicitud es posterior a la fecha dada — "nuevas este mes". */
-    long countByFechaSolicitudAfter(java.time.LocalDateTime fecha);
+    long countByFechaSolicitudAfter(java.time.OffsetDateTime fecha);
 }
-

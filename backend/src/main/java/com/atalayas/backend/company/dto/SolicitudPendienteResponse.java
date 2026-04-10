@@ -6,7 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
@@ -20,15 +20,14 @@ import java.util.UUID;
 @AllArgsConstructor
 public class SolicitudPendienteResponse {
 
-    private UUID           empresaId;
-    private String         nombreEmpresa;
-    private String         cif;
-    private String         emailContacto;
+    private UUID            empresaId;
+    private String          nombreEmpresa;
+    private String          cif;
+    private String          emailContacto;
     private EstadoSolicitud estadoSolicitud;
-    private LocalDateTime  fechaSolicitud;
+    private OffsetDateTime  fechaSolicitud;
 
     /** Nombre completo del admin provisional (nombre + apellidos). */
     private String nombreAdmin;
     private String emailAdmin;
 }
-

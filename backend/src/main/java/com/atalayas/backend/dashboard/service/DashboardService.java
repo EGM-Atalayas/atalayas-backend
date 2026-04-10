@@ -19,8 +19,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -81,7 +81,10 @@ public class DashboardService {
      */
     @Transactional(readOnly = true)
     public SuperAdminDashboardResponse getSuperAdminDashboard() {
-        LocalDateTime inicioMes = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        // Primer instante del mes en curso con offset UTC
+        OffsetDateTime inicioMes = OffsetDateTime.now()
+                .withDayOfMonth(1)
+                .truncatedTo(ChronoUnit.DAYS);
 
         long empresasAdheridas    = companyRepository.count();
         long empresasNuevasMes    = companyRepository.countByFechaSolicitudAfter(inicioMes);
