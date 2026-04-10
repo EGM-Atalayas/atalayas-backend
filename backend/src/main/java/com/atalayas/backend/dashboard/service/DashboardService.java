@@ -7,6 +7,10 @@ import com.atalayas.backend.company.entity.Company;
 import com.atalayas.backend.company.repository.CompanyRepository;
 import com.atalayas.backend.dashboard.dto.ActividadRecienteDto;
 import com.atalayas.backend.dashboard.dto.AdminEmpresaResumenResponse;
+import com.atalayas.backend.dashboard.dto.DashboardChartsResponse;
+import com.atalayas.backend.dashboard.dto.EvolucionMensualDto;
+import com.atalayas.backend.dashboard.dto.ModuloEstadisticaDto;
+import com.atalayas.backend.dashboard.dto.SectorDistribucionDto;
 import com.atalayas.backend.dashboard.dto.SuperAdminDashboardResponse;
 import com.atalayas.backend.dashboard.dto.SuperAdminResumenResponse;
 import com.atalayas.backend.exception.ResourceNotFoundException;
@@ -20,9 +24,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -105,6 +113,59 @@ public class DashboardService {
                 .incidenciasAbiertas(incidenciasAbiertas)
                 .incidenciasCriticas(incidenciasCriticas)
                 .actividadReciente(actividad)
+                .build();
+    }
+
+    /**
+     * Datos para los tres gráficos del dashboard del superadmin.
+     * GET /api/v1/dashboard/superadmin/graficas
+     *
+     * - evolucion: totales acumulados mes a mes de empresas y empleados (últimos 6 meses).
+     * - sectores:  distribución de empresas por sector (pie chart).
+     * - modulos:   completados vs pendientes por módulo activo, top 10 (bar chart).
+     */
+    @Transactional(readOnly = true)
+    public DashboardChartsResponse getDashboardCharts() {
+
+        // ── EVOLUCIÓN (últimos 6 meses, del más antiguo al más reciente) ──────
+        List<EvolucionMensualDto> evolucion = new ArrayList<>();
+        OffsetDateTime ahora = OffsetDateTime.now();
+
+        for (int i = 5; i >= 0; i--) {
+            // Primer instante del mes analizado
+            OffsetDateTime inicioMes = ahora.minusMonths(i)
+                    .withDayOfMonth(1)
+                    .truncatedTo(ChronoUnit.DAYS);
+            // Primer instante del mes siguiente = límite exclusivo
+            OffsetDateTime finMes = inicioMes.plusMonths(1);
+
+            long empresas  = companyRepository.countByFechaSolicitudBefore(finMes);
+            long empleados = userRepository.countByFechaRegistroBefore(finMes);
+
+            // Abreviatura del mes en español con primera letra en mayúscula: "Ene", "Feb", …
+            String mes = inicioMes.getMonth()
+                    .getDisplayName(TextStyle.SHORT_STANDALONE, Locale.forLanguageTag("es"));
+            mes = Character.toUpperCase(mes.charAt(0)) + mes.substring(1).toLowerCase();
+
+            evolucion.add(new EvolucionMensualDto(mes, empresas, empleados));
+        }
+
+        // ── SECTORES ──────────────────────────────────────────────────────────
+        List<SectorDistribucionDto> sectores = companyRepository.findSectorDistribucion();
+
+        // ── MÓDULOS ───────────────────────────────────────────────────────────
+        List<ModuloEstadisticaDto> modulos = moduleRepository.findModuloEstadisticas()
+                .stream()
+                .map(p -> new ModuloEstadisticaDto(
+                        p.getNombre(),
+                        p.getCompletados() != null ? p.getCompletados() : 0L,
+                        p.getPendientes()  != null ? p.getPendientes()  : 0L))
+                .collect(Collectors.toList());
+
+        return DashboardChartsResponse.builder()
+                .evolucion(evolucion)
+                .sectores(sectores)
+                .modulos(modulos)
                 .build();
     }
 }
