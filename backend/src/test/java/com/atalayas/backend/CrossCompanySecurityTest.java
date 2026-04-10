@@ -1,5 +1,5 @@
 package com.atalayas.backend;
-import com.atalayas.backend.role.entity.Rol;
+import com.atalayas.backend.role.entity.Role;
 import com.atalayas.backend.role.repository.RoleRepository;
 import com.atalayas.backend.security.JwtService;
 import com.atalayas.backend.user.entity.User;
@@ -52,11 +52,11 @@ class CrossCompanySecurityTest {
         // Limpiar en orden correcto: usuario tiene FK a rol
         userRepository.deleteAll();
         roleRepository.deleteAll();
-        Rol rolEmpleado = roleRepository.save(Rol.builder()
+        Role rolEmpleado = roleRepository.save(Role.builder()
                 .nombreRol("Empleado").codigoRol("ROLE_EMPLEADO").build());
-        Rol rolAdmin = roleRepository.save(Rol.builder()
+        Role rolAdmin = roleRepository.save(Role.builder()
                 .nombreRol("Administrador").codigoRol("ROLE_ADMIN_EMPRESA").build());
-        Rol rolSuperAdmin = roleRepository.save(Rol.builder()
+        Role rolSuperAdmin = roleRepository.save(Role.builder()
                 .nombreRol("Super Administrador").codigoRol("ROLE_ADMIN").build());
         empleadoA = userRepository.save(User.builder()
                 .nombre("Empleado").apellidos("EmpresaA")

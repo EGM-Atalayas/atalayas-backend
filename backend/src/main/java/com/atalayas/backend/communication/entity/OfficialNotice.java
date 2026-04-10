@@ -6,17 +6,14 @@ import lombok.*;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-
 /**
- * Tabla: comunicado
+ * Entidad mapeada a la tabla 'comunicado'
  *
- * Comunicados oficiales de EGM Atalayas Ciudad Empresarial dirigidos
- * a todos los usuarios de la plataforma
+ * Representa un comunicado oficial publicado por EGM Atalayas
+ * dirigido a todos los usuarios de la plataforma o a un subconjunto
  *
- * Solo ROLE_ADMIN puede crear y desactivar comunicados
- * Todos los usuarios autenticados los ven
- *
- * Visibilidad: activo = true AND (fecha_expiracion IS NULL OR fecha_expiracion > now())
+ * Solo ROLE_ADMIN puede crear y desactivar comunicados oficiales
+ * Todos los usuarios autenticados pueden leerlos
  */
 @Entity
 @Table(name = "comunicado")
@@ -25,14 +22,14 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Comunicado {
+public class OfficialNotice {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "comunicado_id", updatable = false, nullable = false)
     private UUID comunicadoId;
 
-    /** ID del usuario ROLE_ADMIN que creó el comunicado. */
+    // ID del superadmin que publicó el comunicado
     @Column(name = "creado_por")
     private UUID creadoPor;
 
@@ -42,40 +39,36 @@ public class Comunicado {
     @Column(name = "mensaje", nullable = false, columnDefinition = "TEXT")
     private String mensaje;
 
-    /** URL opcional de imagen adjunta o decorativa. */
+    // URL de imagen opcional
     @Column(name = "imagen_url", length = 500)
     private String imagenUrl;
 
     /**
-     * Fecha de publicación. Si no se envía en el request,
-     * el @PrePersist la fija a now() automáticamente
-     * Permite programar comunicados futuros enviando una fecha posterior
+     * Fecha de publicación del comunicado.
+     * Permite programar comunicados para una fecha futura enviando
+     * una fecha posterior a la actual.
      */
     @Column(name = "fecha_publicacion")
     private OffsetDateTime fechaPublicacion;
 
     /**
      * Fecha de expiración opcional.
-     * Null = el comunicado no caduca automáticamente
-     * Si es pasada, se filtra en las queries de listado
+     * Si es null, el comunicado no caduca automáticamente.
      */
     @Column(name = "fecha_expiracion")
     private OffsetDateTime fechaExpiracion;
 
-    /**
-     * Control manual de visibilidad (soft-delete)
-     * Permite retirar un comunicado de forma inmediata
-     * independientemente de las fechas
-     */
+    // Soft delete, permite retirar un comunicado de forma inmediata
+    // sin perder el historial ni afectar a la trazabilidad
     @Column(name = "activo", nullable = false)
     @Builder.Default
     private boolean activo = true;
 
-    /** Gestionado por trigger en BD — no asignar manualmente en updates */
+    // Gestionado por trigger en BD
     @Column(name = "actualizado_en")
     private OffsetDateTime actualizadoEn;
 
-    /** Fija fecha_publicacion a now() si no viene informada en el request */
+    // Si no viene fecha de publicación en el request, usamos now()
     @PrePersist
     protected void onCreate() {
         if (fechaPublicacion == null) {

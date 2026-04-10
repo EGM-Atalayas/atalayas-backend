@@ -3,14 +3,14 @@ package com.atalayas.backend.content.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
-
 /**
- * Entidad que representa una pregunta de evaluación en la tabla 'contenido_pregunta'
- * Solo aplica a contenidos de tipo EVALUACION
- * Las respuestas del empleado se guardan en 'respuesta_empleado'
+ * Entidad mapeada a la tabla 'contenido_pregunta'
+ *
+ * Representa una pregunta de evaluación asociada a un contenido de tipo EVALUACION
+ * Las respuestas del empleado se guardan en la tabla 'respuesta_empleado', no aquí
  */
 @Entity
 @Table(name = "contenido_pregunta")
@@ -30,21 +30,21 @@ public class Question {
     @Column(name = "contenido_id", nullable = false)
     private UUID contenidoId;
 
-    // Texto de la pregunta que verá el empleado
+    // Texto de la pregunta que verá el empleado en el visor de contenido
     @Column(name = "enunciado", nullable = false, columnDefinition = "TEXT")
     private String enunciado;
 
-    // Respuesta correcta - null en preguntas abiertas sin corrección automática
+    // Respuesta correcta
     @Column(name = "respuesta_correcta", columnDefinition = "TEXT")
     private String respuestaCorrecta;
 
+    // Gestionado automáticamente
     @Column(name = "actualizado_en", nullable = false)
-    private LocalDateTime actualizadoEn;
-
+    private OffsetDateTime actualizadoEn;
 
     @PrePersist
     @PreUpdate
     protected void onUpdate() {
-        actualizadoEn = LocalDateTime.now();
+        actualizadoEn = OffsetDateTime.now();
     }
 }

@@ -3,17 +3,15 @@ package com.atalayas.backend.rewards.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
-
 /**
- * Entidad que representa un beneficio o ventaja del área empresarial
- * Mapeada a la tabla 'beneficio'
+ * Entidad mapeada a la tabla 'beneficio'
  *
- * Los beneficios pueden ser globales (visibles para todos) o
- * específicos de una empresa
- * Ejemplos: coche compartido, guardería, etc
+ * Representa un beneficio o ventaja del área empresarial EGM
+ * Puede ser global (visible para todos los empleados del parque)
+ * o específico de una empresa concreta
  */
 @Entity
 @Table(name = "beneficio")
@@ -45,29 +43,31 @@ public class Benefit {
     @Column(name = "url_info", length = 500)
     private String urlInfo;
 
-    // Soft delete — conserva historial aunque se retire el beneficio
+    // Soft delete
     @Column(name = "activo", nullable = false)
     @Builder.Default
     private boolean activo = true;
 
-    // Usuario que creó el beneficio para trazabilidad
+    // ID del usuario que creó el beneficio
     @Column(name = "creado_por")
     private UUID creadoPor;
 
+    // Gestionado automáticamente
     @Column(name = "creado_en", updatable = false, nullable = false)
-    private LocalDateTime creadoEn;
+    private OffsetDateTime creadoEn;
 
+    // Gestionado automáticamente
     @Column(name = "actualizado_en", nullable = false)
-    private LocalDateTime actualizadoEn;
+    private OffsetDateTime actualizadoEn;
 
     @PrePersist
     protected void onCreate() {
-        creadoEn = LocalDateTime.now();
-        actualizadoEn = LocalDateTime.now();
+        creadoEn = OffsetDateTime.now();
+        actualizadoEn = OffsetDateTime.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        actualizadoEn = LocalDateTime.now();
+        actualizadoEn = OffsetDateTime.now();
     }
 }

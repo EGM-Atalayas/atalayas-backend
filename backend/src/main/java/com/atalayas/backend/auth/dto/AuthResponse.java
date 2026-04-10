@@ -7,30 +7,42 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
+/**
+ * Respuesta que devuelve el backend tras login, register, refresh y /auth/me
+ *
+ * Contiene el access token (para soportar Authorization: Bearer cuando las cookies
+ * cross-site son bloqueadas) y todos los datos del usuario que el frontend necesita
+ * para construir el header, el perfil y los guards de navegación por rol.
+ */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class AuthResponse {
 
-    // Access token expuesto en el body para soportar Authorization: Bearer
-    // (necesario cuando las cookies cross-site son bloqueadas por el navegador)
+    // Token de acceso, también va en cookie HttpOnly
     private String accessToken;
     private long expiresIn;
 
-    // ── Datos del usuario autenticado (tabla usuario) ────────────────────────
+    // ── DATOS DEL USUARIO ──────────────────────────────────────────────────
     private UUID usuarioId;
     private String email;
     private String nombre;
     private String apellidos;
     private String avatarUrl;
 
-    // ── Rol (tabla rol) ──────────────────────────────────────────────────────
+    // Puesto de trabajo
+    private String puestoTrabajo;
+
+    // ── ROL ───────────────────────────────────────────────────────────────
     private UUID rolId;
     private String codigoRol;
     private String nombreRol;
 
-    // ── Empresa (tabla empresa) ──────────────────────────────────────────────
+    // ── EMPRESA ───────────────────────────────────────────────────────────
     private UUID empresaId;
     private String nombreEmpresa;
+
+    // URL del logo de la empresa
+    private String logoEmpresaUrl;
 }

@@ -8,15 +8,15 @@ import lombok.NoArgsConstructor;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-
 /**
  * Respuesta con los datos de un comunicado oficial de EGM
+ * Se devuelve en creación, listado y desactivación
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ComunicadoResponse {
+public class OfficialNoticeResponse {
 
     private UUID comunicadoId;
     private UUID creadoPor;

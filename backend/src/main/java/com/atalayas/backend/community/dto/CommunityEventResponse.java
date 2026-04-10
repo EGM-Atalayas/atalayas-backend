@@ -5,11 +5,12 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
  * Respuesta de un evento de comunidad
+ * Se devuelve en creación, listado y actualización
  */
 @Data
 @Builder
@@ -24,8 +25,8 @@ public class CommunityEventResponse {
     private String descripcion;
     private boolean esGlobal;
     private boolean activo;
-    private LocalDateTime fechaInicio;
-    private LocalDateTime fechaFin;
-    private LocalDateTime creadoEn;
-    private LocalDateTime actualizadoEn;
+    private OffsetDateTime fechaInicio;
+    private OffsetDateTime fechaFin;
+    private OffsetDateTime creadoEn;
+    private OffsetDateTime actualizadoEn;
 }
