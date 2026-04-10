@@ -97,8 +97,22 @@
 ## 4. Dashboard · `/api/v1/dashboard`
 | Método | Ruta | Rol | Descripción |
 |--------|------|-----|-------------|
-| `GET` | `/dashboard/admin/resumen` | `ADMIN_EMPRESA` | Métricas de la empresa: usuarios, módulos, progreso. |
-| `GET` | `/dashboard/superadmin/resumen` | `ADMIN` | Métricas globales de toda la plataforma. |
+| `GET` | `/dashboard/admin/resumen` | `ADMIN_EMPRESA` | Métricas de la empresa: usuarios activos e inactivos. |
+| `GET` | `/dashboard/superadmin/resumen` | `ADMIN` | Métricas globales de toda la plataforma (legado). |
+| `GET` | `/dashboard/superadmin` | `ADMIN` | Dashboard completo: métricas, incidencias y actividad reciente. |
+| `GET` | `/dashboard/superadmin/graficas` | `ADMIN` | Datos para los tres gráficos: evolución mensual, sectores y estadísticas de módulos. |
+
+**`GET /dashboard/superadmin/graficas` — estructura de respuesta:**
+```json
+{
+  "evolucion": [{ "mes": "Nov", "empresas": 4,  "empleados": 120 }],
+  "sectores":  [{ "name": "Tecnología", "value": 5 }],
+  "modulos":   [{ "nombre": "Onboarding", "completados": 450, "pendientes": 120 }]
+}
+```
+- **evolucion**: totales acumulados al final de cada uno de los últimos 6 meses (ordenado de más antiguo a más reciente).
+- **sectores**: empresas agrupadas por sector, ordenadas por volumen DESC. No incluye empresas sin sector asignado.
+- **modulos**: top 10 módulos activos ordenados por `completados DESC`.
 ---
 ## 5. Módulos · `/api/v1/modulos`
 > Los módulos pueden ser de **empresa** o **globales** (`empresaId = null`, solo creables por `ADMIN`).

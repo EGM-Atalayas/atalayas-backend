@@ -51,4 +51,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     /** Usuarios cuya fecha de registro es posterior a la fecha dada — "nuevos este mes". */
     long countByFechaRegistroAfter(java.time.OffsetDateTime fecha);
+
+    /** Total acumulado de usuarios cuya fecha de registro es anterior a la fecha dada (evolución). */
+    long countByFechaRegistroBefore(java.time.OffsetDateTime fecha);
 }
