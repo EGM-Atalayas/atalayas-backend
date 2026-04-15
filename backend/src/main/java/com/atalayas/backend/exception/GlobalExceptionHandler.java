@@ -2,6 +2,7 @@ package com.atalayas.backend.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
@@ -114,6 +115,21 @@ public class GlobalExceptionHandler {
         body.put("error", "Validación fallida");
         body.put("fieldErrors", fieldErrors);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    /**
+     * 400 — Jackson no puede deserializar el cuerpo de la petición.
+     * Ocurre cuando el JSON contiene un valor de enum inválido (ej: "ACTIVA" en lugar
+     * de "APROBADA"), un tipo de dato incorrecto o JSON malformado.
+     * Sin este handler la excepción cae al catch-all y devuelve un 500.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleHttpMessageNotReadable(
+            HttpMessageNotReadableException ex) {
+        String message = ex.getCause() != null
+                ? ex.getCause().getMessage()
+                : "El cuerpo de la petición no es válido o contiene un valor no reconocido";
+        return buildResponse(HttpStatus.BAD_REQUEST, message);
     }
 
     /**
