@@ -1,20 +1,19 @@
 package com.atalayas.backend.common.service;
 
-import lombok.RequiredArgsConstructor;
+import com.resend.Resend;
+import com.resend.core.exception.ResendException;
+import com.resend.services.emails.model.CreateEmailOptions;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-
 @Service
-@RequiredArgsConstructor
+@Slf4j
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    @Value("${resend.api.key}")
+    private String resendApiKey;
 
     @Value("${app.mail.from}")
     private String from;
@@ -35,7 +34,6 @@ public class EmailService {
                     <tr><td align="center">
                       <table width="560" cellpadding="0" cellspacing="0"
                              style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-                        <!-- Header -->
                         <tr>
                           <td style="background:#1B3F7E;padding:32px 40px;text-align:center;">
                             <h1 style="color:#ffffff;margin:0;font-size:22px;font-weight:700;letter-spacing:-0.5px;">
@@ -43,7 +41,6 @@ public class EmailService {
                             </h1>
                           </td>
                         </tr>
-                        <!-- Body -->
                         <tr>
                           <td style="padding:40px 40px 32px;">
                             <p style="color:#0f1923;font-size:16px;margin:0 0 8px;">Hola, <strong>%s</strong></p>
@@ -67,7 +64,6 @@ public class EmailService {
                             </p>
                           </td>
                         </tr>
-                        <!-- Footer -->
                         <tr>
                           <td style="background:#f5f6f8;padding:20px 40px;text-align:center;
                                      border-top:1px solid #e2e5ea;">
@@ -84,16 +80,20 @@ public class EmailService {
                 """.formatted(nombre, enlace);
 
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(from);
-            helper.setTo(destinatario);
-            helper.setSubject("Restablecer contraseña · Atalayas");
-            helper.setText(html, true);
-            mailSender.send(message);
-        } catch (MessagingException e) {
-            // Log del error sin interrumpir el flujo — el frontend siempre muestra "correo enviado"
-            System.err.println("[EmailService] Error al enviar correo a " + destinatario + ": " + e.getMessage());
+            Resend resend = new Resend(resendApiKey);
+
+            CreateEmailOptions params = CreateEmailOptions.builder()
+                    .from(from)
+                    .to(destinatario)
+                    .subject("Restablecer contraseña · Atalayas")
+                    .html(html)
+                    .build();
+
+            resend.emails().send(params);
+            log.info("[EmailService] Correo de recuperación enviado a {}", destinatario);
+
+        } catch (ResendException e) {
+            log.error("[EmailService] Error al enviar correo a {}: {}", destinatario, e.getMessage());
         }
     }
 }
