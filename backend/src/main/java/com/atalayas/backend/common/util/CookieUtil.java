@@ -29,12 +29,7 @@ public final class CookieUtil {
                 .sameSite(secure ? "None" : "Lax") // SameSite=None requiere Secure=true; en dev usamos Lax
                 .build();
 
-        // Partitioned (CHIPS) — requerido por Chrome para cookies cross-site con SameSite=None.
-        // Afecta a despliegues donde frontend y backend están en subdominios distintos de railway.app.
-        // ResponseCookie.partitioned() solo existe desde Spring Framework 6.4 (Boot 3.4+),
-        // por lo que lo añadimos manualmente al header Set-Cookie.
-        String cookieHeader = secure ? cookie.toString() + "; Partitioned" : cookie.toString();
-        response.addHeader("Set-Cookie", cookieHeader);
+        response.addHeader("Set-Cookie", cookie.toString());
     }
 
     /**
@@ -45,13 +40,12 @@ public final class CookieUtil {
                                    boolean secure) {
         ResponseCookie cookie = ResponseCookie.from(name, "")
                 .httpOnly(true)
-                .secure(secure)                   // usar el parámetro
+                .secure(secure)
                 .path("/")
                 .maxAge(0)
-                .sameSite(secure ? "None" : "Lax") // consistente con addTokenCookie
+                .sameSite(secure ? "None" : "Lax")
                 .build();
 
-        String cookieHeader = secure ? cookie.toString() + "; Partitioned" : cookie.toString();
-        response.addHeader("Set-Cookie", cookieHeader);
+        response.addHeader("Set-Cookie", cookie.toString());
     }
 }
