@@ -14,7 +14,7 @@ import jakarta.mail.internet.MimeMessage;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class EmailService {
+public class PasswordResetEmailService {
 
     private final JavaMailSender mailSender;
 
