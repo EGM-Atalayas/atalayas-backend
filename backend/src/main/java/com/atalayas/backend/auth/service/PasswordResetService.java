@@ -2,7 +2,7 @@ package com.atalayas.backend.auth.service;
 
 import com.atalayas.backend.auth.entity.PasswordResetToken;
 import com.atalayas.backend.auth.repository.PasswordResetTokenRepository;
-import com.atalayas.backend.common.service.EmailService;
+import com.atalayas.backend.common.service.PasswordResetEmailService;
 import com.atalayas.backend.user.entity.User;
 import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +20,7 @@ public class PasswordResetService {
 
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository tokenRepository;
-    private final EmailService emailService;
+    private final PasswordResetEmailService emailService;
     private final PasswordEncoder passwordEncoder;
 
     private static final int EXPIRACION_MINUTOS = 30;
