@@ -1,9 +1,12 @@
 package com.atalayas.backend.auth.controller;
 
 import com.atalayas.backend.auth.dto.AuthResponse;
+import com.atalayas.backend.auth.dto.ForgotPasswordRequest;
 import com.atalayas.backend.auth.dto.LoginRequest;
 import com.atalayas.backend.auth.dto.RegisterRequest;
+import com.atalayas.backend.auth.dto.ResetPasswordRequest;
 import com.atalayas.backend.auth.service.AuthService;
+import com.atalayas.backend.auth.service.PasswordResetService;
 import com.atalayas.backend.common.util.CookieUtil;
 import com.atalayas.backend.security.SecurityConstants;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,6 +36,7 @@ import java.util.Optional;
 public class AuthController {
 
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
 
     /** En dev puedes poner app.cookie.secure=false en application.properties */
     @Value("${app.cookie.secure:false}")
@@ -159,6 +163,27 @@ public class AuthController {
         body.setAccessToken(token);
 
         return ResponseEntity.ok(body);
+    }
+
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Solicitar recuperación de contraseña",
+               description = "Envía un email con un enlace para restablecer la contraseña. Siempre devuelve 200 para no revelar si el email existe.")
+    @ApiResponse(responseCode = "200", description = "Solicitud procesada")
+    public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        passwordResetService.solicitarRecuperacion(request.getEmail());
+        return ResponseEntity.ok(Map.of("message", "Si el correo está registrado, recibirás un enlace en breve"));
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Restablecer contraseña",
+               description = "Establece una nueva contraseña usando el token recibido por email.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Contraseña restablecida correctamente"),
+        @ApiResponse(responseCode = "400", description = "Token inválido, expirado o ya usado")
+    })
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordResetService.restablecerPassword(request.getToken(), request.getNuevaPassword());
+        return ResponseEntity.ok(Map.of("message", "Contraseña restablecida correctamente"));
     }
 
     /**
