@@ -112,6 +112,13 @@
             <version>5.2.5</version>
         </dependency>
 
+        <!-- Redimensionado de imágenes para avatares -->
+        <dependency>
+            <groupId>net.coobird</groupId>
+            <artifactId>thumbnailator</artifactId>
+            <version>0.4.20</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

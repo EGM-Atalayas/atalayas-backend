@@ -1,13 +1,16 @@
 package com.atalayas.backend.user.service;
 
 import com.atalayas.backend.common.enums.RoleType;
+import com.atalayas.backend.common.service.ImageService;
 import com.atalayas.backend.common.util.SecurityUtils;
 import com.atalayas.backend.communication.service.EmailService;
 import com.atalayas.backend.communication.service.NotificationService;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.role.entity.Role;
 import com.atalayas.backend.role.repository.RoleRepository;
+import com.atalayas.backend.user.dto.ChangePasswordRequest;
 import com.atalayas.backend.user.dto.CreateUserRequest;
+import com.atalayas.backend.user.dto.UpdateProfileRequest;
 import com.atalayas.backend.user.dto.UserProfileResponse;
 import com.atalayas.backend.user.dto.UserResponse;
 import com.atalayas.backend.user.entity.User;
@@ -19,6 +22,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -43,6 +47,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final NotificationService notificationService;
     private final EmailService emailService;
+    private final ImageService imageService;
 
     @Transactional(readOnly = true)
     public UserProfileResponse getCurrentUserProfile() {
@@ -164,5 +169,52 @@ public class UserService {
         }
 
         return userMapper.toUserResponse(user);
+    }
+
+    @Transactional
+    public String uploadAvatar(MultipartFile file) {
+        String url = imageService.processAndSaveAvatar(file);
+        User user = getCurrentUser();
+        user.setAvatarUrl(url);
+        userRepository.save(user);
+        return url;
+    }
+
+    @Transactional
+    public UserProfileResponse updateMyProfile(UpdateProfileRequest request) {
+        User user = getCurrentUser();
+        if (request.getNombre() != null) user.setNombre(request.getNombre());
+        if (request.getApellidos() != null) user.setApellidos(request.getApellidos());
+        if (request.getPuestoTrabajo() != null) user.setPuestoTrabajo(request.getPuestoTrabajo());
+        if (request.getAvatarUrl() != null) user.setAvatarUrl(request.getAvatarUrl());
+        if (request.getBannerUrl() != null) user.setBannerUrl(request.getBannerUrl());
+        if (request.getBio() != null) user.setBio(request.getBio());
+        if (request.getTelefono() != null) user.setTelefono(request.getTelefono());
+        if (request.getDisponibilidad() != null) user.setDisponibilidad(request.getDisponibilidad());
+        if (request.getNotifNuevoModulo() != null) user.setNotifNuevoModulo(request.getNotifNuevoModulo());
+        if (request.getNotifModuloCompletado() != null) user.setNotifModuloCompletado(request.getNotifModuloCompletado());
+        if (request.getNotifComunicado() != null) user.setNotifComunicado(request.getNotifComunicado());
+        if (request.getNotifPendiente() != null) user.setNotifPendiente(request.getNotifPendiente());
+        if (request.getModoOscuro() != null) user.setModoOscuro(request.getModoOscuro());
+        return userMapper.toUserProfileResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    public void changeMyPassword(ChangePasswordRequest request) {
+        if (!request.getPasswordNueva().equals(request.getPasswordConfirmar())) {
+            throw new com.atalayas.backend.exception.BusinessException("Las contraseñas no coinciden");
+        }
+        User user = getCurrentUser();
+        if (!passwordEncoder.matches(request.getPasswordActual(), user.getPassword())) {
+            throw new com.atalayas.backend.exception.BusinessException("La contraseña actual es incorrecta");
+        }
+        user.setPassword(passwordEncoder.encode(request.getPasswordNueva()));
+        userRepository.save(user);
+    }
+
+    private User getCurrentUser() {
+        String email = SecurityUtils.getCurrentUser().getEmail();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario autenticado no encontrado"));
     }
 }

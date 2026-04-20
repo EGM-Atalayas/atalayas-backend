@@ -47,6 +47,40 @@ public class User implements UserDetails {
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
 
+    @Column(name = "banner_url", length = 500)
+    private String bannerUrl;
+
+    @Column(name = "bio", length = 300)
+    private String bio;
+
+    @Column(name = "telefono", length = 20)
+    private String telefono;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "disponibilidad", length = 20)
+    @Builder.Default
+    private com.atalayas.backend.user.enums.Disponibilidad disponibilidad = com.atalayas.backend.user.enums.Disponibilidad.DISPONIBLE;
+
+    @Column(name = "notif_nuevo_modulo", nullable = false)
+    @Builder.Default
+    private boolean notifNuevoModulo = true;
+
+    @Column(name = "notif_modulo_completado", nullable = false)
+    @Builder.Default
+    private boolean notifModuloCompletado = true;
+
+    @Column(name = "notif_comunicado", nullable = false)
+    @Builder.Default
+    private boolean notifComunicado = true;
+
+    @Column(name = "notif_pendiente", nullable = false)
+    @Builder.Default
+    private boolean notifPendiente = true;
+
+    @Column(name = "modo_oscuro", nullable = false)
+    @Builder.Default
+    private boolean modoOscuro = false;
+
     // FK a la empresa a la que pertenece el usuario
     @Column(name = "empresa_id")
     private UUID empresaId;

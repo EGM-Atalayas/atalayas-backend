@@ -1,6 +1,8 @@
 package com.atalayas.backend.user.controller;
 
+import com.atalayas.backend.user.dto.ChangePasswordRequest;
 import com.atalayas.backend.user.dto.CreateUserRequest;
+import com.atalayas.backend.user.dto.UpdateProfileRequest;
 import com.atalayas.backend.user.dto.UserProfileResponse;
 import com.atalayas.backend.user.dto.UserResponse;
 import com.atalayas.backend.user.service.UserService;
@@ -14,11 +16,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -62,6 +67,26 @@ public class UserController {
     @Operation(summary = "Obtener perfil del usuario autenticado")
     public ResponseEntity<UserProfileResponse> getCurrentUserProfile() {
         return ResponseEntity.ok(userService.getCurrentUserProfile());
+    }
+
+    @PatchMapping("/me")
+    @Operation(summary = "Actualizar perfil propio")
+    public ResponseEntity<UserProfileResponse> updateMyProfile(@Valid @RequestBody UpdateProfileRequest request) {
+        return ResponseEntity.ok(userService.updateMyProfile(request));
+    }
+
+    @PostMapping("/me/password")
+    @Operation(summary = "Cambiar contraseña propia")
+    public ResponseEntity<Void> changeMyPassword(@Valid @RequestBody ChangePasswordRequest request) {
+        userService.changeMyPassword(request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Subir avatar del usuario autenticado")
+    public ResponseEntity<Map<String, String>> uploadAvatar(@RequestParam("file") MultipartFile file) {
+        String url = userService.uploadAvatar(file);
+        return ResponseEntity.ok(Map.of("avatarUrl", url));
     }
 
     @GetMapping("/{id}")
