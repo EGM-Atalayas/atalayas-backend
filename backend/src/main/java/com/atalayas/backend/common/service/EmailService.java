@@ -1,19 +1,22 @@
 package com.atalayas.backend.common.service;
 
-import com.resend.Resend;
-import com.resend.core.exception.ResendException;
-import com.resend.services.emails.model.CreateEmailOptions;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+
 @Service
+@RequiredArgsConstructor
 @Slf4j
 public class EmailService {
 
-    @Value("${resend.api.key}")
-    private String resendApiKey;
+    private final JavaMailSender mailSender;
 
     @Value("${app.mail.from}")
     private String from;
@@ -80,19 +83,15 @@ public class EmailService {
                 """.formatted(nombre, enlace);
 
         try {
-            Resend resend = new Resend(resendApiKey);
-
-            CreateEmailOptions params = CreateEmailOptions.builder()
-                    .from(from)
-                    .to(destinatario)
-                    .subject("Restablecer contraseña · Atalayas")
-                    .html(html)
-                    .build();
-
-            resend.emails().send(params);
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(from);
+            helper.setTo(destinatario);
+            helper.setSubject("Restablecer contraseña · Atalayas");
+            helper.setText(html, true);
+            mailSender.send(message);
             log.info("[EmailService] Correo de recuperación enviado a {}", destinatario);
-
-        } catch (ResendException e) {
+        } catch (MessagingException e) {
             log.error("[EmailService] Error al enviar correo a {}: {}", destinatario, e.getMessage());
         }
     }
