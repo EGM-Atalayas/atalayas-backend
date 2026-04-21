@@ -224,6 +224,31 @@ public class CompanyService {
     // ── SOLICITUDES (nuevo frontend superadmin) ──────────────────────────────
 
     /**
+     * Activa o desactiva una empresa APROBADA (toggle de activo).
+     * No cambia estadoSolicitud. Activa/desactiva también todos sus usuarios.
+     */
+    @Transactional
+    public CompanyResponse toggleActivacion(UUID id) {
+        Company company = findOrThrow(id);
+
+        if (company.getEstadoSolicitud() != EstadoSolicitud.APROBADA) {
+            throw new BusinessException("Solo se puede activar/desactivar una empresa aprobada");
+        }
+
+        boolean nuevoActivo = !company.isActivo();
+        company.setActivo(nuevoActivo);
+        companyRepository.save(company);
+
+        List<User> usuarios = userRepository.findAllByEmpresaId(company.getEmpresaId());
+        for (User u : usuarios) {
+            u.setActivo(nuevoActivo);
+            userRepository.save(u);
+        }
+
+        return companyMapper.toResponse(company);
+    }
+
+    /**
      * GET /api/v1/empresas/solicitudes
      * Lista todas las empresas en estado PENDIENTE con datos de su admin provisional.
      */

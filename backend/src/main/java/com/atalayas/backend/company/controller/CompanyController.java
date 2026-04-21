@@ -102,6 +102,26 @@ public class CompanyController {
     }
 
     /**
+     * PATCH /api/v1/empresas/{id}/activacion
+     * Activa o desactiva una empresa APROBADA (toggle de activo).
+     * No cambia estadoSolicitud. Los empleados de una empresa inactiva no pueden iniciar sesión.
+     */
+    @PatchMapping("/{id}/activacion")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Activar / desactivar empresa aprobada (SUPER_ADMIN)",
+               description = "Alterna el campo `activo` de la empresa y de todos sus usuarios. Una empresa inactiva impide el acceso a sus empleados.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Estado de activación actualizado",
+                     content = @Content(schema = @Schema(implementation = CompanyResponse.class))),
+        @ApiResponse(responseCode = "400", description = "La empresa no está aprobada"),
+        @ApiResponse(responseCode = "404", description = "Empresa no encontrada")
+    })
+    public ResponseEntity<CompanyResponse> toggleActivacion(@PathVariable UUID id) {
+        return ResponseEntity.ok(companyService.toggleActivacion(id));
+    }
+
+    /**
      * GET /api/v1/empresas/solicitudes
      * Lista empresas en estado PENDIENTE con datos del admin provisional.
      * Usada en la pantalla de solicitudes del superadmin.
