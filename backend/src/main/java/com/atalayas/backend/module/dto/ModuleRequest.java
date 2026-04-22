@@ -29,5 +29,18 @@ public class ModuleRequest {
     private boolean esEspecializadoIa = false;
 
     private boolean activo = true;
+
+    private String idioma;
+
+    private String duracion;
+
+    /** Audiencia: "todos" | "administradores" | "departamento" */
+    private String audiencia;
+
+    /** Departamentos destinatarios (cuando audiencia = "departamento") */
+    private String[] departamentos;
+
+    /** Preguntas del test serializado como JSON string */
+    private String testPreguntas;
 }
 

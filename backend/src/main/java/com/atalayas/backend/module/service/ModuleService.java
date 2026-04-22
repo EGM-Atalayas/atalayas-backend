@@ -157,6 +157,11 @@ public class ModuleService {
         modulo.setOrden(request.getOrden());
         modulo.setEsEspecializadoIa(request.isEsEspecializadoIa());
         modulo.setActivo(request.isActivo());
+        if (request.getIdioma() != null)      modulo.setIdioma(request.getIdioma());
+        if (request.getDuracion() != null)    modulo.setDuracion(request.getDuracion());
+        if (request.getAudiencia() != null)   modulo.setAudiencia(request.getAudiencia());
+        if (request.getDepartamentos() != null) modulo.setDepartamentos(request.getDepartamentos());
+        if (request.getTestPreguntas() != null) modulo.setTestPreguntas(request.getTestPreguntas());
 
         log.info("Módulo actualizado — id={} por usuarioId={}", moduloId, user.getEmail());
         return moduleMapper.toResponse(moduleRepository.save(modulo));

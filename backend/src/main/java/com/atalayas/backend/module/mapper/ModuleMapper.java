@@ -33,6 +33,11 @@ public class ModuleMapper {
                 .orden(request.getOrden())
                 .esEspecializadoIa(request.isEsEspecializadoIa())
                 .activo(request.isActivo())
+                .idioma(request.getIdioma() != null ? request.getIdioma() : "es")
+                .duracion(request.getDuracion())
+                .audiencia(request.getAudiencia() != null ? request.getAudiencia() : "todos")
+                .departamentos(request.getDepartamentos())
+                .testPreguntas(request.getTestPreguntas())
                 .build();
     }
 
@@ -52,6 +57,11 @@ public class ModuleMapper {
                 .orden(m.getOrden())
                 .esEspecializadoIa(m.isEsEspecializadoIa())
                 .activo(m.isActivo())
+                .idioma(m.getIdioma())
+                .duracion(m.getDuracion())
+                .audiencia(m.getAudiencia())
+                .departamentos(m.getDepartamentos())
+                .testPreguntas(m.getTestPreguntas())
                 .fechaCreacion(m.getFechaCreacion())
                 .actualizadoEn(m.getActualizadoEn())
                 .build();

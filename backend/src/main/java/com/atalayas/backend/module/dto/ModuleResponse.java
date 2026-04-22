@@ -31,6 +31,12 @@ public class ModuleResponse {
     private boolean esEspecializadoIa;
     private boolean activo;
 
+    private String idioma;
+    private String duracion;
+    private String audiencia;
+    private String[] departamentos;
+    private String testPreguntas;
+
     private OffsetDateTime fechaCreacion;
     private OffsetDateTime actualizadoEn;
 }
