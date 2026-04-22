@@ -18,7 +18,14 @@ import java.time.OffsetDateTime;
 public class AiFileResponse {
     private String titulo;
     private String descripcion;
+    /** Contenido formativo en Markdown (cuando tiposSalida incluye "documentacion") */
     private String contenido;
+    /** Guion conversacional de podcast (cuando tiposSalida incluye "podcast") */
+    private String scriptPodcast;
+    /** JSON de slides para video (cuando tiposSalida incluye "video") */
+    private String scriptVideo;
+    /** Tipos de contenido generados, separados por coma */
+    private String tiposSalida;
     private String modelo;
     private OffsetDateTime generadoEn;
 }

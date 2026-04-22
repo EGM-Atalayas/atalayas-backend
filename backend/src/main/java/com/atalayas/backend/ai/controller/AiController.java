@@ -185,21 +185,30 @@ public class AiController {
      * Solo ROLE_ADMIN y ROLE_ADMIN_EMPRESA.
      * Devuelve { titulo, descripcion, contenido, modelo, generadoEn }.
      */
+    /**
+     * POST /api/v1/ai/generar-desde-archivo
+     *
+     * Acepta un archivo (PDF, DOCX o TXT) y uno o varios tipos de salida:
+     *   - documentacion : contenido formativo en Markdown
+     *   - podcast       : guion conversacional apto para narración TTS
+     *   - video         : JSON de slides para presentación
+     *
+     * Se puede combinar: "documentacion,podcast", "documentacion,video", etc.
+     * Por defecto genera solo documentación.
+     */
     @PostMapping(value = "/generar-desde-archivo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
     @Operation(summary = "Generar contenido formativo a partir de un archivo",
-            description = "Sube un archivo PDF, DOCX o TXT. Se extrae su texto y Gemini genera un módulo formativo con título, descripción y contenido.")
+            description = "Sube un archivo PDF, DOCX o TXT y especifica los tipos de salida deseados.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Contenido generado correctamente"),
-            @ApiResponse(responseCode = "400", description = "Archivo vacío o formato no soportado",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
-            @ApiResponse(responseCode = "403", description = "Rol insuficiente",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
-            @ApiResponse(responseCode = "500", description = "Error en la API de Gemini o al leer el archivo",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+            @ApiResponse(responseCode = "400", description = "Archivo vacío o formato no soportado"),
+            @ApiResponse(responseCode = "403", description = "Rol insuficiente"),
+            @ApiResponse(responseCode = "500", description = "Error en la API de Gemini o al leer el archivo")
     })
     public ResponseEntity<AiFileResponse> generarDesdeArchivo(
-            @RequestPart("archivo") MultipartFile archivo) {
+            @RequestPart("archivo") MultipartFile archivo,
+            @RequestParam(value = "tiposSalida", defaultValue = "documentacion") String tiposSalida) {
 
         // 1. Extraer texto del archivo
         String textoExtraido;
@@ -220,36 +229,56 @@ public class AiController {
                 ? textoExtraido.substring(0, 12_000)
                 : textoExtraido;
 
-        // 2. Construir prompts para Gemini
+        boolean incluirDoc     = tiposSalida.contains("documentacion");
+        boolean incluirPodcast = tiposSalida.contains("podcast");
+        boolean incluirVideo   = tiposSalida.contains("video");
+
+        // 2. Construir prompt dinámico según tipos solicitados
+        StringBuilder camposJson = new StringBuilder();
+        camposJson.append("- \"titulo\": título breve del módulo (máximo 80 caracteres).\n");
+        camposJson.append("- \"descripcion\": resumen en 2-3 frases (máximo 300 caracteres).\n");
+        if (incluirDoc) {
+            camposJson.append("- \"contenido\": contenido formativo completo en Markdown con secciones, ejemplos y puntos clave.\n");
+        }
+        if (incluirPodcast) {
+            camposJson.append("- \"scriptPodcast\": guion conversacional de un podcast de ~5 minutos donde un presentador explica el tema de forma amena y clara. Sin marcas de tiempo, solo texto continuo listo para narrar.\n");
+        }
+        if (incluirVideo) {
+            camposJson.append("- \"scriptVideo\": array JSON de slides, cada slide con campos: { \"numero\": número, \"titulo\": título de la slide, \"contenido\": puntos clave en bullet points, \"notas\": notas del presentador }. Genera entre 6 y 10 slides.\n");
+        }
+
         String systemPrompt = """
                 Eres un experto en diseño instruccional y formación corporativa.
-                A partir del texto que te proporciona el usuario, genera un módulo formativo estructurado.
-                Responde ÚNICAMENTE con un JSON válido con las claves: "titulo", "descripcion", "contenido".
-                - "titulo": título breve y descriptivo del módulo (máximo 80 caracteres).
-                - "descripcion": resumen del módulo en 2-3 frases (máximo 300 caracteres).
-                - "contenido": contenido formativo completo en Markdown, con secciones, ejemplos y puntos clave.
-                No añadas texto fuera del JSON.
-                """;
+                A partir del texto que te proporciona el usuario, genera el siguiente contenido en un único JSON válido.
+                Responde ÚNICAMENTE con el JSON, sin texto adicional ni bloques de código Markdown.
+                Claves requeridas:
+                """ + camposJson;
 
         String userPrompt = "Texto del documento:\n\n" + textoParaPrompt;
 
         // 3. Llamar a Gemini
         String respuestaRaw = geminiClient.completar(systemPrompt, userPrompt);
 
-        // 4. Parsear el JSON devuelto por Gemini
-        String titulo = extraerCampoJson(respuestaRaw, "titulo");
+        // 4. Parsear campos del JSON devuelto
+        String titulo      = extraerCampoJson(respuestaRaw, "titulo");
         String descripcion = extraerCampoJson(respuestaRaw, "descripcion");
-        String contenido = extraerCampoJson(respuestaRaw, "contenido");
+        String contenido   = incluirDoc     ? extraerCampoJson(respuestaRaw, "contenido")     : null;
+        String scriptPodcast = incluirPodcast ? extraerCampoJson(respuestaRaw, "scriptPodcast") : null;
+        String scriptVideo   = incluirVideo   ? extraerCampoJsonRaw(respuestaRaw, "scriptVideo"): null;
 
-        // Si el parseo falló devolvemos todo el texto en contenido
-        if (titulo.isBlank() && descripcion.isBlank() && contenido.isBlank()) {
+        // Fallback si el parseo falla por completo
+        if (titulo.isBlank() && descripcion.isBlank()) {
             contenido = respuestaRaw;
+            titulo = "";
         }
 
         return ResponseEntity.ok(AiFileResponse.builder()
                 .titulo(titulo)
                 .descripcion(descripcion)
                 .contenido(contenido)
+                .scriptPodcast(scriptPodcast)
+                .scriptVideo(scriptVideo)
+                .tiposSalida(tiposSalida)
                 .modelo("gemini-2.0-flash")
                 .generadoEn(OffsetDateTime.now())
                 .build());
@@ -260,19 +289,42 @@ public class AiController {
      * usando la ObjectMapper ya disponible en el contexto de Spring (Jackson).
      * Si el JSON no es válido devuelve cadena vacía.
      */
+    /** Extrae el valor de texto de un campo JSON. */
     private String extraerCampoJson(String json, String campo) {
         try {
             com.fasterxml.jackson.databind.ObjectMapper mapper =
                     new com.fasterxml.jackson.databind.ObjectMapper();
-            // Eliminar posibles bloques de código Markdown que Gemini añade
-            String limpio = json.trim();
-            if (limpio.startsWith("```")) {
-                limpio = limpio.replaceFirst("```(?:json)?", "").replaceAll("```$", "").trim();
-            }
+            String limpio = limpiarJson(json);
             com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(limpio);
             return node.path(campo).asText("");
         } catch (Exception e) {
             return "";
         }
+    }
+
+    /**
+     * Extrae un campo JSON que puede ser un objeto o array, devolviéndolo serializado como String.
+     * Útil para scriptVideo que es un array de slides.
+     */
+    private String extraerCampoJsonRaw(String json, String campo) {
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper =
+                    new com.fasterxml.jackson.databind.ObjectMapper();
+            String limpio = limpiarJson(json);
+            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(limpio);
+            com.fasterxml.jackson.databind.JsonNode campo_node = node.path(campo);
+            if (campo_node.isMissingNode()) return null;
+            return mapper.writeValueAsString(campo_node);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String limpiarJson(String json) {
+        String limpio = json.trim();
+        if (limpio.startsWith("```")) {
+            limpio = limpio.replaceFirst("```(?:json)?", "").replaceAll("```\\s*$", "").trim();
+        }
+        return limpio;
     }
 }

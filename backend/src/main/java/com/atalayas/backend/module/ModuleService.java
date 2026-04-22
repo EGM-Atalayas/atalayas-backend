@@ -163,6 +163,9 @@ public class ModuleService {
         if (request.getDepartamentos() != null) modulo.setDepartamentos(request.getDepartamentos());
         if (request.getTestPreguntas() != null) modulo.setTestPreguntas(request.getTestPreguntas());
         if (request.getImagenPortadaUrl() != null) modulo.setImagenPortadaUrl(request.getImagenPortadaUrl());
+        if (request.getTiposSalida() != null)    modulo.setTiposSalida(request.getTiposSalida());
+        if (request.getScriptPodcast() != null)  modulo.setScriptPodcast(request.getScriptPodcast());
+        if (request.getScriptVideo() != null)    modulo.setScriptVideo(request.getScriptVideo());
 
         log.info("Módulo actualizado — id={} por usuarioId={}", moduloId, user.getEmail());
         return moduleMapper.toResponse(moduleRepository.save(modulo));

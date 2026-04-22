@@ -82,6 +82,19 @@ public class TrainingModule {
     @Column(name = "imagen_portada_url", length = 500)
     private String imagenPortadaUrl;
 
+    // Tipos de contenido generados: "documentacion", "podcast", "video" (separados por coma)
+    @Column(name = "tipos_salida", length = 100)
+    @Builder.Default
+    private String tiposSalida = "documentacion";
+
+    // Guion conversacional para podcast (generado por IA)
+    @Column(name = "script_podcast", columnDefinition = "TEXT")
+    private String scriptPodcast;
+
+    // Guion de video en formato JSON de slides (generado por IA)
+    @Column(name = "script_video", columnDefinition = "TEXT")
+    private String scriptVideo;
+
     // Soft delete — false oculta el módulo para empleados pero conserva datos históricos
     @Column(name = "activo", nullable = false)
     @Builder.Default

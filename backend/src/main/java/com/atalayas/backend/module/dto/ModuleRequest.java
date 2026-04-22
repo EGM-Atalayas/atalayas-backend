@@ -45,5 +45,14 @@ public class ModuleRequest {
 
     /** URL pública de la imagen de portada (Supabase Storage) */
     private String imagenPortadaUrl;
+
+    /** Tipos de salida generados: "documentacion", "podcast", "video" (separados por coma) */
+    private String tiposSalida;
+
+    /** Guion de podcast generado por IA */
+    private String scriptPodcast;
+
+    /** Guion de video (JSON de slides) generado por IA */
+    private String scriptVideo;
 }
 

@@ -39,6 +39,9 @@ public class ModuleMapper {
                 .departamentos(request.getDepartamentos())
                 .testPreguntas(request.getTestPreguntas())
                 .imagenPortadaUrl(request.getImagenPortadaUrl())
+                .tiposSalida(request.getTiposSalida() != null ? request.getTiposSalida() : "documentacion")
+                .scriptPodcast(request.getScriptPodcast())
+                .scriptVideo(request.getScriptVideo())
                 .build();
     }
 
@@ -64,6 +67,9 @@ public class ModuleMapper {
                 .departamentos(m.getDepartamentos())
                 .testPreguntas(m.getTestPreguntas())
                 .imagenPortadaUrl(m.getImagenPortadaUrl())
+                .tiposSalida(m.getTiposSalida())
+                .scriptPodcast(m.getScriptPodcast())
+                .scriptVideo(m.getScriptVideo())
                 .fechaCreacion(m.getFechaCreacion())
                 .actualizadoEn(m.getActualizadoEn())
                 .build();
