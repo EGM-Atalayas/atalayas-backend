@@ -42,5 +42,8 @@ public class ModuleRequest {
 
     /** Preguntas del test serializado como JSON string */
     private String testPreguntas;
+
+    /** URL pública de la imagen de portada (Supabase Storage) */
+    private String imagenPortadaUrl;
 }
 

@@ -78,6 +78,10 @@ public class TrainingModule {
     @Column(name = "test_preguntas", columnDefinition = "TEXT")
     private String testPreguntas;
 
+    // URL pública de la imagen de portada (almacenada en Supabase Storage)
+    @Column(name = "imagen_portada_url", length = 500)
+    private String imagenPortadaUrl;
+
     // Soft delete — false oculta el módulo para empleados pero conserva datos históricos
     @Column(name = "activo", nullable = false)
     @Builder.Default

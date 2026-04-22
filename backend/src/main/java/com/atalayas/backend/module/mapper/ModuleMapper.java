@@ -38,6 +38,7 @@ public class ModuleMapper {
                 .audiencia(request.getAudiencia() != null ? request.getAudiencia() : "todos")
                 .departamentos(request.getDepartamentos())
                 .testPreguntas(request.getTestPreguntas())
+                .imagenPortadaUrl(request.getImagenPortadaUrl())
                 .build();
     }
 
@@ -62,6 +63,7 @@ public class ModuleMapper {
                 .audiencia(m.getAudiencia())
                 .departamentos(m.getDepartamentos())
                 .testPreguntas(m.getTestPreguntas())
+                .imagenPortadaUrl(m.getImagenPortadaUrl())
                 .fechaCreacion(m.getFechaCreacion())
                 .actualizadoEn(m.getActualizadoEn())
                 .build();

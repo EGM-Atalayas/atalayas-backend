@@ -36,6 +36,7 @@ public class ModuleResponse {
     private String audiencia;
     private String departamentos;
     private String testPreguntas;
+    private String imagenPortadaUrl;
 
     private OffsetDateTime fechaCreacion;
     private OffsetDateTime actualizadoEn;

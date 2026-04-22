@@ -162,6 +162,7 @@ public class ModuleService {
         if (request.getAudiencia() != null)   modulo.setAudiencia(request.getAudiencia());
         if (request.getDepartamentos() != null) modulo.setDepartamentos(request.getDepartamentos());
         if (request.getTestPreguntas() != null) modulo.setTestPreguntas(request.getTestPreguntas());
+        if (request.getImagenPortadaUrl() != null) modulo.setImagenPortadaUrl(request.getImagenPortadaUrl());
 
         log.info("Módulo actualizado — id={} por usuarioId={}", moduloId, user.getEmail());
         return moduleMapper.toResponse(moduleRepository.save(modulo));
