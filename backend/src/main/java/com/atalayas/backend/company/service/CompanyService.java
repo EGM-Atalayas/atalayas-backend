@@ -108,7 +108,13 @@ public class CompanyService {
     @Transactional(readOnly = true)
     public List<CompanyResponse> getAll() {
         return companyRepository.findAll().stream()
-                .map(companyMapper::toResponse)
+                .map(empresa -> {
+                    User admin = userRepository
+                            .findAllByEmpresaId(empresa.getEmpresaId()).stream()
+                            .findFirst()
+                            .orElse(null);
+                    return companyMapper.toResponse(empresa, admin);
+                })
                 .collect(Collectors.toList());
     }
 
