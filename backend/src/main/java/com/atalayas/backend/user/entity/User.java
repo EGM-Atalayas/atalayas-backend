@@ -103,6 +103,10 @@ public class User implements UserDetails {
     @Column(name = "puesto_trabajo", length = 150)
     private String puestoTrabajo;
 
+    // Departamento al que pertenece el empleado (usado para visibilidad de módulos)
+    @Column(name = "departamento", length = 50)
+    private String departamento;
+
     // Soft delete, false significa que la cuenta está desactivada
     @Column(name = "activo", nullable = false)
     @Builder.Default

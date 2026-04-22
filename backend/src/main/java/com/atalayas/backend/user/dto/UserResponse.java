@@ -34,6 +34,7 @@ public class UserResponse {
     private String nombreRol;
 
     private String puestoTrabajo;
+    private String departamento;
     private boolean activo;
     private boolean terminosAceptados;
     private int intentosFallidos;

@@ -28,6 +28,9 @@ public class UpdateProfileRequest {
     @Size(max = 20)
     private String telefono;
 
+    @Size(max = 50)
+    private String departamento;
+
     private Disponibilidad disponibilidad;
 
     private Boolean notifNuevoModulo;

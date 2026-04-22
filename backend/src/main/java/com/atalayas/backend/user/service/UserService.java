@@ -146,6 +146,7 @@ public class UserService {
                 .empresaId(empresaId)
                 .rol(role)
                 .puestoTrabajo(request.getPuestoTrabajo())
+                .departamento(request.getDepartamento())
                 .build();
 
         user = userRepository.save(user);
@@ -190,6 +191,7 @@ public class UserService {
         if (request.getBannerUrl() != null) user.setBannerUrl(request.getBannerUrl());
         if (request.getBio() != null) user.setBio(request.getBio());
         if (request.getTelefono() != null) user.setTelefono(request.getTelefono());
+        if (request.getDepartamento() != null) user.setDepartamento(request.getDepartamento());
         if (request.getDisponibilidad() != null) user.setDisponibilidad(request.getDisponibilidad());
         if (request.getNotifNuevoModulo() != null) user.setNotifNuevoModulo(request.getNotifNuevoModulo());
         if (request.getNotifModuloCompletado() != null) user.setNotifModuloCompletado(request.getNotifModuloCompletado());

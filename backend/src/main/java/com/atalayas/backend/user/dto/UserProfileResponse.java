@@ -27,6 +27,7 @@ public class UserProfileResponse {
     private String nombreCompleto;
     private String avatarUrl;
     private String puestoTrabajo;
+    private String departamento;
 
     // FK empresa
     private UUID empresaId;
