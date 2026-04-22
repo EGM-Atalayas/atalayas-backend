@@ -42,6 +42,7 @@ public class ModuleMapper {
                 .tiposSalida(request.getTiposSalida() != null ? request.getTiposSalida() : "documentacion")
                 .scriptPodcast(request.getScriptPodcast())
                 .scriptVideo(request.getScriptVideo())
+                .podcastAudioUrl(request.getPodcastAudioUrl())
                 .build();
     }
 
@@ -70,6 +71,7 @@ public class ModuleMapper {
                 .tiposSalida(m.getTiposSalida())
                 .scriptPodcast(m.getScriptPodcast())
                 .scriptVideo(m.getScriptVideo())
+                .podcastAudioUrl(m.getPodcastAudioUrl())
                 .fechaCreacion(m.getFechaCreacion())
                 .actualizadoEn(m.getActualizadoEn())
                 .build();

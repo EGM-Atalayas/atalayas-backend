@@ -1,6 +1,8 @@
 package com.atalayas.backend.ai.controller;
 
+import com.atalayas.backend.ai.client.ElevenLabsClient;
 import com.atalayas.backend.ai.client.GeminiClient;
+import com.atalayas.backend.ai.client.GroqClient;
 import com.atalayas.backend.ai.dto.AiFileResponse;
 import com.atalayas.backend.ai.dto.AiPromptRequest;
 import com.atalayas.backend.ai.dto.AiResponse;
@@ -8,6 +10,7 @@ import com.atalayas.backend.ai.service.AiChatService;
 import com.atalayas.backend.ai.service.AiContentService;
 import com.atalayas.backend.ai.service.AiFileService;
 import com.atalayas.backend.ai.service.AiSummaryService;
+import com.atalayas.backend.ai.service.SupabaseStorageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -48,6 +51,9 @@ public class AiController {
     private final AiSummaryService aiSummaryService;
     private final AiFileService aiFileService;
     private final GeminiClient geminiClient;
+    private final GroqClient groqClient;
+    private final ElevenLabsClient elevenLabsClient;
+    private final SupabaseStorageService supabaseStorageService;
 
 
     /**
@@ -256,20 +262,36 @@ public class AiController {
 
         String userPrompt = "Texto del documento:\n\n" + textoParaPrompt;
 
-        // 3. Llamar a Gemini
-        String respuestaRaw = geminiClient.completar(systemPrompt, userPrompt);
+        // 3. Llamar a Groq (texto: documentación + video)
+        String respuestaRaw = groqClient.completar(systemPrompt, userPrompt);
 
         // 4. Parsear campos del JSON devuelto
-        String titulo      = extraerCampoJson(respuestaRaw, "titulo");
-        String descripcion = extraerCampoJson(respuestaRaw, "descripcion");
-        String contenido   = incluirDoc     ? extraerCampoJson(respuestaRaw, "contenido")     : null;
-        String scriptPodcast = incluirPodcast ? extraerCampoJson(respuestaRaw, "scriptPodcast") : null;
-        String scriptVideo   = incluirVideo   ? extraerCampoJsonRaw(respuestaRaw, "scriptVideo"): null;
+        String titulo        = extraerCampoJson(respuestaRaw, "titulo");
+        String descripcion   = extraerCampoJson(respuestaRaw, "descripcion");
+        String contenido     = incluirDoc     ? extraerCampoJson(respuestaRaw, "contenido")      : null;
+        String scriptPodcast = incluirPodcast ? extraerCampoJson(respuestaRaw, "scriptPodcast")  : null;
+        String scriptVideo   = incluirVideo   ? extraerCampoJsonRaw(respuestaRaw, "scriptVideo") : null;
 
         // Fallback si el parseo falla por completo
         if (titulo.isBlank() && descripcion.isBlank()) {
             contenido = respuestaRaw;
             titulo = "";
+        }
+
+        // 5. Generar audio MP3 con ElevenLabs si se pidió podcast
+        String podcastAudioUrl = null;
+        if (incluirPodcast && scriptPodcast != null && !scriptPodcast.isBlank()) {
+            try {
+                byte[] audioBytes = elevenLabsClient.textToSpeech(scriptPodcast);
+                // Usamos un UUID temporal para el nombre del archivo; el frontend lo asociará al módulo después
+                podcastAudioUrl = supabaseStorageService.subirAudioPodcast(
+                        audioBytes,
+                        java.util.UUID.randomUUID()
+                );
+            } catch (Exception e) {
+                log.warn("No se pudo generar el audio del podcast: {}. Se continuará sin audio.", e.getMessage());
+                // No bloqueamos la respuesta si el audio falla
+            }
         }
 
         return ResponseEntity.ok(AiFileResponse.builder()
@@ -278,8 +300,9 @@ public class AiController {
                 .contenido(contenido)
                 .scriptPodcast(scriptPodcast)
                 .scriptVideo(scriptVideo)
+                .podcastAudioUrl(podcastAudioUrl)
                 .tiposSalida(tiposSalida)
-                .modelo("gemini-2.0-flash")
+                .modelo("llama-3.3-70b-versatile")
                 .generadoEn(OffsetDateTime.now())
                 .build());
     }

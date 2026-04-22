@@ -95,6 +95,10 @@ public class TrainingModule {
     @Column(name = "script_video", columnDefinition = "TEXT")
     private String scriptVideo;
 
+    // URL pública del audio MP3 del podcast (almacenado en Supabase Storage)
+    @Column(name = "podcast_audio_url", length = 500)
+    private String podcastAudioUrl;
+
     // Soft delete — false oculta el módulo para empleados pero conserva datos históricos
     @Column(name = "activo", nullable = false)
     @Builder.Default
