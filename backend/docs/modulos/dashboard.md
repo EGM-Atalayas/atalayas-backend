@@ -2,7 +2,7 @@
 
 > **Paquete:** `com.atalayas.backend.dashboard`
 > **Audiencia:** Frontend, Backend
-> **Última actualización:** Abril 2026
+> **Última actualización:** Abril 2026 (rev. 2)
 
 ---
 
@@ -48,35 +48,31 @@ Base URL: `/api/v1/dashboard`
 **Response `200 OK`:**
 ```json
 {
-  "metricas": {
-    "totalEmpresas": 15,
-    "empresasActivas": 12,
-    "totalEmpleados": 340,
-    "empleadosActivos": 318,
-    "modulosActivos": 67,
-    "contenidosActivos": 420
-  },
-  "incidencias": {
-    "abiertas": 2,
-    "enProgreso": 1,
-    "cerradas": 8
-  },
+  "empresasAdheridas": 15,
+  "empresasNuevasMes": 2,
+  "empleadosRegistrados": 340,
+  "empleadosNuevosMes": 18,
+  "modulosPublicados": 67,
+  "incidenciasAbiertas": 2,
+  "incidenciasCriticas": 1,
   "actividadReciente": [
     {
       "id": 42,
-      "texto": "Nueva empresa 'Tech SL' aprobada",
+      "texto": "Empresa \"Tech SL\" aprobada",
       "tipo": "success",
-      "creadoEn": "2026-04-15T09:30:00Z"
+      "tiempo": "hace 5m"
     },
     {
       "id": 41,
-      "texto": "Incidencia #3 marcada como resuelta",
-      "tipo": "info",
-      "creadoEn": "2026-04-14T16:00:00Z"
+      "texto": "Solicitud de \"OtraEmpresa SL\" rechazada y eliminada",
+      "tipo": "warning",
+      "tiempo": "hace 2h"
     }
   ]
 }
 ```
+
+> El campo `tiempo` es una cadena relativa calculada en el backend en el momento de la petición: `"ahora mismo"`, `"hace Nm"`, `"hace Nh"`, `"hace Nd"`. Se devuelven los **últimos 10 eventos** ordenados de más nuevo a más antiguo.
 
 ### GET `/dashboard/superadmin/graficas` — Datos para gráficos
 
@@ -131,14 +127,23 @@ Base URL: `/api/v1/dashboard`
 
 ## Actividad reciente
 
-La actividad reciente proviene de la tabla `audit_log`. Los tipos de entrada son:
+La actividad reciente proviene de la tabla `audit_log` (ver [auditoria.md](auditoria.md)). Se devuelven los **últimos 10 eventos** ordenados por `creadoEn DESC`.
 
-| Tipo | Color sugerido | Cuándo se genera |
+El campo `tiempo` es calculado en backend como cadena relativa al momento de la petición:
+
+| Valor | Cuándo |
+|---|---|
+| `"ahora mismo"` | Menos de 1 minuto |
+| `"hace Nm"` | Entre 1 y 59 minutos |
+| `"hace Nh"` | Entre 1 y 23 horas |
+| `"hace Nd"` | 1 día o más |
+
+Los tipos de entrada y su correspondencia visual en el frontend:
+
+| Tipo | Color | Cuándo se genera |
 |---|---|---|
-| `success` | Verde | Empresa aprobada, módulo completado masivamente |
-| `info` | Azul | Nuevo usuario registrado, nuevo módulo publicado |
-| `warning` | Naranja | Intento de login fallido repetido, empresa próxima a expirar |
-| `error` | Rojo | Error del sistema, incidencia crítica |
-
-Ver [auditoria.md](auditoria.md) para más detalles sobre el sistema de auditoría.
+| `success` | Verde | Empresa aprobada |
+| `warning` | Ámbar | Solicitud rechazada y eliminada |
+| `info` | Azul | Eventos informativos generales |
+| `error` | Rojo | Errores del sistema, incidencias críticas |
 

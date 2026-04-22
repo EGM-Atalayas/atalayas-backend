@@ -1,8 +1,7 @@
-package com.atalayas.backend.rewards.controller;
+package com.atalayas.backend.rewards;
 
 import com.atalayas.backend.rewards.dto.BenefitRequest;
 import com.atalayas.backend.rewards.dto.BenefitResponse;
-import com.atalayas.backend.rewards.service.BenefitService;
 import com.atalayas.backend.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;

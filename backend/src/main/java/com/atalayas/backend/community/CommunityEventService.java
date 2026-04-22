@@ -1,4 +1,4 @@
-package com.atalayas.backend.community.service;
+package com.atalayas.backend.community;
 
 import com.atalayas.backend.common.enums.RoleType;
 import com.atalayas.backend.community.dto.CommunityEventRequest;

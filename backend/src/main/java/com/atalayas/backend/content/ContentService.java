@@ -1,4 +1,4 @@
-package com.atalayas.backend.content.service;
+package com.atalayas.backend.content;
 
 import com.atalayas.backend.common.enums.RoleType;
 import com.atalayas.backend.content.dto.*;

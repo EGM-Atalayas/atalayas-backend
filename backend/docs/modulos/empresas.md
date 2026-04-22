@@ -3,7 +3,7 @@
 > **Paquete:** `com.atalayas.backend.company`
 > **Tabla BD:** `empresa`
 > **Audiencia:** Frontend, Backend
-> **Última actualización:** Abril 2026
+> **Última actualización:** Abril 2026 (rev. 2)
 
 ---
 
@@ -85,12 +85,14 @@ Base URL: `/api/v1/empresas`
 
 ### Efectos secundarios de cada transición
 
-| Transición | `activo` empresa | Usuarios de la empresa | Email enviado |
-|---|:---:|---|---|
-| `PENDIENTE → APROBADA` | `true` | Se activan (`activo = true`) | ✉ Bienvenida al admin |
-| `PENDIENTE → (rechazo)` | — (borrado) | Eliminados de BD | ✉ Notificación de rechazo |
-| `APROBADA → PAUSADA` | `false` | Se desactivan (`activo = false`) | Ninguno |
-| `PAUSADA → APROBADA` | `true` | Se reactivan (`activo = true`) | Ninguno |
+| Transición | `activo` empresa | Usuarios de la empresa | Email enviado | Audit log |
+|---|:---:|---|---|:---:|
+| `PENDIENTE → APROBADA` | `true` | Se activan (`activo = true`) | ✉ Bienvenida al admin | ✅ `success` |
+| `PENDIENTE → (rechazo)` | — (borrado) | Eliminados de BD | ✉ Notificación de rechazo | ✅ `warning` |
+| `APROBADA → PAUSADA` | `false` | Se desactivan (`activo = false`) | Ninguno | ❌ |
+| `PAUSADA → APROBADA` | `true` | Se reactivan (`activo = true`) | Ninguno | ❌ |
+
+> El audit log de aprobación y rechazo se escribe en una transacción independiente (`REQUIRES_NEW`) para garantizar que siempre se persiste aunque falle algún paso posterior (ej. envío de email).
 
 ### Solicitud de alta (`POST /empresas/solicitud`)
 
@@ -129,6 +131,20 @@ Al solicitar el alta se crea automáticamente:
   "mensaje": "Solicitud enviada correctamente. Recibirás un email cuando sea revisada."
 }
 ```
+
+### GET `/empresas` — Listar todas las empresas
+
+Devuelve todas las empresas con los datos del administrador provisional incluidos en cada objeto. Esto permite al frontend del superadmin mostrar la información del admin sin necesitar una segunda llamada.
+
+**Campos adicionales respecto al resto de listados (`CompanyResponse`):**
+
+| Campo | Descripción |
+|---|---|
+| `nombre` | Nombre del administrador de la empresa |
+| `apellidos` | Apellidos del administrador |
+| `emailAdmin` | Email del administrador |
+
+> Estos campos son `null` cuando la empresa no tiene ningún usuario asociado. Los endpoints `/pendientes`, `/aprobadas` y las respuestas de `PATCH` no los incluyen.
 
 ### GET `/empresas/aprobadas`
 

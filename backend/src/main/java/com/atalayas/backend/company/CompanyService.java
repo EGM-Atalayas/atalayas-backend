@@ -1,4 +1,4 @@
-package com.atalayas.backend.company.service;
+package com.atalayas.backend.company;
 
 import com.atalayas.backend.audit.service.AuditService;
 import com.atalayas.backend.common.enums.EstadoSolicitud;
@@ -288,13 +288,18 @@ public class CompanyService {
         boolean aprobar = "aprobar".equalsIgnoreCase(request.getAccion());
 
         if (aprobar) {
+            // Capturar nombre antes de cambiarEstado para tenerlo disponible en el audit
+            Company empresa = findOrThrow(id);
+            String nombreEmpresa = empresa.getNombreEmpresa();
+
             CambioEstadoRequest cambio = new CambioEstadoRequest();
             cambio.setNuevoEstado(EstadoSolicitud.APROBADA);
             cambiarEstado(id, cambio);
 
-            Company empresa = findOrThrow(id);
+            // REQUIRES_NEW en registrar() garantiza que el audit se persiste
+            // independientemente de si la transacción padre hace rollback
             auditService.registrar(
-                    "Empresa \"" + empresa.getNombreEmpresa() + "\" aprobada", "success");
+                    "Empresa \"" + nombreEmpresa + "\" aprobada", "success");
 
         } else {
             // Rechazo: capturar datos antes de borrar, luego hard delete

@@ -1,4 +1,4 @@
-package com.atalayas.backend.company.controller;
+package com.atalayas.backend.company;
 
 import com.atalayas.backend.company.dto.AccionSolicitudRequest;
 import com.atalayas.backend.company.dto.CambioEstadoRequest;
@@ -6,7 +6,6 @@ import com.atalayas.backend.company.dto.CompanyResponse;
 import com.atalayas.backend.company.dto.SolicitudAltaEmpresaRequest;
 import com.atalayas.backend.company.dto.SolicitudAltaEmpresaResponse;
 import com.atalayas.backend.company.dto.SolicitudPendienteResponse;
-import com.atalayas.backend.company.service.CompanyService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
