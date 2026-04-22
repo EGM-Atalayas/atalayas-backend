@@ -24,6 +24,8 @@ public class AiFileResponse {
     private String scriptPodcast;
     /** JSON de slides para video (cuando tiposSalida incluye "video") */
     private String scriptVideo;
+    /** URL pública del MP3 del podcast (Supabase Storage) */
+    private String podcastAudioUrl;
     /** Tipos de contenido generados, separados por coma */
     private String tiposSalida;
     private String modelo;

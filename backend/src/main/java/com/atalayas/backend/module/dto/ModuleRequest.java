@@ -54,5 +54,8 @@ public class ModuleRequest {
 
     /** Guion de video (JSON de slides) generado por IA */
     private String scriptVideo;
+
+    /** URL pública del MP3 del podcast (Supabase Storage) */
+    private String podcastAudioUrl;
 }
 

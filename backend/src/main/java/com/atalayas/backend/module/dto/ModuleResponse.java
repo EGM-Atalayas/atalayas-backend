@@ -40,6 +40,7 @@ public class ModuleResponse {
     private String tiposSalida;
     private String scriptPodcast;
     private String scriptVideo;
+    private String podcastAudioUrl;
 
     private OffsetDateTime fechaCreacion;
     private OffsetDateTime actualizadoEn;
