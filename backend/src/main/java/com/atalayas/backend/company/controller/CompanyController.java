@@ -73,15 +73,15 @@ public class CompanyController {
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Cambiar estado de empresa (SUPER_ADMIN)",
                description = """
-                   Gestiona el ciclo de vida de una empresa. Transiciones válidas:
+                   Gestiona el ciclo de vida de una empresa activa. Transiciones válidas:
 
                    | Desde | Hacia | Efecto |
                    |---|---|---|
                    | `PENDIENTE` | `APROBADA` | Activa usuarios, email bienvenida, notificación interna |
-                   | `PENDIENTE` | `RECHAZADA` | Desactiva empresa, email de rechazo |
-                   | `RECHAZADA` | `PENDIENTE` | Reset sin efectos secundarios |
-                   | `APROBADA` | cualquiera | **PROHIBIDO** — empresa ya operativa |
-                   | `RECHAZADA` | `APROBADA` | **PROHIBIDO** — debe pasar antes por `PENDIENTE` |
+                   | `APROBADA` | `PAUSADA` | Desactiva empresa y usuarios temporalmente |
+                   | `PAUSADA` | `APROBADA` | Reactiva empresa y usuarios |
+
+                   > El rechazo de solicitudes (con eliminación física) solo es posible desde `PATCH /{id}/solicitud`.
                    """)
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Estado actualizado correctamente",
