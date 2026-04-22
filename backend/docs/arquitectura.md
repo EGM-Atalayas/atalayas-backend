@@ -255,7 +255,7 @@ Se usa `@PreAuthorize` a nivel de método en los controladores:
 ┌───────────────────────────────────────────────────────────────────────┐
 │ empresa                                                               │
 │  empresa_id (PK, UUID)  nombre_empresa  cif  sector                  │
-│  estado_solicitud (PENDIENTE/APROBADA/RECHAZADA)  activo              │
+│  estado_solicitud (PENDIENTE/APROBADA/PAUSADA)  activo              │
 └───────────────────────────────────────────────────────────────────────┘
                     ▲
                     │ empresa_id (FK)
@@ -303,6 +303,8 @@ Se usa `@PreAuthorize` a nivel de método en los controladores:
 La mayoría de entidades no se eliminan físicamente. Tienen un campo `activo`:
 - `activo = true` → el recurso está visible y operativo
 - `activo = false` → soft-deleted, invisible para empleados pero conserva trazabilidad histórica
+
+**Excepción — hard delete al rechazar una solicitud de empresa:** cuando el superadmin rechaza una solicitud de alta, la empresa y sus usuarios provisionales se **eliminan físicamente** de la BD (en ese orden para respetar la FK `usuario → empresa`). Esto solo aplica a empresas en estado `PENDIENTE` que nunca estuvieron operativas.
 
 ### IDs
 Todos los IDs son `UUID` generados por Hibernate (`GenerationType.UUID`), excepto `AuditLog` e `Incidencia` que usan `IDENTITY` (Long autoincremental).

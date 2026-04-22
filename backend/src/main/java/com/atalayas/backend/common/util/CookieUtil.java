@@ -10,11 +10,15 @@ public final class CookieUtil {
     /**
      * Emite una cookie HttpOnly con el token JWT.
      *
+     * En producción (secure=true) añade manualmente el atributo {@code Partitioned} (CHIPS)
+     * porque Spring Boot 3.2 no lo soporta via API. Sin él, Chrome y Firefox bloquean
+     * la cookie como tercero en contextos cross-site (Vercel ↔ Render), causando 401.
+     *
      * @param response   respuesta HTTP donde se añade la cookie
      * @param name       nombre de la cookie
      * @param value      valor (el token)
      * @param maxAgeSec  tiempo de vida en segundos
-     * @param secure     true → solo HTTPS (activar en producción)
+     * @param secure     true → solo HTTPS + SameSite=None + Partitioned (producción)
      */
     public static void addTokenCookie(HttpServletResponse response,
                                       String name,
@@ -23,17 +27,24 @@ public final class CookieUtil {
                                       boolean secure) {
         ResponseCookie cookie = ResponseCookie.from(name, value)
                 .httpOnly(true)
-                .secure(secure)                   // usar el parámetro (true en prod/HTTPS, false en dev/HTTP)
+                .secure(secure)
                 .path("/")
                 .maxAge(maxAgeSec)
-                .sameSite(secure ? "None" : "Lax") // SameSite=None requiere Secure=true; en dev usamos Lax
+                .sameSite(secure ? "None" : "Lax")
                 .build();
 
-        response.addHeader("Set-Cookie", cookie.toString());
+        // En producción añadimos Partitioned manualmente (CHIPS).
+        // Necesario para que Chrome y Firefox no bloqueen la cookie cross-site.
+        String cookieHeader = secure
+                ? cookie.toString() + "; Partitioned"
+                : cookie.toString();
+
+        response.addHeader("Set-Cookie", cookieHeader);
     }
 
     /**
      * Invalida una cookie poniéndole maxAge=0.
+     * Aplica los mismos flags que addTokenCookie para que el navegador la elimine.
      */
     public static void clearCookie(HttpServletResponse response,
                                    String name,
@@ -46,6 +57,10 @@ public final class CookieUtil {
                 .sameSite(secure ? "None" : "Lax")
                 .build();
 
-        response.addHeader("Set-Cookie", cookie.toString());
+        String cookieHeader = secure
+                ? cookie.toString() + "; Partitioned"
+                : cookie.toString();
+
+        response.addHeader("Set-Cookie", cookieHeader);
     }
 }

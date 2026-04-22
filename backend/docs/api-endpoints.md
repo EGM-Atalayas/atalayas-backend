@@ -79,19 +79,28 @@
 | `GET` | `/empresas/aprobadas` | ❌ Pública | Listar empresas aprobadas y activas (selector de registro). |
 | `GET` | `/empresas` | `ADMIN` | Listar todas las empresas. |
 | `GET` | `/empresas/pendientes` | `ADMIN` | Listar empresas en estado `PENDIENTE`. |
-| `PATCH` | `/empresas/{id}/estado` | `ADMIN` | Cambiar estado de una empresa (ver tabla de transiciones). |
+| `GET` | `/empresas/solicitudes` | `ADMIN` | Listar solicitudes pendientes con nombre y email del admin provisional. |
+| `PATCH` | `/empresas/{id}/estado` | `ADMIN` | Cambiar estado de una empresa activa (ver tabla de transiciones). No permite rechazar. |
+| `PATCH` | `/empresas/{id}/solicitud` | `ADMIN` | Aprobar o rechazar una solicitud. Body: `{ "accion": "aprobar" \| "rechazar" }`. |
+| `PATCH` | `/empresas/{id}/activacion` | `ADMIN` | Toggle `activo` de una empresa aprobada y todos sus usuarios. |
+
 ### `PATCH /empresas/{id}/estado` — Transiciones
-**Body:** `{ "nuevoEstado": "APROBADA" | "RECHAZADA" | "PENDIENTE" }`
-| Desde \ Hacia | `PENDIENTE` | `APROBADA` | `RECHAZADA` |
+**Body:** `{ "nuevoEstado": "APROBADA" | "PAUSADA" }`
+
+| Desde \ Hacia | `APROBADA` | `PAUSADA` | Rechazo (hard delete) |
 |---|:---:|:---:|:---:|
-| **`PENDIENTE`** | ❌ | ✅ | ✅ |
-| **`RECHAZADA`** | ✅ | ❌ | ❌ |
-| **`APROBADA`** | ❌ | ❌ | ❌ |
+| **`PENDIENTE`** | ✅ via `/{id}/solicitud` | ❌ | ✅ via `/{id}/solicitud` |
+| **`APROBADA`** | ❌ | ✅ | ❌ |
+| **`PAUSADA`** | ✅ | ❌ | ❌ |
+
 | Transición | `company.activo` | Usuarios | Email | Notif. interna |
 |---|:---:|---|---|:---:|
-| `PENDIENTE → APROBADA` | `true` | Se activan (activo = true) | ✉ Bienvenida | ✅ |
-| `PENDIENTE → RECHAZADA` | `false` | Sin cambio (siguen inactivos) | ✉ Rechazo | ❌ |
-| `RECHAZADA → PENDIENTE` | `false` | Sin cambio | Ninguno | ❌ |
+| `PENDIENTE → APROBADA` | `true` | Se activan (`activo = true`) | ✉ Bienvenida | ✅ |
+| `PENDIENTE → (rechazo)` | — *(borrado físico)* | Eliminados de BD | ✉ Rechazo | ❌ |
+| `APROBADA → PAUSADA` | `false` | Se desactivan (`activo = false`) | Ninguno | ❌ |
+| `PAUSADA → APROBADA` | `true` | Se reactivan (`activo = true`) | Ninguno | ❌ |
+
+> ⚠️ El **rechazo** elimina físicamente la empresa y sus usuarios de la BD (hard delete). Es irreversible.
 > Transiciones prohibidas o no-op devuelven `400 Bad Request` con mensaje descriptivo.
 ---
 ## 4. Dashboard · `/api/v1/dashboard`

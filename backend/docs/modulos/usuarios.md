@@ -90,6 +90,8 @@ El comportamiento depende del rol de quien llama:
 - El usuario desactivado no puede iniciar sesión (`isEnabled()` devuelve `false`).
 - `ROLE_ADMIN_EMPRESA` solo puede desactivar usuarios de su empresa (→ `404` si es de otra).
 
+> **Excepción — hard delete por rechazo de empresa:** cuando el superadmin rechaza una solicitud de alta desde `PATCH /empresas/{id}/solicitud`, los usuarios provisionales de esa empresa se eliminan **físicamente** de la BD en cascada (junto con la empresa). Este borrado lo gestiona `CompanyService`, no este endpoint.
+
 ---
 
 ## Request / Response
