@@ -74,7 +74,7 @@ public class GeminiClient {
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(urlConKey))
-                    .timeout(Duration.ofSeconds(60))
+                    .timeout(Duration.ofSeconds(120))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(bodyJson))
                     .build();
