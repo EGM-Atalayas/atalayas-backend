@@ -23,6 +23,14 @@ public class CompanyMapper {
      * Incluye logoUrl para que el frontend pueda mostrarlo en el header.
      */
     public CompanyResponse toResponse(Company company) {
+        return toResponse(company, null);
+    }
+
+    /**
+     * Sobrecarga enriquecida — usada en getAll() para incluir datos del admin.
+     * Si adminUser es null los campos nombre/apellidos/emailAdmin quedan a null.
+     */
+    public CompanyResponse toResponse(Company company, User adminUser) {
         return CompanyResponse.builder()
                 .empresaId(company.getEmpresaId())
                 .nombreEmpresa(company.getNombreEmpresa())
@@ -37,6 +45,9 @@ public class CompanyMapper {
                 .fechaSolicitud(company.getFechaSolicitud())
                 .fechaResolucion(company.getFechaResolucion())
                 .actualizadoEn(company.getActualizadoEn())
+                .nombre(adminUser != null ? adminUser.getNombre() : null)
+                .apellidos(adminUser != null ? adminUser.getApellidos() : null)
+                .emailAdmin(adminUser != null ? adminUser.getEmail() : null)
                 .build();
     }
 
