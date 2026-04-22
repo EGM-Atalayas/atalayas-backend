@@ -34,7 +34,7 @@ public class ModuleResponse {
     private String idioma;
     private String duracion;
     private String audiencia;
-    private String[] departamentos;
+    private String departamentos;
     private String testPreguntas;
 
     private OffsetDateTime fechaCreacion;

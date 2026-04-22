@@ -37,8 +37,8 @@ public class ModuleRequest {
     /** Audiencia: "todos" | "administradores" | "departamento" */
     private String audiencia;
 
-    /** Departamentos destinatarios (cuando audiencia = "departamento") */
-    private String[] departamentos;
+    /** Departamentos destinatarios como JSON string (cuando audiencia = "departamento") */
+    private String departamentos;
 
     /** Preguntas del test serializado como JSON string */
     private String testPreguntas;

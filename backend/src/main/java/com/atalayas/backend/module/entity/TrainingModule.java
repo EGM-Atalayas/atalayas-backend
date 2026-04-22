@@ -3,8 +3,6 @@ package com.atalayas.backend.module.entity;
 import com.atalayas.backend.common.enums.ModuleType;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -72,14 +70,12 @@ public class TrainingModule {
     @Builder.Default
     private String audiencia = "todos";
 
-    // Departamentos destinatarios cuando audiencia = departamento
-    @JdbcTypeCode(SqlTypes.ARRAY)
-    @Column(name = "departamentos", columnDefinition = "text[]")
-    private String[] departamentos;
+    // Departamentos destinatarios cuando audiencia = departamento (JSON array string)
+    @Column(name = "departamentos", columnDefinition = "TEXT")
+    private String departamentos;
 
-    // Preguntas del test en formato JSON
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "test_preguntas", columnDefinition = "jsonb")
+    // Preguntas del test en formato JSON string
+    @Column(name = "test_preguntas", columnDefinition = "TEXT")
     private String testPreguntas;
 
     // Soft delete — false oculta el módulo para empleados pero conserva datos históricos
