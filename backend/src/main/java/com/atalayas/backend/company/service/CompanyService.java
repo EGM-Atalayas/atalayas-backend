@@ -159,6 +159,9 @@ public class CompanyService {
             case PENDIENTE -> destino == EstadoSolicitud.APROBADA;
             case APROBADA  -> destino == EstadoSolicitud.PAUSADA;
             case PAUSADA   -> destino == EstadoSolicitud.APROBADA;
+            // RECHAZADA es un estado terminal gestionado por resolverSolicitud (hard delete)
+            // No se permite ninguna transición desde cambiarEstado
+            case RECHAZADA -> false;
         };
 
         if (!transicionValida) {
