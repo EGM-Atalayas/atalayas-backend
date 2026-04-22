@@ -136,13 +136,13 @@ public class CompanyService {
     /**
      * Cambia el estado de una empresa — solo ROLE_ADMIN.
      *
-     * Transiciones permitidas:
-     *   PENDIENTE  → APROBADA  : activa empresa y usuarios, envía emails y notificaciones
-     *   PENDIENTE  → RECHAZADA : desactiva empresa, envía email de rechazo
-     *   RECHAZADA  → PENDIENTE : reset sin efectos secundarios
-     *   APROBADA   → cualquier : PROHIBIDO — empresa ya operativa
-     *   RECHAZADA  → APROBADA  : PROHIBIDO — debe pasar primero por PENDIENTE
-     *   mismo      → mismo     : PROHIBIDO — cambio sin efecto
+     * Transiciones permitidas desde este endpoint (PATCH /{id}/estado):
+     *   PENDIENTE → APROBADA  : activa empresa y usuarios, envía emails y notificaciones
+     *   APROBADA  → PAUSADA   : desactiva empresa y usuarios temporalmente
+     *   PAUSADA   → APROBADA  : reactiva empresa y usuarios
+     *
+     * El rechazo (con hard delete) solo se puede realizar desde PATCH /{id}/solicitud.
+     * Cualquier otra transición devuelve 400 Bad Request.
      */
     @Transactional
     public CompanyResponse cambiarEstado(UUID id, CambioEstadoRequest request) {
@@ -150,17 +150,21 @@ public class CompanyService {
         EstadoSolicitud actual = company.getEstadoSolicitud();
         EstadoSolicitud destino = request.getNuevoEstado();
 
-        // Validamos que la transición sea permitida antes de tocar nada
         if (actual == destino) {
             throw new BusinessException("La empresa ya se encuentra en estado " + actual);
         }
-        if (actual == EstadoSolicitud.APROBADA) {
-            throw new BusinessException("Una empresa aprobada no puede cambiar de estado");
-        }
-        if (actual == EstadoSolicitud.RECHAZADA && destino == EstadoSolicitud.APROBADA) {
+
+        // Transiciones permitidas
+        boolean transicionValida = switch (actual) {
+            case PENDIENTE -> destino == EstadoSolicitud.APROBADA;
+            case APROBADA  -> destino == EstadoSolicitud.PAUSADA;
+            case PAUSADA   -> destino == EstadoSolicitud.APROBADA;
+        };
+
+        if (!transicionValida) {
             throw new BusinessException(
-                    "No se puede aprobar directamente una empresa rechazada. " +
-                            "Primero debe volver al estado PENDIENTE.");
+                    "Transición no permitida: " + actual + " → " + destino +
+                    ". El rechazo de solicitudes solo es posible desde PATCH /{id}/solicitud.");
         }
 
         company.setEstadoSolicitud(destino);
@@ -168,53 +172,50 @@ public class CompanyService {
         switch (destino) {
 
             case APROBADA -> {
-                // Activamos la empresa y todos sus usuarios inactivos
                 company.setActivo(true);
                 company.setFechaResolucion(OffsetDateTime.now());
                 companyRepository.save(company);
 
-                List<User> inactivos = userRepository
+                // En ambos casos (desde PENDIENTE o desde PAUSADA) los usuarios
+                // están inactivos — se reactivan todos
+                List<User> afectados = userRepository
                         .findAllByEmpresaIdAndActivoFalse(company.getEmpresaId());
 
-                for (User u : inactivos) {
+                for (User u : afectados) {
                     u.setActivo(true);
                     userRepository.save(u);
 
-                    // Email de bienvenida + notificación interna para cada usuario activado
-                    emailService.enviarAprobacion(
-                            u.getEmail(), u.getNombre(), company.getNombreEmpresa());
-                    notificationService.crearInterna(
-                            u.getUsuarioId(),
-                            "BIENVENIDA",
-                            "¡Bienvenido/a a Atalayas, " + u.getNombre() + "! " +
-                                    "Tu empresa \"" + company.getNombreEmpresa() +
-                                    "\" ha sido activada. Empieza tu formación.",
-                            "/dashboard"
-                    );
+                    if (actual == EstadoSolicitud.PENDIENTE) {
+                        // Primera aprobación: email de bienvenida + notificación interna
+                        emailService.enviarAprobacion(
+                                u.getEmail(), u.getNombre(), company.getNombreEmpresa());
+                        notificationService.crearInterna(
+                                u.getUsuarioId(),
+                                "BIENVENIDA",
+                                "¡Bienvenido/a a Atalayas, " + u.getNombre() + "! " +
+                                        "Tu empresa \"" + company.getNombreEmpresa() +
+                                        "\" ha sido activada. Empieza tu formación.",
+                                "/dashboard"
+                        );
+                    }
+                    // Reactivación desde PAUSADA: sin email, solo se reactiva el acceso
                 }
             }
 
-            case RECHAZADA -> {
-                // Desactivamos la empresa y notificamos por email al admin
+            case PAUSADA -> {
+                // Suspensión temporal — desactivar empresa y todos sus usuarios
                 company.setActivo(false);
-                company.setFechaResolucion(OffsetDateTime.now());
                 companyRepository.save(company);
 
-                List<User> inactivos = userRepository
-                        .findAllByEmpresaIdAndActivoFalse(company.getEmpresaId());
-                for (User u : inactivos) {
-                    emailService.enviarRechazo(
-                            u.getEmail(), u.getNombre(), company.getNombreEmpresa());
+                List<User> activos = userRepository
+                        .findAllByEmpresaIdAndActivoTrue(company.getEmpresaId());
+                for (User u : activos) {
+                    u.setActivo(false);
+                    userRepository.save(u);
                 }
             }
 
-            case PENDIENTE -> {
-                // Reset a estado inicial — empresa inactiva, sin fecha de resolución
-                // Los usuarios siguen inactivos, no se envían emails
-                company.setActivo(false);
-                company.setFechaResolucion(null);
-                companyRepository.save(company);
-            }
+            default -> throw new BusinessException("Estado de destino no gestionado: " + destino);
         }
 
         return companyMapper.toResponse(company);
@@ -268,26 +269,48 @@ public class CompanyService {
     /**
      * PATCH /api/v1/empresas/{id}/solicitud
      * Aprueba o rechaza una solicitud mediante el campo {@code accion}: "aprobar" | "rechazar".
-     * Delega en {@link #cambiarEstado} reutilizando toda la lógica existente
-     * (emails, notificaciones, auditoría).
+     *
+     * - "aprobar": delega en {@link #cambiarEstado} (activa empresa y usuarios, envía emails).
+     * - "rechazar": envía email de rechazo y elimina físicamente usuarios y empresa de la BD
+     *               (en ese orden para respetar la FK usuario → empresa).
      */
     @Transactional
     public void resolverSolicitud(UUID id, AccionSolicitudRequest request) {
-        EstadoSolicitud destino = "aprobar".equalsIgnoreCase(request.getAccion())
-                ? EstadoSolicitud.APROBADA
-                : EstadoSolicitud.RECHAZADA;
+        boolean aprobar = "aprobar".equalsIgnoreCase(request.getAccion());
 
-        CambioEstadoRequest cambio = new CambioEstadoRequest();
-        cambio.setNuevoEstado(destino);
-        cambiarEstado(id, cambio);
+        if (aprobar) {
+            CambioEstadoRequest cambio = new CambioEstadoRequest();
+            cambio.setNuevoEstado(EstadoSolicitud.APROBADA);
+            cambiarEstado(id, cambio);
 
-        // Traza de auditoría
-        Company empresa = findOrThrow(id);
-        String texto = "aprobar".equalsIgnoreCase(request.getAccion())
-                ? "Empresa \"" + empresa.getNombreEmpresa() + "\" aprobada"
-                : "Solicitud de \"" + empresa.getNombreEmpresa() + "\" rechazada";
-        auditService.registrar(texto,
-                "aprobar".equalsIgnoreCase(request.getAccion()) ? "success" : "warning");
+            Company empresa = findOrThrow(id);
+            auditService.registrar(
+                    "Empresa \"" + empresa.getNombreEmpresa() + "\" aprobada", "success");
+
+        } else {
+            // Rechazo: capturar datos antes de borrar, luego hard delete
+            Company empresa = findOrThrow(id);
+
+            if (empresa.getEstadoSolicitud() != EstadoSolicitud.PENDIENTE) {
+                throw new BusinessException(
+                        "Solo se pueden rechazar empresas en estado PENDIENTE");
+            }
+
+            // Notificar por email antes de borrar
+            List<User> usuarios = userRepository.findAllByEmpresaIdAndActivoFalse(empresa.getEmpresaId());
+            for (User u : usuarios) {
+                emailService.enviarRechazo(u.getEmail(), u.getNombre(), empresa.getNombreEmpresa());
+            }
+
+            String nombreEmpresa = empresa.getNombreEmpresa();
+
+            // Hard delete: primero usuarios (FK), luego empresa
+            userRepository.deleteAllByEmpresaId(empresa.getEmpresaId());
+            companyRepository.delete(empresa);
+
+            auditService.registrar(
+                    "Solicitud de \"" + nombreEmpresa + "\" rechazada y eliminada", "warning");
+        }
     }
 
 

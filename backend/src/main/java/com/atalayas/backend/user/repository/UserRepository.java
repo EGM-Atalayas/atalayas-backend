@@ -41,6 +41,12 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      */
     List<User> findAllByEmpresaIdAndActivoFalse(UUID empresaId);
 
+    /**
+     * Elimina todos los usuarios de una empresa — usado al rechazar una solicitud (hard delete).
+     * Debe ejecutarse antes de eliminar la empresa para respetar la FK.
+     */
+    void deleteAllByEmpresaId(UUID empresaId);
+
 
     // ── CONTEOS PARA EL DASHBOARD ────────────────────────────────────────────
     /** Usuarios activos de una empresa - resumen del admin de empresa */

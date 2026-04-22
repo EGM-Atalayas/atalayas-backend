@@ -32,9 +32,9 @@ Gestiona el ciclo de vida de las empresas del parque EGM:
 | `mision` | TEXT (nullable) | Misión corporativa (usado en módulos de onboarding) |
 | `vision` | TEXT (nullable) | Visión corporativa |
 | `valores` | TEXT (nullable) | Valores corporativos |
-| `estadoSolicitud` | Enum | `PENDIENTE` / `APROBADA` / `RECHAZADA` |
+| `estadoSolicitud` | Enum | `PENDIENTE` / `APROBADA` / `PAUSADA` |
 | `esEgm` | boolean | `true` si es la empresa EGM (permisos especiales) |
-| `activo` | boolean | `false` = empresa suspendida o rechazada |
+| `activo` | boolean | `false` = empresa pausada o pendiente de aprobación |
 | `fechaSolicitud` | OffsetDateTime | Cuando se envió la solicitud (no modificable) |
 | `fechaResolucion` | OffsetDateTime (nullable) | Cuando el superadmin tomó la decisión |
 | `actualizadoEn` | OffsetDateTime | Última modificación (automático) |
@@ -51,7 +51,10 @@ Base URL: `/api/v1/empresas`
 | `GET` | `/empresas/aprobadas` | ❌ Pública | Listar empresas aprobadas (para selector de registro) |
 | `GET` | `/empresas` | `ADMIN` | Listar todas las empresas |
 | `GET` | `/empresas/pendientes` | `ADMIN` | Listar empresas en estado `PENDIENTE` |
-| `PATCH` | `/empresas/{id}/estado` | `ADMIN` | Cambiar el estado de una empresa |
+| `GET` | `/empresas/solicitudes` | `ADMIN` | Listar solicitudes pendientes con datos del admin |
+| `PATCH` | `/empresas/{id}/estado` | `ADMIN` | Cambiar el estado de una empresa activa |
+| `PATCH` | `/empresas/{id}/solicitud` | `ADMIN` | Aprobar o rechazar una solicitud de alta |
+| `PATCH` | `/empresas/{id}/activacion` | `ADMIN` | Toggle activo/inactivo de una empresa aprobada |
 
 ---
 
@@ -62,32 +65,32 @@ Base URL: `/api/v1/empresas`
 ```
                ┌──────────────────┐
        Alta    │                  │  Aprobación
-   ──────────► │    PENDIENTE     │ ──────────────► APROBADA
-               │                  │
-               │                  │ ──────────────► RECHAZADA
-               └──────────────────┘  Rechazo
-                        ▲
-                        │ Re-solicitud
-               RECHAZADA ─────────────────────────► PENDIENTE
+   ──────────► │    PENDIENTE     │ ──────────────────────────────► APROBADA ◄──┐
+               │                  │                                     │        │
+               │                  │ ──► (eliminación física)       PAUSADA ──────┘
+               └──────────────────┘  Rechazo        ▲                   │
+                                                     └───────────────────┘
 ```
 
 ### Tabla de transiciones
 
-| Desde \ Hacia | `PENDIENTE` | `APROBADA` | `RECHAZADA` |
-|:---:|:---:|:---:|:---:|
-| **`PENDIENTE`** | ❌ | ✅ | ✅ |
-| **`RECHAZADA`** | ✅ | ❌ | ❌ |
-| **`APROBADA`** | ❌ | ❌ | ❌ |
+| Desde \ Hacia | `PENDIENTE` | `APROBADA` | `PAUSADA` | Rechazo (hard delete) |
+|:---:|:---:|:---:|:---:|:---:|
+| **`PENDIENTE`** | ❌ | ✅ via `/{id}/solicitud` | ❌ | ✅ via `/{id}/solicitud` |
+| **`APROBADA`** | ❌ | ❌ | ✅ via `/{id}/estado` | ❌ |
+| **`PAUSADA`** | ❌ | ✅ via `/{id}/estado` | ❌ | ❌ |
 
-> Una empresa `APROBADA` no puede ser rechazada ni volver a pendiente. Las transiciones no permitidas devuelven `400 Bad Request`.
+> Las transiciones no permitidas devuelven `400 Bad Request`.
+> El rechazo elimina físicamente la empresa y sus usuarios de la BD.
 
 ### Efectos secundarios de cada transición
 
 | Transición | `activo` empresa | Usuarios de la empresa | Email enviado |
 |---|:---:|---|---|
 | `PENDIENTE → APROBADA` | `true` | Se activan (`activo = true`) | ✉ Bienvenida al admin |
-| `PENDIENTE → RECHAZADA` | `false` | Sin cambio (siguen inactivos) | ✉ Notificación de rechazo |
-| `RECHAZADA → PENDIENTE` | `false` | Sin cambio | Ninguno |
+| `PENDIENTE → (rechazo)` | — (borrado) | Eliminados de BD | ✉ Notificación de rechazo |
+| `APROBADA → PAUSADA` | `false` | Se desactivan (`activo = false`) | Ninguno |
+| `PAUSADA → APROBADA` | `true` | Se reactivan (`activo = true`) | Ninguno |
 
 ### Solicitud de alta (`POST /empresas/solicitud`)
 
@@ -145,15 +148,51 @@ No requiere autenticación. Se usa en el formulario de registro de empleados par
 
 ### PATCH `/empresas/{id}/estado` — Cambiar estado
 
+Gestiona el ciclo de vida de empresas activas. **No permite rechazar** — el rechazo se hace desde `/{id}/solicitud`.
+
 **Request body:**
 ```json
 {
-  "nuevoEstado": "APROBADA"
+  "nuevoEstado": "PAUSADA"
 }
 ```
-Valores válidos: `"APROBADA"`, `"RECHAZADA"`, `"PENDIENTE"`
+Valores válidos según el estado actual:
+- Empresa `PENDIENTE`: `"APROBADA"`
+- Empresa `APROBADA`: `"PAUSADA"`
+- Empresa `PAUSADA`: `"APROBADA"`
 
 **Response `200 OK`:** datos actualizados de la empresa.
+
+### PATCH `/empresas/{id}/solicitud` — Aprobar o rechazar
+
+**Request body:**
+```json
+{ "accion": "aprobar" }
+```
+o
+```json
+{ "accion": "rechazar" }
+```
+
+**Response `200 OK`:** sin cuerpo.
+
+> ⚠️ Al rechazar, la empresa y sus usuarios se **eliminan físicamente** de la base de datos. Esta acción es irreversible.
+
+---
+
+## Migración de base de datos
+
+Al introducir el estado `PAUSADA` y eliminar `RECHAZADA`, es necesario actualizar el CHECK constraint de PostgreSQL manualmente (el proyecto usa `ddl-auto=none`):
+
+```sql
+-- 1. Eliminar el constraint antiguo
+ALTER TABLE empresa DROP CONSTRAINT IF EXISTS empresa_estado_solicitud_check;
+
+-- 2. Crear el constraint actualizado
+ALTER TABLE empresa
+    ADD CONSTRAINT empresa_estado_solicitud_check
+    CHECK (estado_solicitud IN ('PENDIENTE', 'APROBADA', 'PAUSADA'));
+```
 
 ---
 
@@ -163,22 +202,21 @@ Valores válidos: `"APROBADA"`, `"RECHAZADA"`, `"PENDIENTE"`
 Empresa solicitante               Superadmin EGM                Backend
        │                               │                           │
        │  POST /empresas/solicitud     │                           │
-       │ ─────────────────────────────────────────────────────► │
+       │ ─────────────────────────────────────────────────────────►│
        │                               │                           │ Crea empresa PENDIENTE
        │  201 Created                  │                           │ Crea admin empresa INACTIVO
-       │ ◄─────────────────────────────────────────────────────── │
+       │ ◄─────────────────────────────────────────────────────────│
        │                               │                           │
        │  (espera revisión)            │                           │
-       │                               │  GET /empresas/pendientes │
+       │                               │  GET /empresas/solicitudes│
        │                               │ ─────────────────────────►│
-       │                               │  PATCH /{id}/estado       │
-       │                               │  { nuevoEstado: APROBADA }│
+       │                               │  PATCH /{id}/solicitud    │
+       │                               │  { "accion": "aprobar" }  │
        │                               │ ─────────────────────────►│
        │                               │                           │ Activa empresa
        │                               │                           │ Activa usuarios
        │  ✉ Email de bienvenida        │                           │ Envía email
-       │ ◄─────────────────────────────────────────────────────── │
+       │ ◄─────────────────────────────────────────────────────────│
        │                               │  200 OK                   │
        │                               │ ◄─────────────────────────│
 ```
-
