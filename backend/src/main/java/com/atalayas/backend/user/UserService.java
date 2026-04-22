@@ -1,4 +1,4 @@
-package com.atalayas.backend.user.service;
+package com.atalayas.backend.user;
 
 import com.atalayas.backend.common.enums.RoleType;
 import com.atalayas.backend.common.service.ImageService;

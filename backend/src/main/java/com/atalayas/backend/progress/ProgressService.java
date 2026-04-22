@@ -1,4 +1,4 @@
-package com.atalayas.backend.progress.service;
+package com.atalayas.backend.progress;
 
 import com.atalayas.backend.common.enums.ProgressStatus;
 import com.atalayas.backend.communication.service.NotificationService;

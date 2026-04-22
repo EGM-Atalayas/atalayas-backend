@@ -1,10 +1,9 @@
-package com.atalayas.backend.dashboard.controller;
+package com.atalayas.backend.dashboard;
 
 import com.atalayas.backend.dashboard.dto.AdminEmpresaResumenResponse;
 import com.atalayas.backend.dashboard.dto.DashboardChartsResponse;
 import com.atalayas.backend.dashboard.dto.SuperAdminDashboardResponse;
 import com.atalayas.backend.dashboard.dto.SuperAdminResumenResponse;
-import com.atalayas.backend.dashboard.service.DashboardService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;

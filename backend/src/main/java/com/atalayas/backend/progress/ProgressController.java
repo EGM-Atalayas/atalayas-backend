@@ -1,8 +1,7 @@
-package com.atalayas.backend.progress.controller;
+package com.atalayas.backend.progress;
 
 import com.atalayas.backend.progress.dto.CompleteContentRequest;
 import com.atalayas.backend.progress.dto.ProgressResponse;
-import com.atalayas.backend.progress.service.ProgressService;
 import com.atalayas.backend.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;

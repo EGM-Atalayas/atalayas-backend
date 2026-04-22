@@ -1,8 +1,7 @@
-package com.atalayas.backend.module.controller;
+package com.atalayas.backend.module;
 
 import com.atalayas.backend.module.dto.ModuleRequest;
 import com.atalayas.backend.module.dto.ModuleResponse;
-import com.atalayas.backend.module.service.ModuleService;
 import com.atalayas.backend.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;

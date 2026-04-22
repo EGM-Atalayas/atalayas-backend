@@ -77,7 +77,7 @@
 |--------|------|-----------|-------------|
 | `POST` | `/empresas/solicitud` | ❌ Pública | Solicitar alta de empresa. Crea la empresa en estado `PENDIENTE` y su usuario admin inactivo. |
 | `GET` | `/empresas/aprobadas` | ❌ Pública | Listar empresas aprobadas y activas (selector de registro). |
-| `GET` | `/empresas` | `ADMIN` | Listar todas las empresas. |
+| `GET` | `/empresas` | `ADMIN` | Listar todas las empresas. Incluye `nombre`, `apellidos` y `emailAdmin` del administrador de cada empresa. |
 | `GET` | `/empresas/pendientes` | `ADMIN` | Listar empresas en estado `PENDIENTE`. |
 | `GET` | `/empresas/solicitudes` | `ADMIN` | Listar solicitudes pendientes con nombre y email del admin provisional. |
 | `PATCH` | `/empresas/{id}/estado` | `ADMIN` | Cambiar estado de una empresa activa (ver tabla de transiciones). No permite rechazar. |
@@ -93,14 +93,15 @@
 | **`APROBADA`** | ❌ | ✅ | ❌ |
 | **`PAUSADA`** | ✅ | ❌ | ❌ |
 
-| Transición | `company.activo` | Usuarios | Email | Notif. interna |
-|---|:---:|---|---|:---:|
-| `PENDIENTE → APROBADA` | `true` | Se activan (`activo = true`) | ✉ Bienvenida | ✅ |
-| `PENDIENTE → (rechazo)` | — *(borrado físico)* | Eliminados de BD | ✉ Rechazo | ❌ |
-| `APROBADA → PAUSADA` | `false` | Se desactivan (`activo = false`) | Ninguno | ❌ |
-| `PAUSADA → APROBADA` | `true` | Se reactivan (`activo = true`) | Ninguno | ❌ |
+| Transición | `company.activo` | Usuarios | Email | Notif. interna | Audit log |
+|---|:---:|---|---|:---:|:---:|
+| `PENDIENTE → APROBADA` | `true` | Se activan (`activo = true`) | ✉ Bienvenida | ✅ | ✅ `success` |
+| `PENDIENTE → (rechazo)` | — *(borrado físico)* | Eliminados de BD | ✉ Rechazo | ❌ | ✅ `warning` |
+| `APROBADA → PAUSADA` | `false` | Se desactivan (`activo = false`) | Ninguno | ❌ | ❌ |
+| `PAUSADA → APROBADA` | `true` | Se reactivan (`activo = true`) | Ninguno | ❌ | ❌ |
 
 > ⚠️ El **rechazo** elimina físicamente la empresa y sus usuarios de la BD (hard delete). Es irreversible.
+> El audit log de aprobación y rechazo se persiste en transacción independiente (`REQUIRES_NEW`) — siempre se graba aunque falle el envío de email.
 > Transiciones prohibidas o no-op devuelven `400 Bad Request` con mensaje descriptivo.
 ---
 ## 4. Dashboard · `/api/v1/dashboard`
@@ -122,6 +123,17 @@
 - **evolucion**: totales acumulados al final de cada uno de los últimos 6 meses (ordenado de más antiguo a más reciente).
 - **sectores**: empresas agrupadas por sector, ordenadas por volumen DESC. No incluye empresas sin sector asignado.
 - **modulos**: top 10 módulos activos ordenados por `completados DESC`.
+
+**`GET /dashboard/superadmin` — campo `actividadReciente`:**
+
+Últimos 10 eventos del `audit_log` ordenados de más nuevo a más antiguo. El campo `tiempo` es una cadena relativa calculada en backend (`"ahora mismo"`, `"hace 5m"`, `"hace 2h"`, `"hace 3d"`).
+
+```json
+"actividadReciente": [
+  { "id": 42, "texto": "Empresa \"Tech SL\" aprobada", "tipo": "success", "tiempo": "hace 5m" },
+  { "id": 41, "texto": "Solicitud de \"Otra SL\" rechazada y eliminada", "tipo": "warning", "tiempo": "hace 2h" }
+]
+```
 ---
 ## 5. Módulos · `/api/v1/modulos`
 > Los módulos pueden ser de **empresa** o **globales** (`empresaId = null`, solo creables por `ADMIN`).

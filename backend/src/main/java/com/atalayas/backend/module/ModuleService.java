@@ -1,4 +1,4 @@
-package com.atalayas.backend.module.service;
+package com.atalayas.backend.module;
 
 import com.atalayas.backend.common.enums.RoleType;
 import com.atalayas.backend.communication.service.NotificationService;

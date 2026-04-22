@@ -1,4 +1,4 @@
-package com.atalayas.backend.rewards.service;
+package com.atalayas.backend.rewards;
 
 import com.atalayas.backend.common.enums.RoleType;
 import com.atalayas.backend.exception.ResourceNotFoundException;

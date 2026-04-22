@@ -5,6 +5,7 @@ import com.atalayas.backend.audit.repository.AuditLogRepository;
 import com.atalayas.backend.dashboard.dto.ActividadRecienteDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
@@ -26,12 +27,14 @@ public class AuditService {
     private final AuditLogRepository auditLogRepository;
 
     /**
-     * Persiste un nuevo evento de auditoría.
+     * Persiste un nuevo evento de auditoría en su propia transacción independiente.
+     * REQUIRES_NEW garantiza que el log se graba aunque la transacción del llamador
+     * haga rollback (p. ej. si un email falla después de aprobar una empresa).
      *
      * @param texto Descripción legible del evento.
      * @param tipo  "info" | "success" | "warning" | "error"
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void registrar(String texto, String tipo) {
         auditLogRepository.save(
                 AuditLog.builder()

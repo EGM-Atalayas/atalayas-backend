@@ -1,4 +1,4 @@
-package com.atalayas.backend.dashboard.service;
+package com.atalayas.backend.dashboard;
 
 import com.atalayas.backend.audit.service.AuditService;
 import com.atalayas.backend.common.enums.EstadoSolicitud;
