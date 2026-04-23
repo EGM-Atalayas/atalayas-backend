@@ -28,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 /**
  * Endpoints de inteligencia artificial con Gemini 2.0 Flash
@@ -286,7 +287,7 @@ public class AiController {
                 // Usamos un UUID temporal para el nombre del archivo; el frontend lo asociará al módulo después
                 podcastAudioUrl = supabaseStorageService.subirAudioPodcast(
                         audioBytes,
-                        java.util.UUID.randomUUID()
+                        UUID.randomUUID()
                 );
             } catch (Exception e) {
                 log.warn("No se pudo generar el audio del podcast: {}. Se continuará sin audio.", e.getMessage());
