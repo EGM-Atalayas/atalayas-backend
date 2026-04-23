@@ -154,4 +154,27 @@ public class ModuleController {
             @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(moduleService.desactivar(id, user));
     }
+
+
+    /**
+     * DELETE /api/v1/modulos/{id}
+     * Elimina el módulo permanentemente de la base de datos.
+     * Admin empresa solo puede eliminar los suyos - 403 si es ajeno o global.
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
+    @Operation(summary = "Eliminar módulo permanentemente — admin empresa solo puede eliminar los propios")
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Módulo eliminado"),
+        @ApiResponse(responseCode = "403", description = "Módulo de otra empresa o global",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Módulo no encontrado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
+    public ResponseEntity<Void> eliminar(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal User user) {
+        moduleService.eliminar(id, user);
+        return ResponseEntity.noContent().build();
+    }
 }
