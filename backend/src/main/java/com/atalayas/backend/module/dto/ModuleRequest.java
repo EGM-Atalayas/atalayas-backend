@@ -55,6 +55,9 @@ public class ModuleRequest {
     /** Guion de video (JSON de slides) generado por IA */
     private String scriptVideo;
 
+    /** Contenido formativo en Markdown (generado por IA o escrito manualmente) */
+    private String contenidoMarkdown;
+
     /** URL pública del MP3 del podcast (Supabase Storage) */
     private String podcastAudioUrl;
 }
