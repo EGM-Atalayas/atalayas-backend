@@ -95,6 +95,10 @@ public class TrainingModule {
     @Column(name = "script_video", columnDefinition = "TEXT")
     private String scriptVideo;
 
+    // Contenido formativo en Markdown (generado por IA o escrito manualmente)
+    @Column(name = "contenido_markdown", columnDefinition = "TEXT")
+    private String contenidoMarkdown;
+
     // URL pública del audio MP3 del podcast (almacenado en Supabase Storage)
     @Column(name = "podcast_audio_url", length = 500)
     private String podcastAudioUrl;

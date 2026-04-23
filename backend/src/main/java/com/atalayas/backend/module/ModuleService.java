@@ -166,6 +166,7 @@ public class ModuleService {
         if (request.getTiposSalida() != null)    modulo.setTiposSalida(request.getTiposSalida());
         if (request.getScriptPodcast() != null)  modulo.setScriptPodcast(request.getScriptPodcast());
         if (request.getScriptVideo() != null)    modulo.setScriptVideo(request.getScriptVideo());
+        if (request.getContenidoMarkdown() != null) modulo.setContenidoMarkdown(request.getContenidoMarkdown());
         if (request.getPodcastAudioUrl() != null) modulo.setPodcastAudioUrl(request.getPodcastAudioUrl());
 
         log.info("Módulo actualizado — id={} por usuarioId={}", moduloId, user.getEmail());

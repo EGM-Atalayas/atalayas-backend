@@ -38,6 +38,7 @@ public class ModuleResponse {
     private String testPreguntas;
     private String imagenPortadaUrl;
     private String tiposSalida;
+    private String contenidoMarkdown;
     private String scriptPodcast;
     private String scriptVideo;
     private String podcastAudioUrl;
