@@ -37,6 +37,9 @@ public class AnnouncementResponse {
     // ID del usuario que creó el anuncio
     private UUID creadoPor;
 
+    // URL de imagen opcional para mostrar en la tarjeta del anuncio
+    private String imagenUrl;
+
     private OffsetDateTime creadoEn;
     private OffsetDateTime actualizadoEn;
 }

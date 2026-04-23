@@ -58,6 +58,9 @@ public class Announcement {
     @Column(name = "creado_en", updatable = false, nullable = false)
     private OffsetDateTime creadoEn;
 
+    @Column(name = "imagen_url", length = 500)
+    private String imagenUrl;
+
     @Column(name = "actualizado_en", nullable = false)
     private OffsetDateTime actualizadoEn;
 
