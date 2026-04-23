@@ -2,20 +2,21 @@
 
 > **Paquete:** `com.atalayas.backend.ai`
 > **Audiencia:** Frontend, Backend
-> **Última actualización:** Abril 2026
+> **Última actualización:** Abril 2026 (rev. 2)
 
 ---
 
 ## ¿Qué hace este módulo?
 
-Integra la plataforma con **Google Gemini** para ofrecer funcionalidades de IA a los administradores y empleados:
+Integra la plataforma con **Google Gemini** y **Groq** para ofrecer funcionalidades de IA a los administradores y empleados:
 
 | Función | Quién la usa | Descripción |
 |---|---|---|
 | Generar contenido formativo | Admin empresa | Genera artículos y material de formación dado un tema |
 | Generar preguntas de evaluación | Admin empresa | Genera preguntas de test para un contenido |
-| Chatbot | Empleados | Asistente conversacional contextualizado con la empresa |
+| Chatbot | Todos los usuarios | Asistente conversacional contextualizado con la empresa |
 | Resumir texto | Admin empresa | Resume documentos largos o textos de formación |
+| Generar desde archivo | Admin empresa | Sube un PDF/DOCX/TXT y genera documentación, podcast y/o vídeo |
 
 ---
 
@@ -26,19 +27,37 @@ Controller (AiController)
        │
        ▼
 Service layer
-  ├── AiContentService    → genera contenido formativo
-  ├── AiChatService       → chatbot empleados
-  ├── AiSummaryService    → resumen de texto
-  └── AiFileService       → extracción de texto de PDF/DOCX + resumen
+  ├── AiContentService    → genera contenido formativo y preguntas (Gemini)
+  ├── AiChatService       → chatbot empleados (Gemini)
+  ├── AiSummaryService    → resumen de texto (Gemini)
+  └── AiFileService       → extracción de texto de PDF/DOCX/TXT
        │
        ▼
-AI Client (client/)
-  └── Llamada HTTP a la API REST de Gemini
-      URL: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
-      Auth: ?key={GEMINI_API_KEY}
+AI Clients (client/)
+  ├── GeminiClient        → Llamada HTTP a Gemini 2.0 Flash
+  │   URL: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+  │   Auth: ?key={GEMINI_API_KEY}
+  ├── GroqClient          → Llamada HTTP a Groq (llama-3.3-70b-versatile)
+  │   Usado en generar-desde-archivo para texto y slides
+  └── ElevenLabsClient    → Text-to-Speech para generación de podcasts
+       │
+       ▼
+SupabaseStorageService    → Sube el audio MP3 del podcast a Supabase Storage
 ```
 
-La comunicación con Gemini se hace mediante llamadas HTTP directas (sin SDK de Java). Se envía un prompt y se recibe el texto generado.
+La comunicación con cada proveedor se hace mediante llamadas HTTP directas (sin SDK de Java).
+
+---
+
+## Variables de entorno requeridas
+
+| Variable | Proveedor | Descripción |
+|---|---|---|
+| `GEMINI_API_KEY` | Google Gemini | Generación de contenido, preguntas, chat y resumen |
+| `GROQ_API_KEY` | Groq | Generación desde archivo (doc, slides) |
+| `ELEVENLABS_API_KEY` | ElevenLabs | Text-to-Speech para el guion de podcast |
+| `SUPABASE_URL` | Supabase | URL del proyecto Supabase |
+| `SUPABASE_KEY` | Supabase | Service role key para acceso al Storage |
 
 ---
 
@@ -48,13 +67,13 @@ Base URL: `/api/v1/ai`
 
 | Método | Ruta | Rol | Descripción |
 |---|---|---|---|
-| `POST` | `/ai/generar-contenido` | `ADMIN_EMPRESA` | Genera contenido formativo |
-| `POST` | `/ai/generar-preguntas` | `ADMIN_EMPRESA` | Genera preguntas de evaluación |
+| `POST` | `/ai/generar-contenido` | `ADMIN_EMPRESA` | Genera contenido formativo con Gemini |
+| `POST` | `/ai/generar-preguntas` | `ADMIN_EMPRESA` | Genera preguntas de evaluación con Gemini |
 | `POST` | `/ai/chat` | Cualquiera | Chatbot para empleados |
 | `POST` | `/ai/resumir` | `ADMIN_EMPRESA` | Genera resumen de un texto |
+| `POST` | `/ai/generar-desde-archivo` | `ADMIN_EMPRESA` | Genera contenido a partir de un archivo PDF/DOCX/TXT |
 
-> **Nota:** Todos los endpoints requieren que la variable `GEMINI_API_KEY` esté configurada.
-> Si está vacía, los endpoints devuelven `500 Internal Server Error` con mensaje descriptivo.
+> **Nota:** Si alguna clave de API no está configurada, el endpoint afectado devuelve `500 Internal Server Error` con mensaje descriptivo.
 
 ---
 
@@ -62,29 +81,27 @@ Base URL: `/api/v1/ai`
 
 ### POST `/ai/generar-contenido` — Generar contenido formativo
 
-Genera el cuerpo de un contenido de tipo `TEXTO` o `IA_GENERADO` listo para guardar en la plataforma.
-
-**Request body:**
+**Request body (`AiPromptRequest`):**
 ```json
 {
-  "prompt": "Genera un artículo sobre las políticas de seguridad informática para empleados de una empresa tecnológica",
-  "tipoModulo": "ESPECIALIZADO",
-  "nombreEmpresa": "Tecnología SL"
+  "tema": "Políticas de seguridad informática",
+  "descripcion": "Dirigido a empleados sin formación técnica previa",
+  "tipoModulo": "ESPECIALIZADO"
 }
 ```
 
-**Response `200 OK`:**
+**Response `200 OK` (`AiResponse`):**
 ```json
 {
-  "contenidoGenerado": "# Políticas de Seguridad Informática\n\n## Introducción\n\nLa seguridad informática es fundamental...",
-  "tituloSugerido": "Políticas de Seguridad Informática para Empleados",
-  "minutosEstimados": 8
+  "contenido": "# Políticas de Seguridad Informática\n\n## Introducción\n\n...",
+  "modelo": "gemini-2.0-flash",
+  "generadoEn": "2026-04-23T10:00:00Z"
 }
 ```
 
 ### POST `/ai/generar-preguntas` — Generar preguntas de evaluación
 
-**Request body:**
+**Request body (`AiPromptRequest`):**
 ```json
 {
   "prompt": "Genera preguntas sobre las políticas de seguridad informática",
@@ -93,65 +110,99 @@ Genera el cuerpo de un contenido de tipo `TEXTO` o `IA_GENERADO` listo para guar
 ```
 > `numPreguntas` es opcional. Por defecto: `5`.
 
-**Response `200 OK`:**
+**Response `200 OK` (`AiResponse`):**
 ```json
 {
-  "preguntas": [
-    {
-      "enunciado": "¿Cuál es la longitud mínima recomendada para una contraseña segura?",
-      "opciones": ["6 caracteres", "8 caracteres", "12 caracteres", "16 caracteres"],
-      "respuestaCorrecta": "12 caracteres"
-    },
-    {
-      "enunciado": "¿Qué es el phishing?",
-      "opciones": [
-        "Un tipo de red WiFi",
-        "Un ataque que suplanta la identidad para robar credenciales",
-        "Un software antivirus",
-        "Un protocolo de cifrado"
-      ],
-      "respuestaCorrecta": "Un ataque que suplanta la identidad para robar credenciales"
-    }
-  ]
+  "contenido": "[{\"enunciado\": \"¿Cuál es la longitud mínima recomendada para una contraseña?\", \"opciones\": [...], \"respuestaCorrecta\": \"12 caracteres\"}]",
+  "modelo": "gemini-2.0-flash",
+  "generadoEn": "2026-04-23T10:00:00Z"
 }
 ```
 
 ### POST `/ai/chat` — Chatbot para empleados
 
-Asistente conversacional que responde en el contexto de la empresa del empleado.
-
-**Request body:**
+**Request body (`AiPromptRequest`):**
 ```json
 {
   "prompt": "¿Cuántos días de vacaciones tengo?",
   "nombreEmpresa": "Tecnología SL",
-  "contexto": "Política de vacaciones: 22 días laborables al año. Se pueden fraccionar en períodos de mínimo 5 días."
+  "contexto": "Política de vacaciones: 22 días laborables al año."
 }
 ```
 
-**Response `200 OK`:**
+**Response `200 OK` (`AiResponse`):**
 ```json
 {
-  "respuesta": "Según la política de vacaciones de Tecnología SL, tienes derecho a 22 días laborables de vacaciones al año. Puedes disfrutarlos fraccionados en periodos de mínimo 5 días. Para solicitar tus vacaciones, contacta con el departamento de RRHH."
+  "contenido": "Según la política de Tecnología SL, tienes 22 días de vacaciones anuales...",
+  "modelo": "gemini-2.0-flash",
+  "generadoEn": "2026-04-23T10:00:00Z"
 }
 ```
 
 ### POST `/ai/resumir` — Resumir texto
 
-**Request body:**
+**Request body (`AiPromptRequest`):**
 ```json
 {
-  "prompt": "Texto largo del documento a resumir...",
-  "nombreEmpresa": "Tecnología SL"
+  "prompt": "Texto largo del documento a resumir..."
 }
 ```
 
-**Response `200 OK`:**
+**Response `200 OK` (`AiResponse`):**
 ```json
 {
-  "resumen": "## Resumen\n\n**Puntos clave:**\n- Punto 1...\n- Punto 2...\n\n**Conclusión:**..."
+  "contenido": "## Resumen\n\n**Puntos clave:**\n- Punto 1...",
+  "modelo": "gemini-2.0-flash",
+  "generadoEn": "2026-04-23T10:00:00Z"
 }
 ```
+
+### POST `/ai/generar-desde-archivo` — Generar desde archivo
+
+Sube un archivo y genera una o varias salidas combinables.
+
+**Content-Type:** `multipart/form-data`
+
+| Parte/Parámetro | Tipo | Descripción |
+|---|---|---|
+| `archivo` | file (part) | PDF, DOCX o TXT. El texto se limita a las primeras 12 000 chars para no exceder el contexto de Groq |
+| `tiposSalida` | query param | Combinación de valores separados por coma. Por defecto: `documentacion` |
+
+**Valores de `tiposSalida`:**
+
+| Valor | Descripción |
+|---|---|
+| `documentacion` | Genera contenido formativo en Markdown |
+| `podcast` | Genera guion de podcast y audio MP3 con ElevenLabs (subido a Supabase Storage) |
+| `video` | Genera array JSON de slides para presentación |
+
+Se pueden combinar: `documentacion,podcast`, `documentacion,video`, `documentacion,podcast,video`.
+
+**Response `200 OK` (`AiFileResponse`):**
+```json
+{
+  "titulo": "Políticas de Seguridad Informática",
+  "descripcion": "Introducción a las principales políticas de seguridad para empleados.",
+  "contenido": "# Políticas de Seguridad...\n\n## Introducción...",
+  "scriptPodcast": "Hoy vamos a hablar sobre la seguridad informática en el trabajo...",
+  "scriptVideo": "[{\"numero\": 1, \"titulo\": \"Introducción\", \"contenido\": \"...\", \"notas\": \"...\"}]",
+  "podcastAudioUrl": "https://supabase.ejemplo.com/storage/v1/object/public/podcasts/uuid.mp3",
+  "tiposSalida": "documentacion,podcast",
+  "modelo": "llama-3.3-70b-versatile",
+  "generadoEn": "2026-04-23T10:00:00Z"
+}
+```
+
+> Los campos `contenido`, `scriptPodcast`, `scriptVideo` y `podcastAudioUrl` son `null` si no se solicitaron en `tiposSalida`.
+> Si la generación de audio con ElevenLabs falla, `podcastAudioUrl` es `null` pero el resto de la respuesta se devuelve igualmente (el fallo de audio no bloquea la respuesta).
+
+**Errores:**
+
+| Código | Causa |
+|---|---|
+| `400` | Archivo vacío, formato no soportado (solo PDF/DOCX/TXT), o texto extraído en blanco |
+| `403` | Rol insuficiente |
+| `500` | Error en la API de Groq/Gemini o al leer el archivo |
 
 ---
 
@@ -159,9 +210,9 @@ Asistente conversacional que responde en el contexto de la empresa del empleado.
 
 | DTO | Descripción |
 |---|---|
-| `AiPromptRequest` | Request genérico con `prompt`, `nombreEmpresa`, `contexto`, `numPreguntas` |
-| `AiResponse` | Response con texto generado (`contenidoGenerado`, `respuesta`, `resumen`) |
-| `AiFileResponse` | Response de extracción de texto de archivo con el texto extraído |
+| `AiPromptRequest` | Request genérico: `tema`, `descripcion`, `tipoModulo`, `prompt`, `nombreEmpresa`, `contexto`, `numPreguntas` |
+| `AiResponse` | Response con texto generado: `contenido`, `modelo`, `generadoEn` |
+| `AiFileResponse` | Response de generación desde archivo: `titulo`, `descripcion`, `contenido`, `scriptPodcast`, `scriptVideo`, `podcastAudioUrl`, `tiposSalida`, `modelo`, `generadoEn` |
 
 ---
 
@@ -170,18 +221,22 @@ Asistente conversacional que responde en el contexto de la empresa del empleado.
 El módulo incluye soporte para extraer texto de:
 - **PDF** → usando Apache PDFBox 3.0.2
 - **DOCX** → usando Apache POI 5.2.5
+- **TXT** → lectura directa
 
-Este texto se puede usar como `contexto` en las peticiones al chatbot o como base para generar resúmenes. El tamaño máximo de archivo es **50 MB** (configurado en `application.properties`).
+El texto extraído se trunca a **12 000 caracteres** antes de enviarse al modelo para no exceder el contexto. El tamaño máximo de archivo aceptado es **50 MB** (configurado en `spring.servlet.multipart.max-file-size`).
 
 ---
 
 ## Notas de implementación para el backend
 
-### Límite de tokens
+### Generación desde archivo vs. otros endpoints
 
-Gemini está configurado con un máximo de `2000` tokens de salida (`gemini.max-tokens`). Para contenidos muy largos, puede ser necesario aumentar este valor o implementar generación en fragmentos.
+| Endpoint | Modelo | Proveedor |
+|---|---|---|
+| `/generar-contenido`, `/generar-preguntas`, `/chat`, `/resumir` | `gemini-2.0-flash` | Google Gemini |
+| `/generar-desde-archivo` (texto y slides) | `llama-3.3-70b-versatile` | Groq |
+| `/generar-desde-archivo` (audio podcast) | — | ElevenLabs TTS |
 
-### Manejo de errores de Gemini
+### Manejo de errores de APIs externas
 
-Si Gemini devuelve un error (API Key inválida, límite de peticiones, timeout), el servicio propaga un `BusinessException` con el mensaje de error de Gemini, que `GlobalExceptionHandler` convierte en una respuesta `400` o `500` según el caso.
-
+Si cualquier proveedor externo (Gemini, Groq, ElevenLabs) devuelve un error (API Key inválida, límite de peticiones, timeout), el servicio propaga una `BusinessException` con el mensaje de error, que `GlobalExceptionHandler` convierte en `400` o `500` según el caso. **Excepción:** el fallo de ElevenLabs en `generar-desde-archivo` no revierte la respuesta — se devuelve sin `podcastAudioUrl`.

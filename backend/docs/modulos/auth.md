@@ -29,6 +29,8 @@ Base URL: `/api/v1/auth`
 | `POST` | `/auth/refresh-token` | ❌ ¹ | Renovar el access token |
 | `POST` | `/auth/logout` | ❌ | Cerrar sesión (limpia cookies) |
 | `GET`  | `/auth/me` | ✅ | Datos del usuario autenticado |
+| `POST` | `/auth/forgot-password` | ❌ | Solicitar recuperación de contraseña por email |
+| `POST` | `/auth/reset-password` | ❌ | Restablecer contraseña con token recibido por email |
 
 ¹ Requiere la cookie `refreshToken` válida en la petición.
 
@@ -134,9 +136,52 @@ No requiere body.
 
 **Response `200 OK`:**
 ```json
-{ "message": "Sesión cerrada" }
+{ "message": "Sesión cerrada correctamente" }
 ```
 Las cookies quedan invalidadas (`Max-Age=0`).
+
+### POST `/auth/forgot-password`
+
+Inicia el flujo de recuperación de contraseña. Envía un email con un enlace de restablecimiento al usuario.
+
+> **Seguridad:** para no revelar si el email está registrado en la plataforma, **siempre devuelve `200 OK`** independientemente de si el email existe o no.
+
+**Request body:**
+```json
+{
+  "email": "usuario@empresa.com"
+}
+```
+
+**Response `200 OK`:**
+```json
+{ "message": "Si el correo está registrado, recibirás un enlace en breve" }
+```
+
+El token de recuperación se almacena en la tabla `password_reset_token` y expira pasado un tiempo determinado. Solo puede usarse una vez (`usado = true` tras el primer uso).
+
+### POST `/auth/reset-password`
+
+Restablece la contraseña del usuario usando el token recibido por email.
+
+**Request body:**
+```json
+{
+  "token": "a1b2c3d4-...",
+  "nuevaPassword": "NuevaPassword123!"
+}
+```
+
+**Response `200 OK`:**
+```json
+{ "message": "Contraseña restablecida correctamente" }
+```
+
+**Errores:**
+
+| Código | Causa |
+|---|---|
+| `400` | Token inválido, expirado o ya utilizado |
 
 ---
 

@@ -25,8 +25,8 @@ Un fichero por cada módulo del sistema. Cada documento incluye: propósito, ent
 
 | Módulo | Fichero | Descripción breve |
 |---|---|---|
-| Autenticación | [modulos/auth.md](modulos/auth.md) | Login, registro, refresh-token, logout, restauración de sesión |
-| Usuarios | [modulos/usuarios.md](modulos/usuarios.md) | Gestión de cuentas de usuario, perfiles, soft-delete |
+| Autenticación | [modulos/auth.md](modulos/auth.md) | Login, registro, refresh-token, logout, restauración de sesión, recuperación de contraseña |
+| Usuarios | [modulos/usuarios.md](modulos/usuarios.md) | Gestión de cuentas de usuario, perfiles extendidos, preferencias, avatar, cambio de contraseña, soft-delete |
 | Empresas | [modulos/empresas.md](modulos/empresas.md) | Alta de empresas, flujo de aprobación, estados |
 | Módulos de formación | [modulos/modulos-formacion.md](modulos/modulos-formacion.md) | Contenedores de contenido formativo, tipos, globales vs empresa |
 | Contenidos | [modulos/contenidos.md](modulos/contenidos.md) | Artículos, vídeos, PDFs, evaluaciones, preguntas, versiones |
@@ -35,8 +35,9 @@ Un fichero por cada módulo del sistema. Cada documento incluye: propósito, ent
 | Comunidad | [modulos/comunidad.md](modulos/comunidad.md) | Eventos del parque empresarial, globales y de empresa |
 | Beneficios | [modulos/beneficios.md](modulos/beneficios.md) | Ventajas y beneficios del área EGM para empleados |
 | Dashboard | [modulos/dashboard.md](modulos/dashboard.md) | Métricas, gráficas e incidencias para los paneles de control |
-| Inteligencia Artificial | [modulos/ia.md](modulos/ia.md) | Generación de contenido, preguntas, resumen y chatbot con Gemini |
+| Inteligencia Artificial | [modulos/ia.md](modulos/ia.md) | Generación de contenido, preguntas, resumen, podcast, vídeo y chatbot con Gemini y Groq |
 | Auditoría | [modulos/auditoria.md](modulos/auditoria.md) | Registro de eventos relevantes del sistema |
+| Sugerencias | [modulos/sugerencias.md](modulos/sugerencias.md) | Buzón de sugerencias de empleados hacia su empresa o EGM |
 
 ---
 

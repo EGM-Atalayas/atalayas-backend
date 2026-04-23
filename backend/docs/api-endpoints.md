@@ -41,6 +41,8 @@
 | `POST` | `/auth/refresh-token` | ❌ ¹ | Renueva el access token usando la cookie `refreshToken`. |
 | `POST` | `/auth/logout` | ❌ | Invalida (limpia) las cookies de tokens. |
 | `GET`  | `/auth/me` | ✅ | Datos del usuario autenticado actualmente + `accessToken` activo en el body. Usar al iniciar la app para restaurar la sesión tras una recarga. |
+| `POST` | `/auth/forgot-password` | ❌ | Solicita recuperación de contraseña. Envía email con enlace. Siempre devuelve `200` para no revelar si el email existe. |
+| `POST` | `/auth/reset-password` | ❌ | Restablece la contraseña con el token recibido por email. `400` si el token es inválido, expirado o ya usado. |
 ¹ Requiere la cookie `refreshToken` válida.
 **Expiración de tokens:**
 - `accessToken`: **1 hora**
@@ -58,11 +60,14 @@
 ## 2. Usuarios · `/api/v1/users`
 | Método | Ruta | Rol mínimo | Descripción |
 |--------|------|-----------|-------------|
-| `POST` | `/users` | `ADMIN_EMPRESA` | Crear usuario. ADMIN_EMPRESA crea en su propia empresa (no puede asignar `ROLE_ADMIN`). ADMIN puede crear en cualquier empresa (`empresaId` obligatorio). |
-| `GET` | `/users/me` | Cualquiera | Perfil completo del usuario autenticado. |
-| `GET` | `/users/{id}` | `ADMIN_EMPRESA` | Obtener usuario por ID. ADMIN_EMPRESA solo ve su empresa. |
+| `POST` | `/users` | `ADMIN_EMPRESA` | Crear usuario. ADMIN_EMPRESA crea en su propia empresa (no puede asignar `ROLE_ADMIN`). ADMIN puede crear en cualquier empresa (`empresaId` obligatorio). El campo `rolId` es un UUID. |
+| `GET` | `/users/me` | Cualquiera | Perfil completo del usuario autenticado (`UserProfileResponse`). |
+| `PATCH` | `/users/me` | Cualquiera | Actualizar perfil propio. Campos opcionales: `nombre`, `apellidos`, `puestoTrabajo`, `bio`, `telefono`, `avatarUrl`, `bannerUrl`, `disponibilidad`, preferencias de notificación y `modoOscuro`. |
+| `POST` | `/users/me/password` | Cualquiera | Cambiar contraseña propia. Requiere `passwordActual`, `passwordNueva`, `passwordConfirmar`. |
+| `POST` | `/users/me/avatar` | Cualquiera | Subir avatar propio (`multipart/form-data`, campo `file`). Devuelve `{ "avatarUrl": "..." }`. |
+| `GET` | `/users/{id}` | `ADMIN_EMPRESA` | Obtener usuario por ID. ADMIN_EMPRESA solo ve su empresa (devuelve `404` si es de otra, no `403`). |
 | `GET` | `/users` | `ADMIN_EMPRESA` | Listar usuarios. ADMIN_EMPRESA ve su empresa; ADMIN ve todos. |
-| `DELETE` | `/users/{id}/desactivar` | `ADMIN_EMPRESA` | Soft-delete de usuario (activo = false). |
+| `DELETE` | `/users/{id}/desactivar` | `ADMIN_EMPRESA` | Soft-delete de usuario (activo = false). Devuelve `404` si el usuario es de otra empresa. |
 
 **`POST /users` — reglas de seguridad por rol:**
 | Quién llama | `empresaId` en body | Roles asignables | Resultado |
@@ -212,13 +217,21 @@
 | `PATCH` | `/beneficios/{id}/desactivar` | `ADMIN_EMPRESA` | Soft-delete. ADMIN_EMPRESA solo desactiva los propios. |
 ---
 ## 13. Inteligencia Artificial · `/api/v1/ai`
-> Integración con **Gemini 2.0 Flash**. Requiere la variable de entorno `GEMINI_API_KEY`.
+> Integración con **Gemini 2.0 Flash** (contenido, preguntas, chat, resumen) y **Groq llama-3.3-70b-versatile** (generación desde archivo). Requiere variables de entorno `GEMINI_API_KEY`, `GROQ_API_KEY`, `ELEVENLABS_API_KEY`.
 | Método | Ruta | Rol mínimo | Descripción |
 |--------|------|-----------|-------------|
 | `POST` | `/ai/generar-contenido` | `ADMIN_EMPRESA` | Genera contenido formativo dado un tema, descripción y tipo de módulo. |
 | `POST` | `/ai/generar-preguntas` | `ADMIN_EMPRESA` | Genera preguntas de evaluación desde un prompt. `numPreguntas` opcional (por defecto 5). |
 | `POST` | `/ai/chat` | Cualquiera | Chatbot para empleados. Acepta `prompt`, `nombreEmpresa` y `contexto`. |
 | `POST` | `/ai/resumir` | `ADMIN_EMPRESA` | Genera un resumen estructurado de un texto largo. |
+| `POST` | `/ai/generar-desde-archivo` | `ADMIN_EMPRESA` | Sube un PDF/DOCX/TXT (`multipart/form-data`, part `archivo`) y genera salidas según `tiposSalida` (query param): `documentacion`, `podcast`, `video` o combinaciones. Devuelve `AiFileResponse`. |
+---
+## 14. Sugerencias · `/api/v1/sugerencias`
+> Buzón de sugerencias de empleados hacia su empresa o hacia EGM Atalayas.
+| Método | Ruta | Rol mínimo | Descripción |
+|--------|------|-----------|-------------|
+| `POST` | `/sugerencias` | Cualquiera | Enviar una sugerencia. Body: `{ "mensaje": "...", "destinatario": "EMPRESA" \| "EGM" }`. Devuelve `201` sin body. |
+| `GET` | `/sugerencias` | `ADMIN_EMPRESA` | Listar todas las sugerencias. |
 ---
 ## Resumen de endpoints públicos (sin autenticación)
 | Método | Ruta |
@@ -227,12 +240,14 @@
 | `POST` | `/auth/register` |
 | `POST` | `/auth/refresh-token` |
 | `POST` | `/auth/logout` |
+| `POST` | `/auth/forgot-password` |
+| `POST` | `/auth/reset-password` |
 | `POST` | `/empresas/solicitud` |
 | `GET` | `/empresas/aprobadas` |
 | `GET` | `/swagger-ui/**` |
 | `GET` | `/v3/api-docs/**` |
 ---
 ## Notas de seguridad multi-tenant
-- Los usuarios con `ROLE_ADMIN_EMPRESA` están **aislados por empresa**: acceder a recursos de otra empresa devuelve `403` (no `404`, para no exponer la existencia del recurso).
+- Los usuarios con `ROLE_ADMIN_EMPRESA` están **aislados por empresa**: acceder por ID a recursos de otra empresa devuelve `404` (no `403`, para no exponer la existencia del recurso).
 - El `ROLE_ADMIN` (superadmin EGM) tiene acceso transversal a todos los recursos.
 - El `ROLE_EMPLEADO` tiene acceso de **solo lectura/consumo** dentro de su empresa.
