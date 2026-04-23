@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,6 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 /**
  * Endpoints de inteligencia artificial con Gemini 2.0 Flash
@@ -38,6 +40,7 @@ import java.time.OffsetDateTime;
  *   - Chatbot de consulta para empleados con contexto de empresa
  *   - Resumen estructurado de textos largos o documentos
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/ai")
 @RequiredArgsConstructor
@@ -286,7 +289,7 @@ public class AiController {
                 // Usamos un UUID temporal para el nombre del archivo; el frontend lo asociará al módulo después
                 podcastAudioUrl = supabaseStorageService.subirAudioPodcast(
                         audioBytes,
-                        java.util.UUID.randomUUID()
+                        UUID.randomUUID()
                 );
             } catch (Exception e) {
                 log.warn("No se pudo generar el audio del podcast: {}. Se continuará sin audio.", e.getMessage());
