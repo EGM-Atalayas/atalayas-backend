@@ -62,12 +62,14 @@ public class ProgressService {
     public ProgressResponse registrarProgreso(CompleteContentRequest request, User user) {
         String rol = user.getRol().getCodigoRol();
 
-        // Un empleado solo puede registrar su propio progreso, no el de otros
-        if ("ROLE_EMPLEADO".equals(rol)
-                && !user.getUsuarioId().equals(request.getUsuarioId())) {
-            throw new UnauthorizedException(
-                    "Solo puedes registrar tu propio progreso");
-        }
+        // Para ROLE_EMPLEADO: siempre forzar su propio usuarioId desde el token.
+        // Para admins: respetar el usuarioId del body (puede registrar por otro).
+        UUID targetUsuarioId = "ROLE_EMPLEADO".equals(rol)
+                ? user.getUsuarioId()
+                : (request.getUsuarioId() != null ? request.getUsuarioId() : user.getUsuarioId());
+
+        // empresaId siempre desde el token — nunca del body.
+        UUID targetEmpresaId = user.getEmpresaId();
 
         // Cargamos el contenido para obtener el moduloId y el título.
         // Lanzamos 404 si no existe — no tiene sentido registrar progreso
@@ -79,12 +81,12 @@ public class ProgressService {
         // Buscamos registro existente para hacer upsert y evitar duplicados
         UserProgress progreso = progressRepository
                 .findByUsuarioIdAndContenidoId(
-                        request.getUsuarioId(), request.getContenidoId())
+                        targetUsuarioId, request.getContenidoId())
                 .orElse(UserProgress.builder()
-                        .usuarioId(request.getUsuarioId())
+                        .usuarioId(targetUsuarioId)
                         .contenidoId(request.getContenidoId())
                         .moduloId(contenido.getModuloId())
-                        .empresaId(request.getEmpresaId())
+                        .empresaId(targetEmpresaId)
                         .build());
 
         // Acumulamos el tiempo de la sesión actual sobre el total histórico
@@ -110,7 +112,7 @@ public class ProgressService {
 
             // Notificación personalizada con el título real del contenido
             notificationService.crearInterna(
-                    request.getUsuarioId(),
+                    targetUsuarioId,
                     "CONTENIDO_COMPLETADO",
                     "¡Has completado \"" + contenido.getTitulo() + "\"! Sigue así.",
                     "/formacion/contenido/" + request.getContenidoId()

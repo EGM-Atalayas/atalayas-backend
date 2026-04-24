@@ -17,14 +17,14 @@ import java.util.UUID;
 @Data
 public class CompleteContentRequest {
 
-    @NotNull(message = "El usuario es obligatorio")
+    // Opcional: solo admins pueden especificar un usuarioId ajeno.
+    // Para ROLE_EMPLEADO se ignora y se usa el del token.
     private UUID usuarioId;
 
     @NotNull(message = "El contenido es obligatorio")
     private UUID contenidoId;
 
-    @NotNull(message = "La empresa es obligatoria")
-    private UUID empresaId;
+    // empresaId eliminado del body — se toma siempre del token JWT.
 
     // Tiempo de la sesión actual en segundos
     @Min(value = 0, message = "El tiempo en segundos no puede ser negativo")
