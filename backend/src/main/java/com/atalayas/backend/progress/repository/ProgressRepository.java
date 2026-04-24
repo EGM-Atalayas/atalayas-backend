@@ -1,5 +1,7 @@
 package com.atalayas.backend.progress.repository;
 
+import com.atalayas.backend.dashboard.dto.GrupoProjection;
+import com.atalayas.backend.dashboard.dto.ProgressEventProjection;
 import com.atalayas.backend.progress.entity.UserProgress;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -53,4 +55,104 @@ public interface ProgressRepository extends JpaRepository<UserProgress, UUID> {
         )
     """)
     List<UserProgress> findConVersionDesactualizada(@Param("empresaId") UUID empresaId);
+
+
+    // ── ACTIVIDAD RECIENTE (dashboard admin empresa) ──────────────────────────
+
+    /** Completaciones individuales de contenido más recientes de la empresa. */
+    @Query(value = """
+        SELECT
+            p.usuario_id      AS usuario_id,
+            p.modulo_id       AS modulo_id,
+            CONCAT(u.nombre, ' ', u.apellidos) AS nombre_usuario,
+            m.nombre          AS nombre_modulo,
+            p.fecha_completado AS fecha
+        FROM trazabilidad_lectura p
+        JOIN usuario u ON u.usuario_id = p.usuario_id
+        JOIN modulo  m ON m.modulo_id  = p.modulo_id
+        WHERE p.empresa_id = :empresaId
+          AND p.completado = true
+          AND p.fecha_completado IS NOT NULL
+        ORDER BY p.fecha_completado DESC
+        LIMIT :limit
+        """, nativeQuery = true)
+    List<ProgressEventProjection> findCompletadosRecientes(
+            @Param("empresaId") UUID empresaId,
+            @Param("limit") int limit);
+
+    /** Contenidos iniciados (no completados) más recientes de la empresa. */
+    @Query(value = """
+        SELECT
+            p.usuario_id AS usuario_id,
+            p.modulo_id  AS modulo_id,
+            CONCAT(u.nombre, ' ', u.apellidos) AS nombre_usuario,
+            m.nombre     AS nombre_modulo,
+            p.fecha_inicio AS fecha
+        FROM trazabilidad_lectura p
+        JOIN usuario u ON u.usuario_id = p.usuario_id
+        JOIN modulo  m ON m.modulo_id  = p.modulo_id
+        WHERE p.empresa_id = :empresaId
+          AND p.completado = false
+          AND p.tiempo_segundos > 0
+          AND p.fecha_inicio IS NOT NULL
+        ORDER BY p.fecha_inicio DESC
+        LIMIT :limit
+        """, nativeQuery = true)
+    List<ProgressEventProjection> findIniciadosRecientes(
+            @Param("empresaId") UUID empresaId,
+            @Param("limit") int limit);
+
+    /**
+     * Logros: empleado que completó TODOS los contenidos activos de un módulo.
+     * Se agrupa por (usuario, módulo) y se filtra con HAVING COUNT = total contenidos.
+     */
+    @Query(value = """
+        SELECT
+            p.usuario_id AS usuario_id,
+            p.modulo_id  AS modulo_id,
+            CONCAT(u.nombre, ' ', u.apellidos) AS nombre_usuario,
+            m.nombre     AS nombre_modulo,
+            MAX(p.fecha_completado) AS fecha
+        FROM trazabilidad_lectura p
+        JOIN usuario u ON u.usuario_id = p.usuario_id
+        JOIN modulo  m ON m.modulo_id  = p.modulo_id
+        WHERE p.empresa_id = :empresaId
+          AND p.completado = true
+        GROUP BY p.usuario_id, p.modulo_id, u.nombre, u.apellidos, m.nombre
+        HAVING COUNT(*) >= (
+            SELECT COUNT(*) FROM contenido c
+            WHERE c.modulo_id = p.modulo_id AND c.activo = true
+        )
+        AND (SELECT COUNT(*) FROM contenido c
+             WHERE c.modulo_id = p.modulo_id AND c.activo = true) > 0
+        ORDER BY MAX(p.fecha_completado) DESC
+        LIMIT :limit
+        """, nativeQuery = true)
+    List<ProgressEventProjection> findLogros(
+            @Param("empresaId") UUID empresaId,
+            @Param("limit") int limit);
+
+    /**
+     * Grupo: ≥ 2 empleados completaron el mismo módulo en el mismo día.
+     * Se agrupa por (módulo, día) y el timestamp es el más reciente del grupo.
+     */
+    @Query(value = """
+        SELECT
+            p.modulo_id  AS modulo_id,
+            m.nombre     AS nombre_modulo,
+            COUNT(DISTINCT p.usuario_id) AS cantidad,
+            MAX(p.fecha_completado)      AS fecha
+        FROM trazabilidad_lectura p
+        JOIN modulo m ON m.modulo_id = p.modulo_id
+        WHERE p.empresa_id = :empresaId
+          AND p.completado = true
+          AND p.fecha_completado IS NOT NULL
+        GROUP BY p.modulo_id, m.nombre, CAST(p.fecha_completado AS DATE)
+        HAVING COUNT(DISTINCT p.usuario_id) >= 2
+        ORDER BY MAX(p.fecha_completado) DESC
+        LIMIT :limit
+        """, nativeQuery = true)
+    List<GrupoProjection> findCompletadosGrupo(
+            @Param("empresaId") UUID empresaId,
+            @Param("limit") int limit);
 }

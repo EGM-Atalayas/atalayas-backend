@@ -1,5 +1,6 @@
 package com.atalayas.backend.dashboard;
 
+import com.atalayas.backend.dashboard.dto.ActividadItemDto;
 import com.atalayas.backend.dashboard.dto.AdminEmpresaResumenResponse;
 import com.atalayas.backend.dashboard.dto.DashboardChartsResponse;
 import com.atalayas.backend.dashboard.dto.SuperAdminDashboardResponse;
@@ -16,7 +17,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/dashboard")
@@ -36,6 +40,33 @@ public class DashboardController {
     @Operation(summary = "Resumen del dashboard para el admin de empresa")
     public ResponseEntity<AdminEmpresaResumenResponse> getAdminEmpresaResumen() {
         return ResponseEntity.ok(dashboardService.getAdminEmpresaResumen());
+    }
+
+    /**
+     * GET /api/v1/dashboard/admin/actividad?limit=5
+     * Actividad reciente real de la empresa: completados, iniciados,
+     * logros (100%), grupos y nuevos módulos. Ordenados por timestamp DESC.
+     */
+    @GetMapping("/admin/actividad")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN_EMPRESA')")
+    @Operation(
+        summary = "Actividad reciente del dashboard de admin empresa",
+        description = """
+            Devuelve los últimos `limit` eventos de actividad de la empresa
+            combinando 5 fuentes: completados, iniciados, logros (100% módulo),
+            grupos (≥ 2 empleados mismo módulo mismo día) y módulos nuevos.
+            El campo `timestamp` es ISO 8601 — el frontend calcula el tiempo relativo.
+            """)
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Actividad devuelta correctamente"),
+        @ApiResponse(responseCode = "401", description = "Sin sesión activa",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "403", description = "Rol insuficiente",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
+    public ResponseEntity<List<ActividadItemDto>> getActividadEmpresa(
+            @RequestParam(defaultValue = "5") int limit) {
+        return ResponseEntity.ok(dashboardService.getActividadEmpresa(limit));
     }
 
     /**

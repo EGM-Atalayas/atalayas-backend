@@ -1,9 +1,11 @@
 package com.atalayas.backend.module.repository;
 
 import com.atalayas.backend.dashboard.dto.ModuloEstadisticaProjection;
+import com.atalayas.backend.dashboard.dto.NuevoModuloProjection;
 import com.atalayas.backend.module.entity.TrainingModule;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -52,4 +54,21 @@ public interface ModuleRepository extends JpaRepository<TrainingModule, UUID> {
             LIMIT 10
             """, nativeQuery = true)
     List<ModuloEstadisticaProjection> findModuloEstadisticas();
+
+    /**
+     * Módulos publicados más recientes visibles para la empresa:
+     * los propios de la empresa + los globales (empresa_id IS NULL).
+     */
+    @Query(value = """
+            SELECT m.nombre        AS nombre_modulo,
+                   m.fecha_creacion AS fecha
+            FROM modulo m
+            WHERE m.activo = true
+              AND (m.empresa_id = :empresaId OR m.empresa_id IS NULL)
+            ORDER BY m.fecha_creacion DESC
+            LIMIT :limit
+            """, nativeQuery = true)
+    List<NuevoModuloProjection> findNuevosModulos(
+            @Param("empresaId") UUID empresaId,
+            @Param("limit") int limit);
 }
