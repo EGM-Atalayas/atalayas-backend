@@ -200,6 +200,25 @@ public class ModuleService {
     }
 
 
+    // ── ELIMINAR ──────────────────────────────────────────────────────────
+
+    /**
+     * Hard delete del módulo — lo borra permanentemente de la base de datos.
+     * Admin empresa solo puede eliminar módulos de su empresa.
+     */
+    @Transactional
+    public void eliminar(UUID moduloId, User user) {
+        TrainingModule modulo = moduleRepository.findById(moduloId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Módulo no encontrado: " + moduloId));
+
+        validarAccesoEscritura(modulo, user);
+
+        log.info("Módulo eliminado permanentemente — id={} por usuarioId={}", moduloId, user.getEmail());
+        moduleRepository.delete(modulo);
+    }
+
+
     // ── VALIDACIONES DE ACCESO ────────────────────────────────────────────
 
     /**

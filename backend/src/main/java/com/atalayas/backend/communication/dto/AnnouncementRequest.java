@@ -23,4 +23,8 @@ public class AnnouncementRequest {
      * Si el usuario es ROLE_ADMIN_EMPRESA este campo se ignora y se fuerza a false.
      */
     private boolean esGlobal = false;
+
+    // URL de imagen opcional para mostrar en la tarjeta del anuncio
+    @Size(max = 500, message = "La URL de imagen no puede superar los 500 caracteres")
+    private String imagenUrl;
 }
