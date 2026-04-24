@@ -39,6 +39,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Preflight OPTIONS — debe pasar sin autenticación
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(SecurityConstants.PUBLIC_URLS).permitAll()
                         // Solicitud de alta de empresa — público, sin cuenta previa
                         .requestMatchers(HttpMethod.POST, "/api/v1/empresas/solicitud").permitAll()
@@ -70,4 +72,3 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 }
-

@@ -113,9 +113,34 @@
 | Método | Ruta | Rol | Descripción |
 |--------|------|-----|-------------|
 | `GET` | `/dashboard/admin/resumen` | `ADMIN_EMPRESA` | Métricas de la empresa: usuarios activos e inactivos. |
+| `GET` | `/dashboard/admin/actividad` | `ADMIN_EMPRESA` | Actividad reciente real de la empresa (progreso + módulos nuevos). |
 | `GET` | `/dashboard/superadmin/resumen` | `ADMIN` | Métricas globales de toda la plataforma (legado). |
 | `GET` | `/dashboard/superadmin` | `ADMIN` | Dashboard completo: métricas, incidencias y actividad reciente. |
 | `GET` | `/dashboard/superadmin/graficas` | `ADMIN` | Datos para los tres gráficos: evolución mensual, sectores y estadísticas de módulos. |
+
+**`GET /dashboard/admin/actividad?limit=5` — actividad reciente de empresa:**
+
+Devuelve los últimos `limit` eventos (por defecto 5) ordenados por `timestamp DESC`. Agrega 5 fuentes y deduplica eventos `logro` vs `completado` para el mismo `(usuario, módulo)`.
+
+```json
+[
+  { "tipo": "completado", "texto": "Ana García completó «Prevención de Riesgos»",   "timestamp": "2026-04-24T10:15:00Z" },
+  { "tipo": "inicio",     "texto": "Carlos Ruiz inició «Protección de Datos»",       "timestamp": "2026-04-24T09:58:00Z" },
+  { "tipo": "logro",      "texto": "María López obtuvo el 100% en Onboarding",       "timestamp": "2026-04-24T09:00:00Z" },
+  { "tipo": "grupo",      "texto": "5 empleados completaron «Habilidades Comunicación»", "timestamp": "2026-04-24T08:30:00Z" },
+  { "tipo": "nuevo",      "texto": "Nuevo módulo «Excel Avanzado» publicado",         "timestamp": "2026-04-23T16:00:00Z" }
+]
+```
+
+| Tipo | Origen | Regla |
+|------|--------|-------|
+| `completado` | `trazabilidad_lectura` | `completado = true` (excluye los que ya son `logro`) |
+| `inicio` | `trazabilidad_lectura` | `completado = false AND tiempo_segundos > 0` |
+| `logro` | `trazabilidad_lectura` | Empleado completó **todos** los contenidos activos del módulo |
+| `grupo` | `trazabilidad_lectura` | ≥ 2 empleados completaron el mismo módulo el mismo día |
+| `nuevo` | `modulo` | Módulo con `activo = true` propio de la empresa o global |
+
+> El campo `timestamp` es **ISO 8601**. El frontend calcula el tiempo relativo (`"Hace 5 min"`, `"Ayer"`, etc.).
 
 **`GET /dashboard/superadmin/graficas` — estructura de respuesta:**
 ```json

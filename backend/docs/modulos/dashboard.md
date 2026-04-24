@@ -2,7 +2,7 @@
 
 > **Paquete:** `com.atalayas.backend.dashboard`
 > **Audiencia:** Frontend, Backend
-> **Última actualización:** Abril 2026 (rev. 2)
+> **Última actualización:** Abril 2026 (rev. 3)
 
 ---
 
@@ -10,8 +10,8 @@
 
 Provee los datos agregados para los **paneles de control** de la plataforma. Hay dos tipos de dashboard:
 
-- **Dashboard de Admin Empresa**: métricas sobre sus propios empleados
-- **Dashboard de Superadmin (EGM)**: métricas globales de toda la plataforma, incidencias y actividad reciente
+- **Dashboard de Admin Empresa**: métricas sobre sus propios empleados + actividad reciente real
+- **Dashboard de Superadmin (EGM)**: métricas globales de toda la plataforma, incidencias y actividad de auditoría
 
 ---
 
@@ -22,8 +22,9 @@ Base URL: `/api/v1/dashboard`
 | Método | Ruta | Rol | Descripción |
 |---|---|---|---|
 | `GET` | `/dashboard/admin/resumen` | `ADMIN_EMPRESA` | Métricas de la empresa del admin autenticado |
+| `GET` | `/dashboard/admin/actividad` | `ADMIN_EMPRESA` | Actividad reciente real: progreso de empleados + módulos nuevos |
 | `GET` | `/dashboard/superadmin/resumen` | `ADMIN` | Métricas globales básicas (legado) |
-| `GET` | `/dashboard/superadmin` | `ADMIN` | Dashboard completo: métricas + incidencias + actividad |
+| `GET` | `/dashboard/superadmin` | `ADMIN` | Dashboard completo: métricas + incidencias + actividad de auditoría |
 | `GET` | `/dashboard/superadmin/graficas` | `ADMIN` | Datos para los 3 gráficos del panel |
 
 ---
@@ -35,13 +36,42 @@ Base URL: `/api/v1/dashboard`
 **Response `200 OK`:**
 ```json
 {
-  "totalEmpleados": 25,
-  "empleadosActivos": 23,
-  "empleadosInactivos": 2,
-  "modulosActivos": 8,
-  "contenidosActivos": 42
+  "nombreEmpresa": "Tech SL",
+  "usuariosActivos": 23,
+  "usuariosInactivos": 2
 }
 ```
+
+### GET `/dashboard/admin/actividad?limit=5` — Actividad reciente de empresa
+
+Query param `limit` opcional (por defecto `5`). Devuelve los `limit` eventos más recientes ordenados por `timestamp DESC`.
+
+**Response `200 OK`:**
+```json
+[
+  { "tipo": "completado", "texto": "Ana García completó «Prevención de Riesgos»",       "timestamp": "2026-04-24T10:15:00Z" },
+  { "tipo": "inicio",     "texto": "Carlos Ruiz inició «Protección de Datos»",           "timestamp": "2026-04-24T09:58:00Z" },
+  { "tipo": "logro",      "texto": "María López obtuvo el 100% en Onboarding",           "timestamp": "2026-04-24T09:00:00Z" },
+  { "tipo": "grupo",      "texto": "5 empleados completaron «Habilidades Comunicación»", "timestamp": "2026-04-24T08:30:00Z" },
+  { "tipo": "nuevo",      "texto": "Nuevo módulo «Excel Avanzado» publicado",             "timestamp": "2026-04-23T16:00:00Z" }
+]
+```
+
+#### Fuentes de datos
+
+| Tipo | Tabla origen | Regla de generación |
+|------|-------------|---------------------|
+| `completado` | `trazabilidad_lectura` | `completado = true` — se excluyen los que ya generan un `logro` para el mismo usuario+módulo |
+| `inicio` | `trazabilidad_lectura` | `completado = false AND tiempo_segundos > 0` |
+| `logro` | `trazabilidad_lectura` | El empleado completó **todos** los contenidos activos del módulo (COUNT = total contenidos) |
+| `grupo` | `trazabilidad_lectura` | ≥ 2 empleados distintos completaron el mismo módulo en el mismo día |
+| `nuevo` | `modulo` | Módulo `activo = true` propio de la empresa **o** global (`empresa_id IS NULL`), ordenado por `fecha_creacion DESC` |
+
+#### Notas
+
+- El `timestamp` es **ISO 8601** — el frontend calcula el tiempo relativo.
+- La deduplicación `logro` vs `completado` se aplica por par `(usuarioId, moduloId)`: si existe un logro para ese par, sus entradas individuales de `completado` se omiten.
+- El `empresaId` se obtiene del token JWT; el admin empresa no necesita pasarlo.
 
 ### GET `/dashboard/superadmin` — Dashboard completo
 
@@ -56,23 +86,13 @@ Base URL: `/api/v1/dashboard`
   "incidenciasAbiertas": 2,
   "incidenciasCriticas": 1,
   "actividadReciente": [
-    {
-      "id": 42,
-      "texto": "Empresa \"Tech SL\" aprobada",
-      "tipo": "success",
-      "tiempo": "hace 5m"
-    },
-    {
-      "id": 41,
-      "texto": "Solicitud de \"OtraEmpresa SL\" rechazada y eliminada",
-      "tipo": "warning",
-      "tiempo": "hace 2h"
-    }
+    { "id": 42, "texto": "Empresa \"Tech SL\" aprobada", "tipo": "success", "tiempo": "hace 5m" },
+    { "id": 41, "texto": "Solicitud de \"OtraEmpresa SL\" rechazada y eliminada", "tipo": "warning", "tiempo": "hace 2h" }
   ]
 }
 ```
 
-> El campo `tiempo` es una cadena relativa calculada en el backend en el momento de la petición: `"ahora mismo"`, `"hace Nm"`, `"hace Nh"`, `"hace Nd"`. Se devuelven los **últimos 10 eventos** ordenados de más nuevo a más antiguo.
+> El campo `tiempo` es una cadena relativa calculada en backend: `"ahora mismo"`, `"hace Nm"`, `"hace Nh"`, `"hace Nd"`. Se devuelven los **últimos 10 eventos** del `audit_log` global.
 
 ### GET `/dashboard/superadmin/graficas` — Datos para gráficos
 
@@ -89,9 +109,7 @@ Base URL: `/api/v1/dashboard`
   ],
   "sectores": [
     { "name": "Tecnología", "value": 5 },
-    { "name": "Consultoría", "value": 4 },
-    { "name": "Industria", "value": 3 },
-    { "name": "Servicios", "value": 3 }
+    { "name": "Consultoría", "value": 4 }
   ],
   "modulos": [
     { "nombre": "Onboarding General", "completados": 450, "pendientes": 120 },
@@ -125,9 +143,9 @@ Base URL: `/api/v1/dashboard`
 
 ---
 
-## Actividad reciente
+## Actividad reciente — Superadmin
 
-La actividad reciente proviene de la tabla `audit_log` (ver [auditoria.md](auditoria.md)). Se devuelven los **últimos 10 eventos** ordenados por `creadoEn DESC`.
+La actividad reciente del superadmin proviene de la tabla `audit_log` (ver [auditoria.md](auditoria.md)). Se devuelven los **últimos 10 eventos** ordenados por `creadoEn DESC`.
 
 El campo `tiempo` es calculado en backend como cadena relativa al momento de la petición:
 
@@ -138,8 +156,6 @@ El campo `tiempo` es calculado en backend como cadena relativa al momento de la 
 | `"hace Nh"` | Entre 1 y 23 horas |
 | `"hace Nd"` | 1 día o más |
 
-Los tipos de entrada y su correspondencia visual en el frontend:
-
 | Tipo | Color | Cuándo se genera |
 |---|---|---|
 | `success` | Verde | Empresa aprobada |
@@ -147,3 +163,23 @@ Los tipos de entrada y su correspondencia visual en el frontend:
 | `info` | Azul | Eventos informativos generales |
 | `error` | Rojo | Errores del sistema, incidencias críticas |
 
+---
+
+## Actividad reciente — Admin Empresa
+
+La actividad reciente del admin empresa se deriva en tiempo real desde `trazabilidad_lectura` y `modulo` **sin tabla adicional**. Ver endpoint `GET /dashboard/admin/actividad` arriba.
+
+### Clases involucradas
+
+| Clase | Responsabilidad |
+|---|---|
+| `DashboardService#getActividadEmpresa` | Orquesta las 5 queries, deduplica y ordena |
+| `ProgressRepository#findCompletadosRecientes` | Contenidos completados más recientes |
+| `ProgressRepository#findIniciadosRecientes` | Contenidos iniciados (no completados) |
+| `ProgressRepository#findLogros` | Empleados que completaron todos los contenidos de un módulo |
+| `ProgressRepository#findCompletadosGrupo` | ≥ 2 empleados completando el mismo módulo el mismo día |
+| `ModuleRepository#findNuevosModulos` | Módulos publicados visibles para la empresa |
+| `ProgressEventProjection` | Proyección JPA para eventos individuales de progreso |
+| `GrupoProjection` | Proyección JPA para eventos de grupo |
+| `NuevoModuloProjection` | Proyección JPA para módulos nuevos |
+| `ActividadItemDto` | DTO de respuesta con `tipo`, `texto`, `timestamp` (ISO 8601) |

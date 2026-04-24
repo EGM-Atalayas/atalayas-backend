@@ -6,7 +6,7 @@ import com.atalayas.backend.ai.client.GroqClient;
 import com.atalayas.backend.ai.dto.AiFileResponse;
 import com.atalayas.backend.ai.dto.AiPromptRequest;
 import com.atalayas.backend.ai.dto.AiResponse;
-import com.atalayas.backend.ai.service.AiChatService;
+import com.atalayas.backend.ai.dto.ChatRequest;
 import com.atalayas.backend.ai.service.AiContentService;
 import com.atalayas.backend.ai.service.AiFileService;
 import com.atalayas.backend.ai.service.AiSummaryService;
@@ -26,6 +26,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.IOException;
 import java.time.OffsetDateTime;
@@ -50,7 +51,6 @@ import java.util.UUID;
 public class AiController {
 
     private final AiContentService aiContentService;
-    private final AiChatService aiChatService;
     private final AiSummaryService aiSummaryService;
     private final AiFileService aiFileService;
     private final GeminiClient geminiClient;
@@ -128,33 +128,27 @@ public class AiController {
 
     /**
      * POST /api/v1/ai/chat
-     * Chatbot de consulta para empleados con contexto de empresa.
+     * Chatbot con historial de conversación — responde en streaming (text/plain).
+     * Body: { messages: [{role, content}], systemPrompt: string }
      * Todos los usuarios autenticados pueden usarlo.
      */
-    @PostMapping("/chat")
-    @Operation(summary = "Chatbot de consulta para empleados",
-            description = "Chatbot IA accesible a todos los usuarios autenticados. Acepta `prompt`, `nombreEmpresa` y `contexto` adicional.")
+    @PostMapping(value = "/chat", produces = MediaType.TEXT_PLAIN_VALUE)
+    @Operation(summary = "Chatbot con streaming",
+            description = "Recibe el historial de mensajes y un systemPrompt, devuelve la respuesta de Gemini como stream de texto plano.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Respuesta del chatbot"),
-            @ApiResponse(responseCode = "400", description = "Prompt vacío",
+            @ApiResponse(responseCode = "200", description = "Stream de tokens del chatbot"),
+            @ApiResponse(responseCode = "400", description = "Messages vacío",
                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
             @ApiResponse(responseCode = "500", description = "Error en la API de Gemini",
                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     })
-    public ResponseEntity<AiResponse> chat(
-            @Valid @RequestBody AiPromptRequest request) {
-
-        String respuesta = aiChatService.responder(
-                request.getPrompt(),
-                request.getNombreEmpresa(),
-                request.getContexto()
-        );
-
-        return ResponseEntity.ok(AiResponse.builder()
-                .contenido(respuesta)
-                .modelo("gemini-2.0-flash")
-                .generadoEn(OffsetDateTime.now())
-                .build());
+    public ResponseEntity<StreamingResponseBody> chat(@Valid @RequestBody ChatRequest request) {
+        log.info("Chat streaming - {} mensajes", request.getMessages().size());
+        StreamingResponseBody stream = outputStream ->
+                geminiClient.streamCompletions(request.getSystemPrompt(), request.getMessages(), outputStream);
+        return ResponseEntity.ok()
+                .contentType(MediaType.TEXT_PLAIN)
+                .body(stream);
     }
 
 
