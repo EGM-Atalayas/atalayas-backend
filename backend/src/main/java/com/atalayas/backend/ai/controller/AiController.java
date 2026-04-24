@@ -296,7 +296,15 @@ public class AiController {
         String systemPrompt = """
                 Eres un experto en diseño instruccional y formación corporativa para empresas españolas.
                 Tu objetivo es transformar el documento que te proporciona el usuario en material formativo de alta calidad para empleados.
-                Responde ÚNICAMENTE con un JSON válido, sin texto adicional, sin bloques de código Markdown, sin comentarios.
+
+                REGLA CRÍTICA DE FORMATO:
+                - Responde ÚNICAMENTE con un objeto JSON válido y nada más.
+                - NO uses bloques de código Markdown (sin ```json ni ```).
+                - NO añadas comentarios, explicaciones ni texto fuera del JSON.
+                - Los valores de texto dentro del JSON (como "contenido" o "scriptPodcast") son cadenas de texto plano o Markdown.
+                - NUNCA incluyas JSON, llaves { } ni comillas de JSON dentro del valor de "contenido". Solo Markdown puro.
+                - Si el valor de un campo de texto necesita saltos de línea, usa \\n dentro de la cadena JSON.
+
                 El contenido debe ser fiel al documento fuente: extrae, organiza y amplía su información, no inventes datos.
                 Idioma: español. Tono: profesional pero cercano, accesible para empleados sin formación técnica avanzada.
                 Claves requeridas del JSON:
@@ -318,6 +326,11 @@ public class AiController {
         if (titulo.isBlank() && descripcion.isBlank()) {
             contenido = respuestaRaw;
             titulo = "";
+        }
+
+        // Sanear el contenido: si el modelo coló JSON o bloques de código al principio, eliminarlos
+        if (contenido != null) {
+            contenido = sanitizarContenidoMarkdown(contenido);
         }
 
         // 5. Generar audio MP3 con ElevenLabs si se pidió podcast
@@ -390,6 +403,67 @@ public class AiController {
         if (limpio.startsWith("```")) {
             limpio = limpio.replaceFirst("```(?:json)?", "").replaceAll("```\\s*$", "").trim();
         }
+        return limpio;
+    }
+
+    /**
+     * Limpia el campo "contenido" cuando el modelo de IA cuela la cabecera JSON
+     * dentro del propio valor del campo (p.ej. empieza con ```json\n{\n"titulo"...).
+     *
+     * Estrategia:
+     * 1. Si empieza con un bloque de código (```), quita todo hasta el primer ## o hasta
+     *    la primera línea que no sea JSON.
+     * 2. Si empieza con { (JSON inline), intenta extraer el campo "contenido" del JSON anidado.
+     * 3. Si el contenido tiene un bloque JSON al principio seguido de Markdown, recorta el bloque JSON.
+     */
+    private String sanitizarContenidoMarkdown(String contenido) {
+        if (contenido == null || contenido.isBlank()) return contenido;
+
+        String limpio = contenido.trim();
+
+        // Caso 1: empieza con ```json ... → el modelo metió JSON en la cadena
+        if (limpio.startsWith("```")) {
+            // Si hay un ## después del bloque de código, quedarnos solo con lo que viene después
+            int idxPrimerHash = limpio.indexOf("\n##");
+            if (idxPrimerHash == -1) idxPrimerHash = limpio.indexOf("\n# ");
+            if (idxPrimerHash > 0) {
+                return limpio.substring(idxPrimerHash).trim();
+            }
+            // Si no hay headers Markdown, intentar extraer campo "contenido" del JSON embebido
+            try {
+                String jsonEmbebido = limpio.replaceFirst("```(?:json)?\\s*", "").replaceAll("```\\s*$", "").trim();
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(jsonEmbebido);
+                String contenidoAnidado = node.path("contenido").asText("");
+                if (!contenidoAnidado.isBlank()) return contenidoAnidado.trim();
+            } catch (Exception ignored) {}
+            // Último recurso: quitar el bloque de código y devolver lo que quede
+            return limpio.replaceFirst("```(?:json)?[\\s\\S]*?```", "").trim();
+        }
+
+        // Caso 2: empieza con { → podría ser JSON puro como valor del contenido
+        if (limpio.startsWith("{")) {
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(limpio);
+                String contenidoAnidado = node.path("contenido").asText("");
+                if (!contenidoAnidado.isBlank()) return contenidoAnidado.trim();
+            } catch (Exception ignored) {}
+            // Si no es JSON válido, devolver tal cual (podría ser Markdown que empieza con {)
+        }
+
+        // Caso 3: tiene un bloque JSON o código al principio seguido de Markdown
+        // Buscar el primer encabezado Markdown (## o #) y recortar desde ahí
+        int idxMarkdown = limpio.indexOf("\n##");
+        if (idxMarkdown == -1) idxMarkdown = limpio.indexOf("\n# ");
+        if (idxMarkdown > 50) { // Solo recortar si hay bastante contenido basura antes
+            String antes = limpio.substring(0, idxMarkdown);
+            // Verificar que "antes" parece JSON (contiene "titulo" o "descripcion")
+            if (antes.contains("\"titulo\"") || antes.contains("\"descripcion\"") || antes.contains("```")) {
+                return limpio.substring(idxMarkdown).trim();
+            }
+        }
+
         return limpio;
     }
 }
