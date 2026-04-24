@@ -233,9 +233,9 @@ public class AiController {
             return ResponseEntity.badRequest().build();
         }
 
-        // Limitar texto a 12 000 caracteres para no exceder el contexto de Gemini
-        String textoParaPrompt = textoExtraido.length() > 12_000
-                ? textoExtraido.substring(0, 12_000)
+        // Limitar texto a 25 000 caracteres (llama-3.3-70b soporta 128k tokens)
+        String textoParaPrompt = textoExtraido.length() > 25_000
+                ? textoExtraido.substring(0, 25_000)
                 : textoExtraido;
 
         boolean incluirDoc     = tiposSalida.contains("documentacion");
@@ -244,26 +244,65 @@ public class AiController {
 
         // 2. Construir prompt dinámico según tipos solicitados
         StringBuilder camposJson = new StringBuilder();
-        camposJson.append("- \"titulo\": título breve del módulo (máximo 80 caracteres).\n");
-        camposJson.append("- \"descripcion\": resumen en 2-3 frases (máximo 300 caracteres).\n");
+        camposJson.append("- \"titulo\": título descriptivo del módulo formativo, máximo 80 caracteres, que refleje el tema del documento.\n");
+        camposJson.append("- \"descripcion\": resumen atractivo de 2-3 frases (máximo 300 caracteres) que explique qué aprenderá el empleado.\n");
         if (incluirDoc) {
-            camposJson.append("- \"contenido\": contenido formativo completo en Markdown con secciones, ejemplos y puntos clave.\n");
+            camposJson.append("""
+                - "contenido": documentación formativa completa en Markdown. Sigue esta estructura exacta:
+                  ## Introducción
+                  (2-3 párrafos explicando el contexto y la importancia del tema para el empleado)
+                  ## Objetivos de aprendizaje
+                  (lista con guión - de 4-6 objetivos claros y medibles, comenzando con verbos de acción)
+                  ## [Título de la primera sección temática]
+                  (2-4 párrafos con explicación detallada, ejemplos prácticos y aplicaciones reales del documento fuente)
+                  ## [Título de la segunda sección temática]
+                  (igual de detallada, extrae y amplía el contenido del documento)
+                  ## [Más secciones temáticas si el documento lo requiere, mínimo 3 en total]
+                  ## Puntos clave a recordar
+                  (lista con guión - de 6-8 puntos breves y memorables, los más importantes del documento)
+                  ## Conclusión
+                  (1-2 párrafos que refuercen el aprendizaje y motiven a aplicarlo)
+                  Usa **negrita** para términos técnicos importantes. Usa > para advertencias o notas críticas de seguridad.
+                  Extensión mínima: 900 palabras. Sé fiel al contenido del documento fuente, no inventes información.
+                """);
         }
         if (incluirPodcast) {
-            camposJson.append("- \"scriptPodcast\": guion conversacional de un podcast de ~5 minutos donde un presentador explica el tema de forma amena y clara. Sin marcas de tiempo, solo texto continuo listo para narrar.\n");
+            camposJson.append("""
+                - "scriptPodcast": guion completo para un episodio de podcast formativo de 6-8 minutos (aproximadamente 900-1100 palabras).
+                  Formato: texto continuo en español, tono conversacional y cercano, como si un formador experto explicara el tema en voz alta.
+                  Estructura obligatoria:
+                    1. Bienvenida y presentación del tema (30 segundos)
+                    2. Por qué es importante este tema para el empleado (1 minuto)
+                    3. Desarrollo del contenido en 3-4 bloques temáticos con transiciones naturales (4-5 minutos)
+                    4. Resumen de los 3 puntos más importantes (1 minuto)
+                    5. Cierre motivador y llamada a la acción (30 segundos)
+                  Usa transiciones como "Pasemos ahora a...", "Como acabamos de ver...", "Esto es importante porque...".
+                  NO uses markdown, asteriscos, guiones ni ningún símbolo especial. Solo texto plano listo para síntesis de voz (TTS).
+                  NO uses abreviaturas. Escribe los números con letras. Evita siglas sin explicarlas primero.
+                """);
         }
         if (incluirVideo) {
-            camposJson.append("- \"scriptVideo\": array JSON de slides, cada slide con campos: { \"numero\": número, \"titulo\": título de la slide, \"contenido\": puntos clave en bullet points, \"notas\": notas del presentador }. Genera entre 6 y 10 slides.\n");
+            camposJson.append("""
+                - "scriptVideo": array JSON de entre 8 y 12 slides para una presentación formativa. Cada slide tiene exactamente estos campos:
+                  { "numero": N, "titulo": "Título conciso de la slide (máximo 50 caracteres)", "contenido": ["punto clave 1", "punto clave 2", "punto clave 3"], "notas": "Texto de apoyo del presentador para esta slide, explicando los puntos con más detalle (2-4 frases completas)" }
+                  Distribución obligatoria:
+                    - Slide 1: portada (título del módulo + subtítulo descriptivo, máximo 2 puntos)
+                    - Slides 2-N: contenido temático (máximo 4 puntos por slide, concisos y accionables)
+                    - Slide final: resumen con los 3-5 puntos más importantes + llamada a la acción
+                  Las notas del presentador deben ser lo suficientemente detalladas para hablar durante 30-60 segundos por slide.
+                """);
         }
 
         String systemPrompt = """
-                Eres un experto en diseño instruccional y formación corporativa.
-                A partir del texto que te proporciona el usuario, genera el siguiente contenido en un único JSON válido.
-                Responde ÚNICAMENTE con el JSON, sin texto adicional ni bloques de código Markdown.
-                Claves requeridas:
+                Eres un experto en diseño instruccional y formación corporativa para empresas españolas.
+                Tu objetivo es transformar el documento que te proporciona el usuario en material formativo de alta calidad para empleados.
+                Responde ÚNICAMENTE con un JSON válido, sin texto adicional, sin bloques de código Markdown, sin comentarios.
+                El contenido debe ser fiel al documento fuente: extrae, organiza y amplía su información, no inventes datos.
+                Idioma: español. Tono: profesional pero cercano, accesible para empleados sin formación técnica avanzada.
+                Claves requeridas del JSON:
                 """ + camposJson;
 
-        String userPrompt = "Texto del documento:\n\n" + textoParaPrompt;
+        String userPrompt = "Transforma el siguiente documento en contenido formativo de calidad:\n\n" + textoParaPrompt;
 
         // 3. Llamar a Groq (texto: documentación + video)
         String respuestaRaw = groqClient.completar(systemPrompt, userPrompt);
