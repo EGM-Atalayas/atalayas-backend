@@ -55,6 +55,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     /** Usuarios inactivos de una empresa - resumen del admin de empresa */
     long countByEmpresaIdAndActivoFalse(UUID empresaId);
 
+    /** Todos los usuarios con un código de rol concreto (ej. ROLE_ADMIN). */
+    List<User> findAllByRolCodigoRol(String codigoRol);
+
     /** Usuarios cuya fecha de registro es posterior a la fecha dada — "nuevos este mes". */
     long countByFechaRegistroAfter(java.time.OffsetDateTime fecha);
 

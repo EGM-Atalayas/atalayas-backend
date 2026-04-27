@@ -98,6 +98,17 @@ public class CompanyService {
                 .build();
         adminUser = userRepository.save(adminUser);
 
+        // Paso 4 — Notificar a todos los superadmins de la nueva solicitud
+        final Company savedCompany = company;
+        userRepository.findAllByRolCodigoRol("ROLE_ADMIN").forEach(admin ->
+                notificationService.crearInterna(
+                        admin.getUsuarioId(),
+                        "SOLICITUD_EMPRESA",
+                        "Nueva solicitud de registro: " + savedCompany.getNombreEmpresa(),
+                        "/admin/solicitudes"
+                )
+        );
+
         return companyMapper.toSolicitudResponse(company, adminUser);
     }
 
