@@ -2,7 +2,7 @@
 
 > **Paquete:** `com.atalayas.backend.dashboard`
 > **Audiencia:** Frontend, Backend
-> **Última actualización:** Abril 2026 (rev. 3)
+> **Última actualización:** Abril 2026 (rev. 4)
 
 ---
 
@@ -22,9 +22,9 @@ Base URL: `/api/v1/dashboard`
 | Método | Ruta | Rol | Descripción |
 |---|---|---|---|
 | `GET` | `/dashboard/admin/resumen` | `ADMIN_EMPRESA` | Métricas de la empresa del admin autenticado |
-| `GET` | `/dashboard/admin/actividad` | `ADMIN_EMPRESA` | Actividad reciente real: progreso de empleados + módulos nuevos |
+| `GET` | `/dashboard/admin/actividad?limit=5` | `ADMIN_EMPRESA` | Actividad reciente real: progreso de empleados + módulos nuevos |
 | `GET` | `/dashboard/superadmin/resumen` | `ADMIN` | Métricas globales básicas (legado) |
-| `GET` | `/dashboard/superadmin` | `ADMIN` | Dashboard completo: métricas + incidencias + actividad de auditoría |
+| `GET` | `/dashboard/superadmin?limit=10` | `ADMIN` | Dashboard completo: métricas + incidencias + actividad de auditoría. Query param `limit` opcional (por defecto `10`). |
 | `GET` | `/dashboard/superadmin/graficas` | `ADMIN` | Datos para los 3 gráficos del panel |
 
 ---
@@ -70,29 +70,31 @@ Query param `limit` opcional (por defecto `5`). Devuelve los `limit` eventos má
 #### Notas
 
 - El `timestamp` es **ISO 8601** — el frontend calcula el tiempo relativo.
-- La deduplicación `logro` vs `completado` se aplica por par `(usuarioId, moduloId)`: si existe un logro para ese par, sus entradas individuales de `completado` se omiten.
-- El `empresaId` se obtiene del token JWT; el admin empresa no necesita pasarlo.
+- La deduplicación `logro` vs `completado` se aplica por par `(usuarioId, moduloId)`.
+- El `empresaId` se obtiene del token JWT.
 
-### GET `/dashboard/superadmin` — Dashboard completo
+### GET `/dashboard/superadmin?limit=10` — Dashboard completo
+
+Query param `limit` controla cuántos eventos devuelve `actividadReciente` (por defecto `10`).
 
 **Response `200 OK`:**
 ```json
 {
-  "empresasAdheridas": 15,
+  "empresasAdheridas": 24,
   "empresasNuevasMes": 2,
-  "empleadosRegistrados": 340,
-  "empleadosNuevosMes": 18,
-  "modulosPublicados": 67,
-  "incidenciasAbiertas": 2,
+  "empleadosRegistrados": 310,
+  "empleadosNuevosMes": 15,
+  "modulosPublicados": 8,
+  "incidenciasAbiertas": 3,
   "incidenciasCriticas": 1,
   "actividadReciente": [
-    { "id": 42, "texto": "Empresa \"Tech SL\" aprobada", "tipo": "success", "tiempo": "hace 5m" },
-    { "id": 41, "texto": "Solicitud de \"OtraEmpresa SL\" rechazada y eliminada", "tipo": "warning", "tiempo": "hace 2h" }
+    { "id": 101, "texto": "Nueva empresa adherida: Sprinter S.L.",         "tiempo": "Hace 10 minutos", "tipo": "success" },
+    { "id": 100, "texto": "Solicitud rechazada: Empresa Ejemplo S.A.",     "tiempo": "Hace 2 horas",    "tipo": "error"   },
+    { "id": 99,  "texto": "Incidencia crítica abierta: caída de servicio", "tiempo": "Ayer",            "tipo": "error"   },
+    { "id": 98,  "texto": "Nuevo empleado registrado en Famosa",           "tiempo": "12 abr 2025",     "tipo": "info"    }
   ]
 }
 ```
-
-> El campo `tiempo` es una cadena relativa calculada en backend: `"ahora mismo"`, `"hace Nm"`, `"hace Nh"`, `"hace Nd"`. Se devuelven los **últimos 10 eventos** del `audit_log` global.
 
 ### GET `/dashboard/superadmin/graficas` — Datos para gráficos
 
@@ -101,19 +103,13 @@ Query param `limit` opcional (por defecto `5`). Devuelve los `limit` eventos má
 {
   "evolucion": [
     { "mes": "Nov", "empresas": 10, "empleados": 280 },
-    { "mes": "Dic", "empresas": 11, "empleados": 295 },
-    { "mes": "Ene", "empresas": 12, "empleados": 310 },
-    { "mes": "Feb", "empresas": 13, "empleados": 318 },
-    { "mes": "Mar", "empresas": 14, "empleados": 330 },
     { "mes": "Abr", "empresas": 15, "empleados": 340 }
   ],
   "sectores": [
-    { "name": "Tecnología", "value": 5 },
-    { "name": "Consultoría", "value": 4 }
+    { "name": "Tecnología", "value": 5 }
   ],
   "modulos": [
-    { "nombre": "Onboarding General", "completados": 450, "pendientes": 120 },
-    { "nombre": "Seguridad en el trabajo", "completados": 380, "pendientes": 95 }
+    { "nombre": "Onboarding General", "completados": 450, "pendientes": 120 }
   ]
 }
 ```
@@ -145,23 +141,28 @@ Query param `limit` opcional (por defecto `5`). Devuelve los `limit` eventos má
 
 ## Actividad reciente — Superadmin
 
-La actividad reciente del superadmin proviene de la tabla `audit_log` (ver [auditoria.md](auditoria.md)). Se devuelven los **últimos 10 eventos** ordenados por `creadoEn DESC`.
+La actividad reciente del superadmin proviene de la tabla `audit_log`. Se devuelven los últimos `limit` eventos (por defecto **10**) ordenados por `creadoEn DESC`, paginados con `PageRequest`.
 
 El campo `tiempo` es calculado en backend como cadena relativa al momento de la petición:
 
 | Valor | Cuándo |
 |---|---|
-| `"ahora mismo"` | Menos de 1 minuto |
-| `"hace Nm"` | Entre 1 y 59 minutos |
-| `"hace Nh"` | Entre 1 y 23 horas |
-| `"hace Nd"` | 1 día o más |
+| `"Ahora mismo"` | < 1 minuto |
+| `"Hace N minuto(s)"` | 1–59 minutos |
+| `"Hace N hora(s)"` | 1–23 horas |
+| `"Ayer"` | 1 día exacto |
+| `"Hace N días"` | 2–6 días |
+| `"d MMM yyyy"` (ej. `"12 abr 2025"`) | 7 días o más |
 
-| Tipo | Color | Cuándo se genera |
-|---|---|---|
-| `success` | Verde | Empresa aprobada |
-| `warning` | Ámbar | Solicitud rechazada y eliminada |
-| `info` | Azul | Eventos informativos generales |
-| `error` | Rojo | Errores del sistema, incidencias críticas |
+#### Eventos registrados en `audit_log`
+
+| Sección | Texto generado | `tipo` | Servicio que lo registra |
+|---------|---------------|--------|--------------------------|
+| Empresas | `Empresa "X" aprobada` | `success` | `CompanyService#resolverSolicitud` |
+| Empresas | `Solicitud de "X" rechazada y eliminada` | `warning` | `CompanyService#resolverSolicitud` |
+| Incidencias | `Incidencia crítica abierta: {titulo}` | `error` | `IncidenciaService#crear` |
+
+> Todos los eventos se persisten con `Propagation.REQUIRES_NEW` — se graban aunque falle la transacción padre.
 
 ---
 
@@ -174,12 +175,24 @@ La actividad reciente del admin empresa se deriva en tiempo real desde `trazabil
 | Clase | Responsabilidad |
 |---|---|
 | `DashboardService#getActividadEmpresa` | Orquesta las 5 queries, deduplica y ordena |
+| `DashboardService#getSuperAdminDashboard(int limit)` | Agrega métricas globales y delega en `AuditService` |
+| `AuditService#getActividadReciente(int limit)` | Pagina `audit_log` con `PageRequest.of(0, limit)` |
+| `AuditService#registrar(texto, tipo)` | Persiste evento en transacción independiente |
 | `ProgressRepository#findCompletadosRecientes` | Contenidos completados más recientes |
 | `ProgressRepository#findIniciadosRecientes` | Contenidos iniciados (no completados) |
 | `ProgressRepository#findLogros` | Empleados que completaron todos los contenidos de un módulo |
 | `ProgressRepository#findCompletadosGrupo` | ≥ 2 empleados completando el mismo módulo el mismo día |
 | `ModuleRepository#findNuevosModulos` | Módulos publicados visibles para la empresa |
-| `ProgressEventProjection` | Proyección JPA para eventos individuales de progreso |
-| `GrupoProjection` | Proyección JPA para eventos de grupo |
-| `NuevoModuloProjection` | Proyección JPA para módulos nuevos |
-| `ActividadItemDto` | DTO de respuesta con `tipo`, `texto`, `timestamp` (ISO 8601) |
+| `AuditLogRepository#findAllByOrderByCreadoEnDesc(Pageable)` | Query paginada del log de auditoría |
+| `ActividadItemDto` | DTO de actividad empresa con `tipo`, `texto`, `timestamp` (ISO 8601) |
+| `ActividadRecienteDto` | DTO de actividad superadmin con `id`, `texto`, `tiempo`, `tipo` |
+
+---
+
+## Tablas de base de datos
+
+| Tabla | Descripción |
+|-------|-------------|
+| `audit_log` | Eventos de auditoría global. DDL en [`docs/sql/create_audit_log_and_incidencia.sql`](../sql/create_audit_log_and_incidencia.sql) |
+| `incidencia` | Incidencias de plataforma. Gestionadas vía `/api/v1/incidencias` |
+| `trazabilidad_lectura` | Progreso de empleados (fuente de actividad del admin empresa) |

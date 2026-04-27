@@ -113,9 +113,9 @@
 | Método | Ruta | Rol | Descripción |
 |--------|------|-----|-------------|
 | `GET` | `/dashboard/admin/resumen` | `ADMIN_EMPRESA` | Métricas de la empresa: usuarios activos e inactivos. |
-| `GET` | `/dashboard/admin/actividad` | `ADMIN_EMPRESA` | Actividad reciente real de la empresa (progreso + módulos nuevos). |
+| `GET` | `/dashboard/admin/actividad?limit=5` | `ADMIN_EMPRESA` | Actividad reciente real de la empresa (progreso + módulos nuevos). |
 | `GET` | `/dashboard/superadmin/resumen` | `ADMIN` | Métricas globales de toda la plataforma (legado). |
-| `GET` | `/dashboard/superadmin` | `ADMIN` | Dashboard completo: métricas, incidencias y actividad reciente. |
+| `GET` | `/dashboard/superadmin?limit=10` | `ADMIN` | Dashboard completo: métricas, incidencias y actividad reciente. Query param `limit` opcional (por defecto `10`). |
 | `GET` | `/dashboard/superadmin/graficas` | `ADMIN` | Datos para los tres gráficos: evolución mensual, sectores y estadísticas de módulos. |
 
 **`GET /dashboard/admin/actividad?limit=5` — actividad reciente de empresa:**
@@ -124,11 +124,11 @@ Devuelve los últimos `limit` eventos (por defecto 5) ordenados por `timestamp D
 
 ```json
 [
-  { "tipo": "completado", "texto": "Ana García completó «Prevención de Riesgos»",   "timestamp": "2026-04-24T10:15:00Z" },
-  { "tipo": "inicio",     "texto": "Carlos Ruiz inició «Protección de Datos»",       "timestamp": "2026-04-24T09:58:00Z" },
-  { "tipo": "logro",      "texto": "María López obtuvo el 100% en Onboarding",       "timestamp": "2026-04-24T09:00:00Z" },
+  { "tipo": "completado", "texto": "Ana García completó «Prevención de Riesgos»",       "timestamp": "2026-04-24T10:15:00Z" },
+  { "tipo": "inicio",     "texto": "Carlos Ruiz inició «Protección de Datos»",           "timestamp": "2026-04-24T09:58:00Z" },
+  { "tipo": "logro",      "texto": "María López obtuvo el 100% en Onboarding",           "timestamp": "2026-04-24T09:00:00Z" },
   { "tipo": "grupo",      "texto": "5 empleados completaron «Habilidades Comunicación»", "timestamp": "2026-04-24T08:30:00Z" },
-  { "tipo": "nuevo",      "texto": "Nuevo módulo «Excel Avanzado» publicado",         "timestamp": "2026-04-23T16:00:00Z" }
+  { "tipo": "nuevo",      "texto": "Nuevo módulo «Excel Avanzado» publicado",             "timestamp": "2026-04-23T16:00:00Z" }
 ]
 ```
 
@@ -140,7 +140,37 @@ Devuelve los últimos `limit` eventos (por defecto 5) ordenados por `timestamp D
 | `grupo` | `trazabilidad_lectura` | ≥ 2 empleados completaron el mismo módulo el mismo día |
 | `nuevo` | `modulo` | Módulo con `activo = true` propio de la empresa o global |
 
-> El campo `timestamp` es **ISO 8601**. El frontend calcula el tiempo relativo (`"Hace 5 min"`, `"Ayer"`, etc.).
+> El campo `timestamp` es **ISO 8601**. El frontend calcula el tiempo relativo.
+
+**`GET /dashboard/superadmin?limit=10` — estructura de respuesta:**
+```json
+{
+  "empresasAdheridas": 24,
+  "empresasNuevasMes": 2,
+  "empleadosRegistrados": 310,
+  "empleadosNuevosMes": 15,
+  "modulosPublicados": 8,
+  "incidenciasAbiertas": 3,
+  "incidenciasCriticas": 1,
+  "actividadReciente": [
+    { "id": 101, "texto": "Nueva empresa adherida: Sprinter S.L.", "tiempo": "Hace 10 minutos", "tipo": "success" },
+    { "id": 100, "texto": "Solicitud rechazada: Empresa Ejemplo S.A.", "tiempo": "Hace 2 horas",  "tipo": "error"   },
+    { "id": 99,  "texto": "Incidencia crítica abierta: caída de servicio", "tiempo": "Ayer",      "tipo": "error"   },
+    { "id": 98,  "texto": "Nuevo empleado registrado en Famosa", "tiempo": "12 abr 2025",         "tipo": "info"    }
+  ]
+}
+```
+
+El campo `tiempo` es calculado en backend según la antigüedad del evento:
+
+| Valor | Cuándo |
+|-------|--------|
+| `"Ahora mismo"` | < 1 minuto |
+| `"Hace N minuto(s)"` | 1–59 minutos |
+| `"Hace N hora(s)"` | 1–23 horas |
+| `"Ayer"` | 1 día |
+| `"Hace N días"` | 2–6 días |
+| `"d MMM yyyy"` (ej. `"12 abr 2025"`) | 7 días o más |
 
 **`GET /dashboard/superadmin/graficas` — estructura de respuesta:**
 ```json
@@ -153,17 +183,6 @@ Devuelve los últimos `limit` eventos (por defecto 5) ordenados por `timestamp D
 - **evolucion**: totales acumulados al final de cada uno de los últimos 6 meses (ordenado de más antiguo a más reciente).
 - **sectores**: empresas agrupadas por sector, ordenadas por volumen DESC. No incluye empresas sin sector asignado.
 - **modulos**: top 10 módulos activos ordenados por `completados DESC`.
-
-**`GET /dashboard/superadmin` — campo `actividadReciente`:**
-
-Últimos 10 eventos del `audit_log` ordenados de más nuevo a más antiguo. El campo `tiempo` es una cadena relativa calculada en backend (`"ahora mismo"`, `"hace 5m"`, `"hace 2h"`, `"hace 3d"`).
-
-```json
-"actividadReciente": [
-  { "id": 42, "texto": "Empresa \"Tech SL\" aprobada", "tipo": "success", "tiempo": "hace 5m" },
-  { "id": 41, "texto": "Solicitud de \"Otra SL\" rechazada y eliminada", "tipo": "warning", "tiempo": "hace 2h" }
-]
-```
 ---
 ## 5. Módulos · `/api/v1/modulos`
 > Los módulos pueden ser de **empresa** o **globales** (`empresaId = null`, solo creables por `ADMIN`).
@@ -257,6 +276,48 @@ Devuelve los últimos `limit` eventos (por defecto 5) ordenados por `timestamp D
 |--------|------|-----------|-------------|
 | `POST` | `/sugerencias` | Cualquiera | Enviar una sugerencia. Body: `{ "mensaje": "...", "destinatario": "EMPRESA" \| "EGM" }`. Devuelve `201` sin body. |
 | `GET` | `/sugerencias` | `ADMIN_EMPRESA` | Listar todas las sugerencias. |
+---
+## 15. Incidencias · `/api/v1/incidencias`
+> Gestión de incidencias de plataforma. Solo accesible para `ROLE_ADMIN` (superadmin EGM).
+> `empresa_id` es opcional: `null` = incidencia global, valor = asociada a empresa concreta.
+
+| Método | Ruta | Rol | Descripción |
+|--------|------|-----|-------------|
+| `POST` | `/incidencias` | `ADMIN` | Crear nueva incidencia. Si `prioridad = CRITICA` se genera un evento `error` en `audit_log`. |
+| `GET` | `/incidencias` | `ADMIN` | Listar todas las incidencias ordenadas por `creadoEn DESC`. |
+| `PATCH` | `/incidencias/{id}/cerrar` | `ADMIN` | Cierra la incidencia (estado → `CERRADA`). |
+
+**`POST /incidencias` — body:**
+```json
+{
+  "titulo":      "Caída del servicio de notificaciones",
+  "descripcion": "El servicio de emails no responde desde las 10:00.",
+  "prioridad":   "CRITICA",
+  "empresaId":   null
+}
+```
+
+**`GET /incidencias` — respuesta:**
+```json
+[
+  {
+    "id": 5,
+    "titulo": "Caída del servicio de notificaciones",
+    "descripcion": "El servicio de emails no responde desde las 10:00.",
+    "estado": "ABIERTA",
+    "prioridad": "CRITICA",
+    "empresaId": null,
+    "creadoEn": "2026-04-27T10:05:00Z"
+  }
+]
+```
+
+| Campo | Valores | Descripción |
+|-------|---------|-------------|
+| `estado` | `ABIERTA` \| `CERRADA` | Estado de la incidencia |
+| `prioridad` | `NORMAL` \| `CRITICA` | Las `CRITICA` generan entrada en `audit_log` automáticamente |
+| `empresaId` | `UUID` \| `null` | `null` = incidencia global de plataforma |
+
 ---
 ## Resumen de endpoints públicos (sin autenticación)
 | Método | Ruta |

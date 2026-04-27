@@ -4,6 +4,7 @@ import com.atalayas.backend.incidencia.enums.PrioridadIncidencia;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.OffsetDateTime;
+import java.util.UUID;
 /**
  * Entidad mapeada a la tabla 'incidencia'.
  * Permite al superadmin registrar y gestionar incidencias de la plataforma.
@@ -33,6 +34,9 @@ public class Incidencia {
     @Column(name = "prioridad", nullable = false, length = 20)
     @Builder.Default
     private PrioridadIncidencia prioridad = PrioridadIncidencia.NORMAL;
+    /** null = incidencia global de plataforma; valor = asociada a empresa concreta */
+    @Column(name = "empresa_id")
+    private UUID empresaId;
     @Column(name = "creado_en", nullable = false, updatable = false)
     private OffsetDateTime creadoEn;
     @PrePersist

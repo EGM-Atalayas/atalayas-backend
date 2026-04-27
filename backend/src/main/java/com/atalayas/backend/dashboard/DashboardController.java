@@ -102,8 +102,9 @@ public class DashboardController {
         @ApiResponse(responseCode = "403", description = "Rol insuficiente — requiere ROLE_ADMIN",
                      content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     })
-    public ResponseEntity<SuperAdminDashboardResponse> getSuperAdminDashboard() {
-        return ResponseEntity.ok(dashboardService.getSuperAdminDashboard());
+    public ResponseEntity<SuperAdminDashboardResponse> getSuperAdminDashboard(
+            @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(dashboardService.getSuperAdminDashboard(limit));
     }
 
     /**

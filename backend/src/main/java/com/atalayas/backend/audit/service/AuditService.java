@@ -4,13 +4,16 @@ import com.atalayas.backend.audit.entity.AuditLog;
 import com.atalayas.backend.audit.repository.AuditLogRepository;
 import com.atalayas.backend.dashboard.dto.ActividadRecienteDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 /**
@@ -23,6 +26,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AuditService {
+
+    private static final DateTimeFormatter FORMATTER =
+            DateTimeFormatter.ofPattern("d MMM yyyy", Locale.forLanguageTag("es"));
 
     private final AuditLogRepository auditLogRepository;
 
@@ -44,13 +50,12 @@ public class AuditService {
         );
     }
 
-    /**
-     * Devuelve los últimos 10 eventos con el campo {@code tiempo} calculado
-     * de forma relativa al momento actual.
-     */
+    /** Devuelve los últimos {@code limit} eventos con tiempo relativo calculado. */
     @Transactional(readOnly = true)
-    public List<ActividadRecienteDto> getActividadReciente() {
-        return auditLogRepository.findTop10ByOrderByCreadoEnDesc().stream()
+    public List<ActividadRecienteDto> getActividadReciente(int limit) {
+        return auditLogRepository
+                .findAllByOrderByCreadoEnDesc(PageRequest.of(0, limit))
+                .stream()
                 .map(log -> ActividadRecienteDto.builder()
                         .id(log.getId())
                         .texto(log.getTexto())
@@ -65,12 +70,18 @@ public class AuditService {
     private String tiempoRelativo(OffsetDateTime creadoEn) {
         OffsetDateTime ahora = OffsetDateTime.now();
         long minutos = ChronoUnit.MINUTES.between(creadoEn, ahora);
-        if (minutos < 1)  return "ahora mismo";
-        if (minutos < 60) return "hace " + minutos + "m";
+        if (minutos < 1)   return "Ahora mismo";
+        if (minutos < 60)  return "Hace " + minutos + " minuto" + (minutos == 1 ? "" : "s");
         long horas = ChronoUnit.HOURS.between(creadoEn, ahora);
-        if (horas < 24)   return "hace " + horas + "h";
-        long dias = ChronoUnit.DAYS.between(creadoEn, ahora);
-        return "hace " + dias + "d";
+        if (horas < 24)    return "Hace " + horas + " hora" + (horas == 1 ? "" : "s");
+        long dias = ChronoUnit.DAYS.between(creadoEn.toLocalDate(), ahora.toLocalDate());
+        if (dias == 1)     return "Ayer";
+        if (dias < 7)      return "Hace " + dias + " días";
+        return capitalize(creadoEn.format(FORMATTER));
+    }
+
+    private String capitalize(String s) {
+        if (s == null || s.isEmpty()) return s;
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 }
-

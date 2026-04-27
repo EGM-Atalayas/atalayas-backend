@@ -96,7 +96,7 @@ public class DashboardService {
      * GET /api/v1/dashboard/superadmin
      */
     @Transactional(readOnly = true)
-    public SuperAdminDashboardResponse getSuperAdminDashboard() {
+    public SuperAdminDashboardResponse getSuperAdminDashboard(int limit) {
         // Primer instante del mes en curso con offset UTC
         OffsetDateTime inicioMes = OffsetDateTime.now()
                 .withDayOfMonth(1)
@@ -110,7 +110,7 @@ public class DashboardService {
         long incidenciasAbiertas  = incidenciaRepository.countByEstado(EstadoIncidencia.ABIERTA);
         long incidenciasCriticas  = incidenciaRepository.countByEstadoAndPrioridad(
                                         EstadoIncidencia.ABIERTA, PrioridadIncidencia.CRITICA);
-        List<ActividadRecienteDto> actividad = auditService.getActividadReciente();
+        List<ActividadRecienteDto> actividad = auditService.getActividadReciente(limit);
 
         return SuperAdminDashboardResponse.builder()
                 .empresasAdheridas(empresasAdheridas)
