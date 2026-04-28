@@ -27,4 +27,25 @@ public class AnnouncementRequest {
     // URL de imagen opcional para mostrar en la tarjeta del anuncio
     @Size(max = 500, message = "La URL de imagen no puede superar los 500 caracteres")
     private String imagenUrl;
+
+    private String enlaceUrl;
+
+    @Size(max = 100, message = "El texto del enlace no puede superar los 100 caracteres")
+    private String enlaceTexto;
+
+    private String videoUrl;
+
+    private String adjuntoUrl;
+
+    @Size(max = 200, message = "El nombre del adjunto no puede superar los 200 caracteres")
+    private String adjuntoNombre;
+
+    /** 'publicado' | 'borrador' */
+    @Size(max = 20)
+    private String estado = "publicado";
+
+    private boolean fijado = false;
+
+    @Size(max = 50)
+    private String categoria;
 }

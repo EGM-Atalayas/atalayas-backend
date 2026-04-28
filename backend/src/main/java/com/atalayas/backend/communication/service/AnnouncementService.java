@@ -96,6 +96,55 @@ public class AnnouncementService {
     }
 
 
+    // ── EDITAR ────────────────────────────────────────────────────────────
+    /**
+     * Edita un anuncio existente.
+     *
+     * Superadmin puede editar cualquier anuncio.
+     * Admin empresa solo puede editar los suyos propios.
+     * Los campos de identidad (esGlobal, empresaId, creadoPor) no se modifican.
+     */
+    @Transactional
+    public AnnouncementResponse editar(UUID id, AnnouncementRequest request, User user) {
+        Announcement announcement;
+
+        if (isSuperAdmin(user)) {
+            announcement = announcementRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Anuncio no encontrado con id: " + id));
+        } else {
+            announcement = announcementRepository
+                    .findByAnuncioIdAndEmpresaId(id, user.getEmpresaId())
+                    .orElseThrow(() -> {
+                        if (announcementRepository.existsById(id)) {
+                            return new AccessDeniedException(
+                                    "No tienes permisos para editar este anuncio");
+                        }
+                        return new ResourceNotFoundException(
+                                "Anuncio no encontrado con id: " + id);
+                    });
+        }
+
+        announcementMapper.updateEntity(announcement, request);
+        announcement = announcementRepository.save(announcement);
+        return announcementMapper.toResponse(announcement);
+    }
+
+
+    // ── REGISTRAR VISTA ───────────────────────────────────────────────────
+    /**
+     * Incrementa el contador de vistas de un anuncio en 1.
+     * Operación no crítica — si el anuncio no existe simplemente se ignora.
+     */
+    @Transactional
+    public void registrarVista(UUID id) {
+        announcementRepository.findById(id).ifPresent(a -> {
+            a.setVistas(a.getVistas() + 1);
+            announcementRepository.save(a);
+        });
+    }
+
+
     // ── DESACTIVAR ────────────────────────────────────────────────────────
     /**
      * Soft-delete de un anuncio, marca activo = false sin eliminar el registro
