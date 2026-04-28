@@ -44,6 +44,8 @@ public class SecurityConfig {
                         .requestMatchers(SecurityConstants.PUBLIC_URLS).permitAll()
                         // Solicitud de alta de empresa — público, sin cuenta previa
                         .requestMatchers(HttpMethod.POST, "/api/v1/empresas/solicitud").permitAll()
+                        // Contador de vistas — no requiere autenticación (operación no crítica)
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/anuncios/*/vistas").permitAll()
                         // Swagger solo accesible para usuarios autenticados
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                             .authenticated()
