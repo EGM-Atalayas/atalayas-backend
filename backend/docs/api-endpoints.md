@@ -233,15 +233,28 @@ El campo `tiempo` es calculado en backend según la antigüedad del evento:
 | `PATCH` | `/comunicados/{id}/desactivar` | `ADMIN` | Desactivar comunicado. |
 ---
 ## 10. Notificaciones · `/api/v1/notificaciones`
-> Se generan automáticamente en eventos clave (ej. aprobación de empresa) y también manualmente.
+> Se generan automáticamente en eventos clave (ej. aprobación de empresa) via `NotificationService#crearInterna` y también manualmente via endpoint.
+> → [Documentación detallada del módulo](modulos/notificaciones.md)
+
 | Método | Ruta | Rol mínimo | Descripción |
 |--------|------|-----------|-------------|
-| `POST` | `/notificaciones` | `ADMIN_EMPRESA` | Crear notificación manual para un usuario. |
-| `GET` | `/notificaciones/me` | Cualquiera | Todas mis notificaciones (leídas + no leídas). |
-| `GET` | `/notificaciones/me/no-leidas` | Cualquiera | Solo las no leídas (para la campana del frontend). |
+| `POST` | `/notificaciones` | `ADMIN` o `ADMIN_EMPRESA` | Crear notificación manual para un usuario. `ROLE_EMPLEADO` → `403`. |
+| `GET` | `/notificaciones/me` | Cualquiera | Mis notificaciones paginadas (leídas + no leídas). Params: `?page=0&size=20`. Devuelve `Page<NotificationResponse>`. |
+| `GET` | `/notificaciones/me/no-leidas` | Cualquiera | Solo las no leídas (para la campana del frontend). Devuelve `List<NotificationResponse>`. |
 | `GET` | `/notificaciones/me/contador` | Cualquiera | Número de no leídas. Respuesta: `{ "noLeidas": N }`. |
-| `PATCH` | `/notificaciones/{id}/leer` | Cualquiera | Marcar una notificación como leída. Solo el destinatario puede ejecutarlo. |
-| `PATCH` | `/notificaciones/me/leer-todas` | Cualquiera | Marcar todas como leídas. Respuesta: `{ "actualizadas": N }`. |
+| `PATCH` | `/notificaciones/{id}/leer` | Cualquiera | Marcar una notificación como leída. `400` si ya leída o no es el destinatario. `404` si no existe. |
+| `PATCH` | `/notificaciones/me/leer-todas` | Cualquiera | Marcar todas las no leídas como leídas. Solo afecta al usuario autenticado. Respuesta: `{ "actualizadas": N }`. |
+
+**`NotificationRequest` — campos:**
+
+| Campo | Tipo | Requerido | Validación |
+|-------|------|:---------:|------------|
+| `destinatarioId` | `UUID` | ✅ | `@NotNull` |
+| `tipo` | `String` | ✅ | `@NotBlank`, máx. 100 chars |
+| `mensaje` | `String` | ✅ | `@NotBlank` |
+| `enlace` | `String` | ❌ | Máx. 500 chars — URL relativa al recurso relacionado |
+
+**`NotificationResponse` — campos:** `notificacionId`, `destinatarioId`, `tipo`, `mensaje`, `enlace`, `leido`, `creadoEn`, `actualizadoEn`.
 ---
 ## 11. Eventos de Comunidad · `/api/v1/eventos`
 | Método | Ruta | Rol mínimo | Descripción |
