@@ -40,6 +40,19 @@ public class AnnouncementResponse {
     // URL de imagen opcional para mostrar en la tarjeta del anuncio
     private String imagenUrl;
 
+    private String enlaceUrl;
+    private String enlaceTexto;
+    private String videoUrl;
+    private String adjuntoUrl;
+    private String adjuntoNombre;
+
+    /** 'publicado' | 'borrador' */
+    private String estado;
+
+    private boolean fijado;
+
+    private int vistas;
+
     private OffsetDateTime creadoEn;
     private OffsetDateTime actualizadoEn;
 }
