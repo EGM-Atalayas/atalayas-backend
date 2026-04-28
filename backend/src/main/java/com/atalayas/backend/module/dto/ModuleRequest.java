@@ -60,5 +60,11 @@ public class ModuleRequest {
 
     /** URL pública del MP3 del podcast (Supabase Storage) */
     private String podcastAudioUrl;
+
+    /** URL pública del archivo adjunto subido manualmente (Supabase Storage) */
+    private String adjuntoUrl;
+
+    /** Nombre original del archivo adjunto */
+    private String adjuntoNombre;
 }
 

@@ -44,6 +44,8 @@ public class ModuleMapper {
                 .scriptPodcast(request.getScriptPodcast())
                 .scriptVideo(request.getScriptVideo())
                 .podcastAudioUrl(request.getPodcastAudioUrl())
+                .adjuntoUrl(request.getAdjuntoUrl())
+                .adjuntoNombre(request.getAdjuntoNombre())
                 .build();
     }
 
@@ -74,6 +76,8 @@ public class ModuleMapper {
                 .scriptPodcast(m.getScriptPodcast())
                 .scriptVideo(m.getScriptVideo())
                 .podcastAudioUrl(m.getPodcastAudioUrl())
+                .adjuntoUrl(m.getAdjuntoUrl())
+                .adjuntoNombre(m.getAdjuntoNombre())
                 .fechaCreacion(m.getFechaCreacion())
                 .actualizadoEn(m.getActualizadoEn())
                 .build();

@@ -103,6 +103,14 @@ public class TrainingModule {
     @Column(name = "podcast_audio_url", length = 500)
     private String podcastAudioUrl;
 
+    // URL pública del adjunto subido manualmente (Supabase Storage)
+    @Column(name = "adjunto_url", length = 500)
+    private String adjuntoUrl;
+
+    // Nombre original del archivo adjunto
+    @Column(name = "adjunto_nombre", length = 255)
+    private String adjuntoNombre;
+
     // Soft delete — false oculta el módulo para empleados pero conserva datos históricos
     @Column(name = "activo", nullable = false)
     @Builder.Default
