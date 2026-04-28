@@ -89,6 +89,9 @@ public class Announcement {
     @Builder.Default
     private int vistas = 0;
 
+    @Column(name = "categoria", length = 50)
+    private String categoria;
+
     @Column(name = "actualizado_en", nullable = false)
     private OffsetDateTime actualizadoEn;
 

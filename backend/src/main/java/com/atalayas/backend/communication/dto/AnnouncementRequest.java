@@ -45,4 +45,7 @@ public class AnnouncementRequest {
     private String estado = "publicado";
 
     private boolean fijado = false;
+
+    @Size(max = 50)
+    private String categoria;
 }

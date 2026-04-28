@@ -24,6 +24,7 @@ public class AnnouncementMapper {
                 .adjuntoNombre(request.getAdjuntoNombre())
                 .estado(request.getEstado() != null ? request.getEstado() : "publicado")
                 .fijado(request.isFijado())
+                .categoria(request.getCategoria())
                 .esGlobal(esGlobal)
                 .empresaId(esGlobal ? null : user.getEmpresaId())
                 .creadoPor(user.getUsuarioId())
@@ -48,6 +49,7 @@ public class AnnouncementMapper {
             announcement.setEstado(request.getEstado());
         }
         announcement.setFijado(request.isFijado());
+        announcement.setCategoria(request.getCategoria());
     }
 
     public AnnouncementResponse toResponse(Announcement announcement) {
@@ -65,6 +67,7 @@ public class AnnouncementMapper {
                 .estado(announcement.getEstado())
                 .fijado(announcement.isFijado())
                 .vistas(announcement.getVistas())
+                .categoria(announcement.getCategoria())
                 .esGlobal(announcement.isEsGlobal())
                 .activo(announcement.isActivo())
                 .creadoPor(announcement.getCreadoPor())

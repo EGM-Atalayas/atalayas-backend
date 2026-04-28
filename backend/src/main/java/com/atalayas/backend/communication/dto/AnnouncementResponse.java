@@ -52,6 +52,7 @@ public class AnnouncementResponse {
     private boolean fijado;
 
     private int vistas;
+    private String categoria;
 
     private OffsetDateTime creadoEn;
     private OffsetDateTime actualizadoEn;
