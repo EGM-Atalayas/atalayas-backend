@@ -76,6 +76,27 @@ public class OfficialNoticeController {
 
 
     /**
+     * PUT /api/v1/comunicados/{id}
+     * Actualiza un comunicado existente (campos + estado borrador/publicado).
+     * Solo ROLE_ADMIN puede editar comunicados.
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @Operation(summary = "Editar comunicado - solo ROLE_ADMIN")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Comunicado actualizado"),
+            @ApiResponse(responseCode = "403", description = "Rol insuficiente"),
+            @ApiResponse(responseCode = "404", description = "Comunicado no encontrado")
+    })
+    public ResponseEntity<OfficialNoticeResponse> actualizar(
+            @PathVariable UUID id,
+            @Valid @RequestBody OfficialNoticeRequest request,
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(noticeService.actualizar(id, request, user));
+    }
+
+
+    /**
      * PATCH /api/v1/comunicados/{id}/desactivar
      * Soft-delete del comunicado, lo oculta sin borrarlo del histórico.
      * Solo ROLE_ADMIN puede desactivar.

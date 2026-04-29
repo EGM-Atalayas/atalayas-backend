@@ -23,6 +23,14 @@ public class OfficialNoticeResponse {
     private String titulo;
     private String mensaje;
     private String imagenUrl;
+    private String categoria;
+    private boolean destacado;
+    private String estado;
+    private String enlaceUrl;
+    private String enlaceTexto;
+    private String videoUrl;
+    private String adjuntoUrl;
+    private String adjuntoNombre;
     private OffsetDateTime fechaPublicacion;
     private OffsetDateTime fechaExpiracion;
     private boolean activo;

@@ -23,8 +23,9 @@ public interface OfficialNoticeRepository extends JpaRepository<OfficialNotice, 
     @Query("""
             SELECT n FROM OfficialNotice n
             WHERE n.activo = true
+              AND (n.estado IS NULL OR n.estado != 'borrador')
               AND (n.fechaExpiracion IS NULL OR n.fechaExpiracion > CURRENT_TIMESTAMP)
-            ORDER BY n.fechaPublicacion DESC
+            ORDER BY n.destacado DESC, n.fechaPublicacion DESC
             """)
     List<OfficialNotice> findActivosVigentes();
 
