@@ -105,4 +105,18 @@ public class AuthService {
                 .empresaId(user.getEmpresaId())
                 .build();
     }
+
+    /**
+     * Devuelve los datos del usuario autenticado en el SecurityContext.
+     * Usado por GET /api/v1/auth/me.
+     */
+    public AuthResponse getCurrentUserInfo() {
+        org.springframework.security.core.Authentication auth =
+                org.springframework.security.core.context.SecurityContextHolder
+                        .getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof User user)) {
+            throw new IllegalStateException("No hay sesión activa");
+        }
+        return buildAuthResponse(user);
+    }
 }

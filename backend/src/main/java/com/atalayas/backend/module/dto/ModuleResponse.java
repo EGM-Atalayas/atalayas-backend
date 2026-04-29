@@ -6,7 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
@@ -45,7 +45,7 @@ public class ModuleResponse {
     private String adjuntoUrl;
     private String adjuntoNombre;
 
-    private LocalDateTime fechaCreacion;
-    private LocalDateTime actualizadoEn;
+    private OffsetDateTime fechaCreacion;
+    private OffsetDateTime actualizadoEn;
 }
 
