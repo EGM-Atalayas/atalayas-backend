@@ -6,11 +6,11 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * Respuesta completa de un módulo formativo (tabla modulo).
+ * Respuesta completa de un módulo (tabla modulo).
  */
 @Data
 @Builder
@@ -22,7 +22,7 @@ public class ModuleResponse {
     private String nombre;
     private String descripcion;
 
-    // FK empresa — null si es módulo global
+    // FK empresa (opcional)
     private UUID empresaId;
     private String nombreEmpresa;
 
@@ -45,6 +45,7 @@ public class ModuleResponse {
     private String adjuntoUrl;
     private String adjuntoNombre;
 
-    private OffsetDateTime fechaCreacion;
-    private OffsetDateTime actualizadoEn;
+    private LocalDateTime fechaCreacion;
+    private LocalDateTime actualizadoEn;
 }
+
