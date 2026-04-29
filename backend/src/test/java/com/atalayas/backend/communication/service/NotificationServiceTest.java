@@ -7,7 +7,7 @@ import com.atalayas.backend.communication.mapper.NotificationMapper;
 import com.atalayas.backend.communication.repository.NotificationRepository;
 import com.atalayas.backend.exception.BusinessException;
 import com.atalayas.backend.exception.ResourceNotFoundException;
-import com.atalayas.backend.role.entity.Role;
+import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.user.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,7 +50,7 @@ class NotificationServiceTest {
         userId = UUID.randomUUID();
         notifId = UUID.randomUUID();
 
-        Role role = Role.builder()
+        Rol role = Rol.builder()
                 .rolId(UUID.randomUUID())
                 .codigoRol("ROLE_ADMIN")
                 .nombreRol("Administrador")

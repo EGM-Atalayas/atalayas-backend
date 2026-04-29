@@ -2,7 +2,7 @@ package com.atalayas.backend.communication.controller;
 
 import com.atalayas.backend.communication.entity.Notification;
 import com.atalayas.backend.communication.repository.NotificationRepository;
-import com.atalayas.backend.role.entity.Role;
+import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.role.repository.RoleRepository;
 import com.atalayas.backend.security.JwtService;
 import com.atalayas.backend.user.entity.User;
@@ -46,9 +46,9 @@ class NotificationControllerIT {
 
     @BeforeEach
     void setUp() {
-        Role roleAdmin = roleRepository.save(Role.builder()
+        Rol roleAdmin = roleRepository.save(Rol.builder()
                 .codigoRol("ROLE_ADMIN").nombreRol("Administrador").build());
-        Role roleEmpleado = roleRepository.save(Role.builder()
+        Rol roleEmpleado = roleRepository.save(Rol.builder()
                 .codigoRol("ROLE_EMPLEADO").nombreRol("Empleado").build());
 
         admin = userRepository.save(User.builder()
