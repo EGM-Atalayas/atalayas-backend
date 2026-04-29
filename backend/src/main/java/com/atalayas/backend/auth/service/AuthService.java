@@ -3,6 +3,8 @@ package com.atalayas.backend.auth.service;
 import com.atalayas.backend.auth.dto.AuthResponse;
 import com.atalayas.backend.auth.dto.LoginRequest;
 import com.atalayas.backend.auth.dto.RegisterRequest;
+import com.atalayas.backend.company.entity.Company;
+import com.atalayas.backend.company.repository.CompanyRepository;
 import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.role.repository.RoleRepository;
 import com.atalayas.backend.security.JwtService;
@@ -22,6 +24,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final CompanyRepository companyRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
@@ -92,6 +95,18 @@ public class AuthService {
 
     private AuthResponse buildAuthResponse(User user) {
         Rol rol = user.getRol();
+
+        // Resolver nombre y logo de empresa si el usuario pertenece a una
+        String nombreEmpresa = null;
+        String logoEmpresaUrl = null;
+        if (user.getEmpresaId() != null) {
+            Company empresa = companyRepository.findById(user.getEmpresaId()).orElse(null);
+            if (empresa != null) {
+                nombreEmpresa  = empresa.getNombreEmpresa();
+                logoEmpresaUrl = empresa.getLogoUrl();
+            }
+        }
+
         return AuthResponse.builder()
                 .expiresIn(SecurityConstants.ACCESS_TOKEN_EXPIRATION)
                 .usuarioId(user.getUsuarioId())
@@ -103,6 +118,8 @@ public class AuthService {
                 .codigoRol(rol.getCodigoRol())
                 .nombreRol(rol.getNombreRol())
                 .empresaId(user.getEmpresaId())
+                .nombreEmpresa(nombreEmpresa)
+                .logoEmpresaUrl(logoEmpresaUrl)
                 .build();
     }
 
