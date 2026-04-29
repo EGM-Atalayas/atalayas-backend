@@ -6,7 +6,7 @@ import com.atalayas.backend.common.util.SecurityUtils;
 import com.atalayas.backend.communication.service.EmailService;
 import com.atalayas.backend.communication.service.NotificationService;
 import com.atalayas.backend.exception.ResourceNotFoundException;
-import com.atalayas.backend.role.entity.Role;
+import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.role.repository.RoleRepository;
 import com.atalayas.backend.user.dto.ChangePasswordRequest;
 import com.atalayas.backend.user.dto.CreateUserRequest;
@@ -129,7 +129,7 @@ public class UserService {
         }
 
         // 3. Buscar rol
-        Role role = roleRepository.findById(request.getRolId())
+        Rol role = roleRepository.findById(request.getRolId())
                 .orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado con id: " + request.getRolId()));
 
         // 4. ROLE_ADMIN_EMPRESA no puede crear usuarios con ROLE_ADMIN

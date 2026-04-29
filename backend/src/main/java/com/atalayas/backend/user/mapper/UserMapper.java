@@ -1,6 +1,6 @@
 package com.atalayas.backend.user.mapper;
 
-import com.atalayas.backend.role.entity.Role;
+import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.user.dto.UserProfileResponse;
 import com.atalayas.backend.user.dto.UserResponse;
 import com.atalayas.backend.user.entity.User;
@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 public class UserMapper {
 
     public UserResponse toUserResponse(User user) {
-        Role role = user.getRol();
+        Rol role = user.getRol();
         return UserResponse.builder()
                 .usuarioId(user.getUsuarioId())
                 .email(user.getEmail())
@@ -40,7 +40,7 @@ public class UserMapper {
     }
 
     public UserProfileResponse toUserProfileResponse(User user) {
-        Role role = user.getRol();
+        Rol role = user.getRol();
         return UserProfileResponse.builder()
                 .usuarioId(user.getUsuarioId())
                 .email(user.getEmail())

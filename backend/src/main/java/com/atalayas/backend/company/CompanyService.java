@@ -16,7 +16,7 @@ import com.atalayas.backend.company.mapper.CompanyMapper;
 import com.atalayas.backend.company.repository.CompanyRepository;
 import com.atalayas.backend.exception.BusinessException;
 import com.atalayas.backend.exception.ResourceNotFoundException;
-import com.atalayas.backend.role.entity.Role;
+import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.role.repository.RoleRepository;
 import com.atalayas.backend.user.entity.User;
 import com.atalayas.backend.user.repository.UserRepository;
@@ -79,7 +79,7 @@ public class CompanyService {
 
         // Paso 2 — Buscar el rol ADMIN_EMPRESA en BD
         // Si no existe es un error de configuración del sistema, no del usuario
-        Role roleAdminEmpresa = roleRepository
+        Rol roleAdminEmpresa = roleRepository
                 .findByCodigoRol(RoleType.ROLE_ADMIN_EMPRESA.name())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Rol ROLE_ADMIN_EMPRESA no encontrado en BD. " +
