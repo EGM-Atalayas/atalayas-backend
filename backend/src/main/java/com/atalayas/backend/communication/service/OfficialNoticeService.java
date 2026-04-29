@@ -59,6 +59,13 @@ public class OfficialNoticeService {
      */
     @Transactional(readOnly = true)
     public List<OfficialNoticeResponse> listar(User user) {
+        // Sin sesión activa — solo comunicados vigentes (endpoint público)
+        if (user == null) {
+            log.debug("Listando comunicados - acceso anónimo, devolviendo solo vigentes");
+            return noticeRepository.findActivosVigentes()
+                    .stream().map(noticeMapper::toResponse).collect(Collectors.toList());
+        }
+
         boolean esSuperAdmin = isSuperAdmin(user);
 
         log.debug("Listando comunicados - usuarioId={} esSuperAdmin={}",

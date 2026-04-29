@@ -71,6 +71,13 @@ public class AnnouncementService {
      */
     @Transactional(readOnly = true)
     public List<AnnouncementResponse> listar(User user) {
+        // Sin sesión activa — solo anuncios globales activos (endpoint público)
+        if (user == null) {
+            log.debug("Listando anuncios - acceso anónimo, devolviendo solo globales");
+            return announcementRepository.findAllByEsGlobalTrueAndActivoTrue()
+                    .stream().map(announcementMapper::toResponse).collect(Collectors.toList());
+        }
+
         boolean superAdmin = isSuperAdmin(user);
         UUID empresaId = user.getEmpresaId();
 

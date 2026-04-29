@@ -217,20 +217,28 @@ El campo `tiempo` es calculado en backend según la antigüedad del evento:
 | `GET` | `/progreso/empresa/{empresaId}` | `ADMIN_EMPRESA` | Progreso de todos los empleados de una empresa (dashboard). |
 ---
 ## 8. Anuncios · `/api/v1/anuncios`
-| Método | Ruta | Rol mínimo | Descripción |
+> `GET /anuncios` es **público**: sin sesión devuelve solo anuncios globales activos. Con sesión devuelve los de la empresa + globales (o todos si es `ADMIN`).
+
+| Método | Ruta | Rol / Auth | Descripción |
 |--------|------|-----------|-------------|
 | `POST` | `/anuncios` | `ADMIN_EMPRESA` | Crear anuncio. ADMIN puede crear globales (`esGlobal = true`). |
-| `GET` | `/anuncios` | Cualquiera | Listar anuncios de empresa + globales. ADMIN ve toda la plataforma. |
+| `GET` | `/anuncios` | ❌ Pública ¹ | Listar anuncios. Sin sesión: solo globales activos. Con sesión: empresa + globales. ADMIN ve toda la plataforma. |
 | `PATCH` | `/anuncios/{id}/desactivar` | `ADMIN_EMPRESA` | Soft-delete. ADMIN_EMPRESA solo desactiva los propios. |
 | `DELETE` | `/anuncios/{id}` | `ADMIN_EMPRESA` | Alias REST de `PATCH /{id}/desactivar`. Misma lógica. |
+
+¹ Sin token devuelve solo anuncios con `esGlobal = true` y `activo = true`.
 ---
 ## 9. Comunicados · `/api/v1/comunicados`
 > Comunicados oficiales de EGM para toda la plataforma. Solo gestionables por `ADMIN`.
+> `GET /comunicados` es **público**: sin sesión devuelve solo los vigentes y activos.
+
 | Método | Ruta | Rol | Descripción |
 |--------|------|-----|-------------|
 | `POST` | `/comunicados` | `ADMIN` | Crear comunicado oficial. |
-| `GET` | `/comunicados` | Cualquiera | Listar vigentes. ADMIN ve el histórico completo (expirados/desactivados incluidos). |
+| `GET` | `/comunicados` | ❌ Pública ¹ | Listar comunicados. Sin sesión: solo vigentes activos. ADMIN ve el histórico completo (expirados/desactivados incluidos). |
 | `PATCH` | `/comunicados/{id}/desactivar` | `ADMIN` | Desactivar comunicado. |
+
+¹ Sin token devuelve `findActivosVigentes()` — comunicados con `activo = true` y `fechaExpiracion` no superada.
 ---
 ## 10. Notificaciones · `/api/v1/notificaciones`
 > Se generan automáticamente en eventos clave (ej. aprobación de empresa) via `NotificationService#crearInterna` y también manualmente via endpoint.
@@ -333,18 +341,20 @@ El campo `tiempo` es calculado en backend según la antigüedad del evento:
 
 ---
 ## Resumen de endpoints públicos (sin autenticación)
-| Método | Ruta |
-|--------|------|
-| `POST` | `/auth/login` |
-| `POST` | `/auth/register` |
-| `POST` | `/auth/refresh-token` |
-| `POST` | `/auth/logout` |
-| `POST` | `/auth/forgot-password` |
-| `POST` | `/auth/reset-password` |
-| `POST` | `/empresas/solicitud` |
-| `GET` | `/empresas/aprobadas` |
-| `GET` | `/swagger-ui/**` |
-| `GET` | `/v3/api-docs/**` |
+| Método | Ruta | Nota |
+|--------|------|------|
+| `POST` | `/auth/login` | |
+| `POST` | `/auth/register` | |
+| `POST` | `/auth/refresh-token` | |
+| `POST` | `/auth/logout` | |
+| `POST` | `/auth/forgot-password` | |
+| `POST` | `/auth/reset-password` | |
+| `POST` | `/empresas/solicitud` | |
+| `GET` | `/empresas/aprobadas` | |
+| `GET` | `/anuncios` | Sin sesión: solo globales activos |
+| `GET` | `/comunicados` | Sin sesión: solo vigentes activos |
+| `GET` | `/swagger-ui/**` | |
+| `GET` | `/v3/api-docs/**` | |
 ---
 ## Notas de seguridad multi-tenant
 - Los usuarios con `ROLE_ADMIN_EMPRESA` están **aislados por empresa**: acceder por ID a recursos de otra empresa devuelve `404` (no `403`, para no exponer la existencia del recurso).

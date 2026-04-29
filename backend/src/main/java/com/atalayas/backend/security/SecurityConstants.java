@@ -23,6 +23,8 @@ public final class SecurityConstants {
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html"
+            // GET /api/v1/anuncios y GET /api/v1/comunicados se declaran en SecurityConfig
+            // con HttpMethod.GET explícito para no exponer sus POST sin autenticación
     };
 
 }
