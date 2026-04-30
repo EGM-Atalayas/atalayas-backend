@@ -19,6 +19,8 @@ public final class SecurityConstants {
             "/api/v1/auth/register",
             "/api/v1/auth/refresh-token",
             "/api/v1/auth/logout",
+            "/api/v1/auth/forgot-password",
+            "/api/v1/auth/reset-password",
             "/api/v1/empresas/aprobadas",   // selector de registro — sin autenticación
             "/v3/api-docs/**",
             "/swagger-ui/**",
