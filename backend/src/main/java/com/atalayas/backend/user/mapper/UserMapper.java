@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 
 /**
  * Mapper para convertir entre la entidad User y sus DTOs.
- *
  * toUserResponse() — vista completa para uso administrativo.
  * toUserProfileResponse() — vista de perfil para el usuario autenticado,
  * incluye nombreCompleto calculado para mostrar en la UI.

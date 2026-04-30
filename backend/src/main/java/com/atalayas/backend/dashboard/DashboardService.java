@@ -127,7 +127,6 @@ public class DashboardService {
     /**
      * Datos para los tres gráficos del dashboard del superadmin.
      * GET /api/v1/dashboard/superadmin/graficas
-     *
      * - evolucion: totales acumulados mes a mes de empresas y empleados (últimos 6 meses).
      * - sectores:  distribución de empresas por sector (pie chart).
      * - modulos:   completados vs pendientes por módulo activo, top 10 (bar chart).
@@ -168,7 +167,7 @@ public class DashboardService {
                         p.getNombre(),
                         p.getCompletados() != null ? p.getCompletados() : 0L,
                         p.getPendientes()  != null ? p.getPendientes()  : 0L))
-                .collect(Collectors.toList());
+                .toList();
 
         return DashboardChartsResponse.builder()
                 .evolucion(evolucion)
@@ -180,11 +179,9 @@ public class DashboardService {
     /**
      * Actividad reciente para ROLE_ADMIN_EMPRESA.
      * GET /api/v1/dashboard/admin/actividad?limit=5
-     *
      * Agrega 5 tipos de eventos desde trazabilidad_lectura y modulo,
      * todos filtrados por empresaId del token. Devuelve los `limit`
      * eventos más recientes ordenados por timestamp DESC.
-     *
      * Deduplicación: si un (usuario, módulo) genera un logro (100%),
      * sus entradas individuales de tipo "completado" para ese mismo
      * módulo se omiten para evitar ruido en el feed.
@@ -207,7 +204,7 @@ public class DashboardService {
                 progressRepository.findCompletadosRecientes(empresaId, limit)
                         .stream()
                         .filter(c -> !logroKeys.contains(c.getUsuarioId() + ":" + c.getModuloId()))
-                        .collect(Collectors.toList());
+                        .toList();
 
         // ── 3. Iniciados ─────────────────────────────────────────────────────
         List<ProgressEventProjection> iniciados =
@@ -258,7 +255,7 @@ public class DashboardService {
         return actividad.stream()
                 .sorted(Comparator.comparing(ActividadItemDto::getTimestamp).reversed())
                 .limit(limit)
-                .collect(Collectors.toList());
+                .toList();
     }
 }
 

@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,7 +41,7 @@ public class IncidenciaService {
         return incidenciaRepository.findAllByOrderByCreadoEnDesc()
                 .stream()
                 .map(incidenciaMapper::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Transactional

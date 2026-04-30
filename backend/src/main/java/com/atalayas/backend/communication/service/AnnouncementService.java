@@ -16,15 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * Lógica de negocio para la gestión de anuncios de empresa
- *
  * Los anuncios son comunicaciones de empresa a empleados, distintos de los
  * comunicados oficiales de EGM (Comunicado), que son globales y solo los
  * crea el superadmin.
- *
  * Reglas de acceso:
  *   - ROLE_ADMIN         - puede crear anuncios globales y gestionar todos
  *   - ROLE_ADMIN_EMPRESA - solo puede crear y gestionar anuncios de su empresa
@@ -38,11 +35,9 @@ public class AnnouncementService {
     private final AnnouncementRepository announcementRepository;
     private final AnnouncementMapper announcementMapper;
 
-
     // ── CREAR ─────────────────────────────────────────────────────────────
     /**
      * Crea un nuevo anuncio
-     *
      * Solo el superadmin puede marcar un anuncio como global.
      * Si un admin empresa intenta crear un anuncio global, el flag se ignora
      * y se fuerza a false.
@@ -59,11 +54,9 @@ public class AnnouncementService {
         return announcementMapper.toResponse(announcement);
     }
 
-
     // ── LISTAR ────────────────────────────────────────────────────────────
     /**
      * Lista los anuncios visibles para el usuario autenticado
-     *
      * La visibilidad depende del rol y la empresa del usuario:
      *   - Superadmin       - todos los anuncios activos de la plataforma
      *   - Con empresa      - los de su empresa + los globales activos
@@ -75,7 +68,7 @@ public class AnnouncementService {
         if (user == null) {
             log.debug("Listando anuncios - acceso anónimo, devolviendo solo globales");
             return announcementRepository.findAllByEsGlobalTrueAndActivoTrue()
-                    .stream().map(announcementMapper::toResponse).collect(Collectors.toList());
+                    .stream().map(announcementMapper::toResponse).toList();
         }
 
         boolean superAdmin = isSuperAdmin(user);
@@ -99,14 +92,12 @@ public class AnnouncementService {
 
         return announcements.stream()
                 .map(announcementMapper::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
-
 
     // ── EDITAR ────────────────────────────────────────────────────────────
     /**
      * Edita un anuncio existente.
-     *
      * Superadmin puede editar cualquier anuncio.
      * Admin empresa solo puede editar los suyos propios.
      * Los campos de identidad (esGlobal, empresaId, creadoPor) no se modifican.
@@ -137,7 +128,6 @@ public class AnnouncementService {
         return announcementMapper.toResponse(announcement);
     }
 
-
     // ── REGISTRAR VISTA ───────────────────────────────────────────────────
     /**
      * Incrementa el contador de vistas de un anuncio en 1.
@@ -151,11 +141,9 @@ public class AnnouncementService {
         });
     }
 
-
     // ── DESACTIVAR ────────────────────────────────────────────────────────
     /**
      * Soft-delete de un anuncio, marca activo = false sin eliminar el registro
-     *
      * Superadmin puede desactivar cualquier anuncio.
      * Admin empresa solo puede desactivar los suyos propios:
      *   - 403 si intenta desactivar uno global o de otra empresa

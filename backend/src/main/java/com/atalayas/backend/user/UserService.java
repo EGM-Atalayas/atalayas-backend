@@ -102,7 +102,6 @@ public class UserService {
 
     /**
      * Crea un usuario desde el panel de administración.
-     *
      * Reglas de seguridad:
      * - ROLE_ADMIN_EMPRESA: crea usuarios solo en su propia empresa.
      *   No puede asignar ROLE_ADMIN.
