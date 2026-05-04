@@ -105,7 +105,7 @@ public class CompanyService {
                         admin.getUsuarioId(),
                         "SOLICITUD_EMPRESA",
                         "Nueva solicitud de registro: " + savedCompany.getNombreEmpresa(),
-                        "/admin/solicitudes"
+                        "/superadmin/solicitudes"
                 )
         );
 
