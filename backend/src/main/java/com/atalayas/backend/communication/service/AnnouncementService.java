@@ -8,6 +8,7 @@ import com.atalayas.backend.communication.repository.AnnouncementRepository;
 import com.atalayas.backend.exception.BusinessException;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
@@ -34,6 +35,8 @@ public class AnnouncementService {
 
     private final AnnouncementRepository announcementRepository;
     private final AnnouncementMapper announcementMapper;
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     // ── CREAR ─────────────────────────────────────────────────────────────
     /**
@@ -51,6 +54,32 @@ public class AnnouncementService {
 
         Announcement announcement = announcementMapper.toEntity(request, user, esGlobal);
         announcement = announcementRepository.save(announcement);
+
+        // Notificar a los destinatarios del comunicado
+        final String titulo = announcement.getTitulo();
+        final UUID autorId = user.getUsuarioId();
+        if (esGlobal) {
+            // Global: todos los usuarios activos que pertenecen a alguna empresa
+            userRepository.findAll().stream()
+                    .filter(u -> u.isActivo() && u.getEmpresaId() != null && !u.getUsuarioId().equals(autorId))
+                    .forEach(u -> notificationService.crearInterna(
+                            u.getUsuarioId(),
+                            "COMUNICADO_NUEVO",
+                            "Nuevo comunicado: \"" + titulo + "\".",
+                            "/dashboard/comunicacion"
+                    ));
+        } else if (announcement.getEmpresaId() != null) {
+            // De empresa: todos los activos de esa empresa excepto el autor
+            userRepository.findAllByEmpresaIdAndActivoTrue(announcement.getEmpresaId()).stream()
+                    .filter(u -> !u.getUsuarioId().equals(autorId))
+                    .forEach(u -> notificationService.crearInterna(
+                            u.getUsuarioId(),
+                            "COMUNICADO_NUEVO",
+                            "Nuevo comunicado: \"" + titulo + "\".",
+                            "/dashboard/comunicacion"
+                    ));
+        }
+
         return announcementMapper.toResponse(announcement);
     }
 
