@@ -152,13 +152,26 @@ public class UserService {
         log.info("Usuario creado por admin - usuarioId={} empresaId={} rol={}",
                 user.getUsuarioId(), empresaId, role.getCodigoRol());
 
-        // 6. Notificación interna de bienvenida
+        // 6. Notificación interna de bienvenida al nuevo usuario
         notificationService.crearInterna(
                 user.getUsuarioId(),
                 "BIENVENIDA",
                 "¡Bienvenido/a " + user.getNombre() + "! Explora tus módulos formativos.",
                 "/dashboard"
         );
+
+        // 6b. Notificar al/los admin empresa que hay un nuevo empleado
+        if (role.getRoleType() == RoleType.ROLE_EMPLEADO) {
+            userRepository.findAllByEmpresaIdAndActivoTrue(empresaId).stream()
+                    .filter(u -> "ROLE_ADMIN_EMPRESA".equals(u.getRol().getCodigoRol())
+                            && !u.getUsuarioId().equals(user.getUsuarioId()))
+                    .forEach(admin -> notificationService.crearInterna(
+                            admin.getUsuarioId(),
+                            "EMPLEADO_NUEVO",
+                            user.getNombre() + " " + user.getApellidos() + " se ha unido a tu empresa.",
+                            "/dashboard/admin"
+                    ));
+        }
 
         // 7. Email de bienvenida — el fallo de email no revierte la creación
         try {
