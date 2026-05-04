@@ -148,15 +148,15 @@ public class UserService {
                 .departamento(request.getDepartamento())
                 .build();
 
-        user = userRepository.save(user);
+        final User savedUser = userRepository.save(user);
         log.info("Usuario creado por admin - usuarioId={} empresaId={} rol={}",
-                user.getUsuarioId(), empresaId, role.getCodigoRol());
+                savedUser.getUsuarioId(), empresaId, role.getCodigoRol());
 
         // 6. Notificación interna de bienvenida al nuevo usuario
         notificationService.crearInterna(
-                user.getUsuarioId(),
+                savedUser.getUsuarioId(),
                 "BIENVENIDA",
-                "¡Bienvenido/a " + user.getNombre() + "! Explora tus módulos formativos.",
+                "¡Bienvenido/a " + savedUser.getNombre() + "! Explora tus módulos formativos.",
                 "/dashboard"
         );
 
@@ -164,11 +164,11 @@ public class UserService {
         if (role.getRoleType() == RoleType.ROLE_EMPLEADO) {
             userRepository.findAllByEmpresaIdAndActivoTrue(empresaId).stream()
                     .filter(u -> "ROLE_ADMIN_EMPRESA".equals(u.getRol().getCodigoRol())
-                            && !u.getUsuarioId().equals(user.getUsuarioId()))
+                            && !u.getUsuarioId().equals(savedUser.getUsuarioId()))
                     .forEach(admin -> notificationService.crearInterna(
                             admin.getUsuarioId(),
                             "EMPLEADO_NUEVO",
-                            user.getNombre() + " " + user.getApellidos() + " se ha unido a tu empresa.",
+                            savedUser.getNombre() + " " + savedUser.getApellidos() + " se ha unido a tu empresa.",
                             "/dashboard/admin"
                     ));
         }
@@ -176,12 +176,12 @@ public class UserService {
         // 7. Email de bienvenida — el fallo de email no revierte la creación
         try {
             emailService.enviarBienvenidaUsuarioCreado(
-                    user.getEmail(), user.getNombre(), empresaId.toString());
+                    savedUser.getEmail(), savedUser.getNombre(), empresaId.toString());
         } catch (Exception e) {
-            log.warn("No se pudo enviar el email de bienvenida a {}: {}", user.getEmail(), e.getMessage());
+            log.warn("No se pudo enviar el email de bienvenida a {}: {}", savedUser.getEmail(), e.getMessage());
         }
 
-        return userMapper.toUserResponse(user);
+        return userMapper.toUserResponse(savedUser);
     }
 
     @Transactional
