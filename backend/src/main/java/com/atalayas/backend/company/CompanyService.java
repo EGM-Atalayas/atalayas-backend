@@ -21,6 +21,8 @@ import com.atalayas.backend.role.repository.RoleRepository;
 import com.atalayas.backend.user.entity.User;
 import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.mail.MailException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +41,7 @@ import java.util.stream.Collectors;
  * Solo ROLE_ADMIN puede aprobar, rechazar y gestionar empresas.
  * El alta pública (formulario de solicitud) no requiere autenticación.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CompanyService {
@@ -206,9 +209,18 @@ public class CompanyService {
                     userRepository.save(u);
 
                     if (actual == EstadoSolicitud.PENDIENTE) {
-                        // Primera aprobación: email de bienvenida + notificación interna
-                        emailService.enviarAprobacion(
-                                u.getEmail(), u.getNombre(), company.getNombreEmpresa());
+                        // Primera aprobación: email de bienvenida + notificación interna.
+                        // El email está intencionalmente fuera del contrato transaccional:
+                        // un fallo SMTP no debe revertir el cambio de estado en BD.
+                        // Ver docs/email-transactional-pattern.md para la alternativa
+                        // robusta basada en @TransactionalEventListener.
+                        try {
+                            emailService.enviarAprobacion(
+                                    u.getEmail(), u.getNombre(), company.getNombreEmpresa());
+                        } catch (MailException ex) {
+                            log.warn("No se pudo enviar email de aprobación a {} — empresa={}: {}",
+                                    u.getEmail(), company.getNombreEmpresa(), ex.getMessage());
+                        }
                         notificationService.crearInterna(
                                 u.getUsuarioId(),
                                 "BIENVENIDA",
@@ -321,10 +333,17 @@ public class CompanyService {
                         "Solo se pueden rechazar empresas en estado PENDIENTE");
             }
 
-            // Notificar por email antes de borrar
+            // Notificar por email antes de borrar.
+            // El email está fuera del contrato transaccional — ver
+            // docs/email-transactional-pattern.md.
             List<User> usuarios = userRepository.findAllByEmpresaIdAndActivoFalse(empresa.getEmpresaId());
             for (User u : usuarios) {
-                emailService.enviarRechazo(u.getEmail(), u.getNombre(), empresa.getNombreEmpresa());
+                try {
+                    emailService.enviarRechazo(u.getEmail(), u.getNombre(), empresa.getNombreEmpresa());
+                } catch (MailException ex) {
+                    log.warn("No se pudo enviar email de rechazo a {} — empresa={}: {}",
+                            u.getEmail(), empresa.getNombreEmpresa(), ex.getMessage());
+                }
             }
 
             String nombreEmpresa = empresa.getNombreEmpresa();

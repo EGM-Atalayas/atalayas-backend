@@ -3,6 +3,7 @@ package com.atalayas.backend.exception;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.mail.MailException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
@@ -152,6 +153,22 @@ public class GlobalExceptionHandler {
             NoHandlerFoundException ex) {
         return buildResponse(HttpStatus.NOT_FOUND,
                 "Endpoint no encontrado: " + ex.getHttpMethod() + " " + ex.getRequestURL());
+    }
+
+    /**
+     * 502 — Fallo al enviar correo electrónico (dependencia SMTP externa).
+     * HTTP 502 Bad Gateway es semánticamente correcto: el servidor actuó como
+     * proxy hacia Gmail/SMTP y recibió una respuesta inválida o no recibió
+     * respuesta en el tiempo esperado.
+     *
+     * Nota: CompanyService ya captura MailException localmente para que el
+     * fallo SMTP no revierta la transacción de BD. Este handler cubre cualquier
+     * otro punto del sistema donde pueda escapar sin capturar.
+     */
+    @ExceptionHandler(MailException.class)
+    public ResponseEntity<Map<String, Object>> handleMailException(MailException ex) {
+        return buildResponse(HttpStatus.BAD_GATEWAY,
+                "No se pudo enviar el correo electrónico. Inténtalo de nuevo en unos minutos.");
     }
 
     /**
