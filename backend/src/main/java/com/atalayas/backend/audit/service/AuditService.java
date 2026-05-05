@@ -6,6 +6,7 @@ import com.atalayas.backend.dashboard.dto.ActividadRecienteDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
@@ -34,10 +35,17 @@ public class AuditService {
     /**
      * Persiste un nuevo evento de auditoría.
      *
+     * Se usa REQUIRES_NEW para abrir una transacción independiente de la del
+     * llamador: si la transacción padre hace rollback (p. ej. por un fallo SMTP
+     * no capturado), el audit log se persiste igualmente como traza de lo
+     * ocurrido. application.properties aumenta hikari.leak-detection-threshold
+     * a 30 s para evitar falsos positivos mientras la conexión de audit está
+     * abierta en paralelo.
+     *
      * @param texto Descripción legible del evento.
      * @param tipo  "info" | "success" | "warning" | "error"
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void registrar(String texto, String tipo) {
         auditLogRepository.save(
                 AuditLog.builder()
