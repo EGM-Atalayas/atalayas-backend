@@ -109,4 +109,12 @@ public class UserController {
         userService.desactivarUsuario(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PatchMapping("/{id}/activar")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN_EMPRESA', 'ROLE_ADMIN')")
+    @Operation(summary = "Activar usuario (solo admins)")
+    public ResponseEntity<Void> activarUsuario(@PathVariable UUID id) {
+        userService.activarUsuario(id);
+        return ResponseEntity.ok().build();
+    }
 }
