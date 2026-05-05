@@ -88,6 +88,7 @@
 | `PATCH` | `/empresas/{id}/estado` | `ADMIN` | Cambiar estado de una empresa activa (ver tabla de transiciones). No permite rechazar. |
 | `PATCH` | `/empresas/{id}/solicitud` | `ADMIN` | Aprobar o rechazar una solicitud. Body: `{ "accion": "aprobar" \| "rechazar" }`. |
 | `PATCH` | `/empresas/{id}/activacion` | `ADMIN` | Toggle `activo` de una empresa aprobada y todos sus usuarios. |
+| `POST` | `/empresas/{id}/reenviar-email` | `ADMIN` | Reenvía el email de aprobación al admin cuando `emailEnviado = false`. Devuelve `502` si SMTP falla. |
 
 ### `PATCH /empresas/{id}/estado` — Transiciones
 **Body:** `{ "nuevoEstado": "APROBADA" | "PAUSADA" }`
@@ -98,16 +99,29 @@
 | **`APROBADA`** | ❌ | ✅ | ❌ |
 | **`PAUSADA`** | ✅ | ❌ | ❌ |
 
-| Transición | `company.activo` | Usuarios | Email | Notif. interna | Audit log |
-|---|:---:|---|---|:---:|:---:|
-| `PENDIENTE → APROBADA` | `true` | Se activan (`activo = true`) | ✉ Bienvenida | ✅ | ✅ `success` |
-| `PENDIENTE → (rechazo)` | — *(borrado físico)* | Eliminados de BD | ✉ Rechazo | ❌ | ✅ `warning` |
-| `APROBADA → PAUSADA` | `false` | Se desactivan (`activo = false`) | Ninguno | ❌ | ❌ |
-| `PAUSADA → APROBADA` | `true` | Se reactivan (`activo = true`) | Ninguno | ❌ | ❌ |
+| Transición | `company.activo` | `emailEnviado` | Usuarios | Email | Notif. interna | Audit log |
+|---|:---:|:---:|---|---|:---:|:---:|
+| `PENDIENTE → APROBADA` | `true` | `true` tras envío | Se activan (`activo = true`) | ✉ Bienvenida (async, post-commit) | ✅ | ✅ `success` |
+| `PENDIENTE → (rechazo)` | — *(borrado físico)* | — | Eliminados de BD | ✉ Rechazo (async, post-commit) | ❌ | ✅ `warning` |
+| `APROBADA → PAUSADA` | `false` | sin cambio | Se desactivan (`activo = false`) | Ninguno | ❌ | ❌ |
+| `PAUSADA → APROBADA` | `true` | sin cambio | Se reactivan (`activo = true`) | Ninguno | ❌ | ❌ |
 
 > ⚠️ El **rechazo** elimina físicamente la empresa y sus usuarios de la BD (hard delete). Es irreversible.
+> Los emails se envían **siempre después del commit** vía `@TransactionalEventListener(AFTER_COMMIT) + @Async` — un fallo SMTP nunca revierte el cambio de estado en BD.
+> Si `emailEnviado = false` en una empresa APROBADA, el superadmin puede reenviar el email manualmente con `POST /{id}/reenviar-email`.
 > El audit log de aprobación y rechazo se persiste en transacción independiente (`REQUIRES_NEW`) — siempre se graba aunque falle el envío de email.
 > Transiciones prohibidas o no-op devuelven `400 Bad Request` con mensaje descriptivo.
+
+### `POST /empresas/{id}/reenviar-email` — reenvío manual
+
+**Body:** `{ "tipo": "aprobacion" }` _(único valor en v1)_
+
+| Código | Situación |
+|--------|-----------|
+| `200`  | Email enviado y `email_enviado = true` persistido |
+| `400`  | `tipo` inválido o empresa no está en estado `APROBADA` |
+| `404`  | Empresa no encontrada |
+| `502`  | Fallo SMTP (capturado por `GlobalExceptionHandler`) |
 ---
 ## 4. Dashboard · `/api/v1/dashboard`
 | Método | Ruta | Rol | Descripción |

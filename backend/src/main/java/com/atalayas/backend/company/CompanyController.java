@@ -3,6 +3,7 @@ package com.atalayas.backend.company;
 import com.atalayas.backend.company.dto.AccionSolicitudRequest;
 import com.atalayas.backend.company.dto.CambioEstadoRequest;
 import com.atalayas.backend.company.dto.CompanyResponse;
+import com.atalayas.backend.company.dto.ReenviarEmailRequest;
 import com.atalayas.backend.company.dto.SolicitudAltaEmpresaRequest;
 import com.atalayas.backend.company.dto.SolicitudAltaEmpresaResponse;
 import com.atalayas.backend.company.dto.SolicitudPendienteResponse;
@@ -163,6 +164,30 @@ public class CompanyController {
             @PathVariable UUID id,
             @Valid @RequestBody AccionSolicitudRequest request) {
         companyService.resolverSolicitud(id, request);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * POST /api/v1/empresas/{id}/reenviar-email
+     * Reenvía el email de aprobación al admin de la empresa cuando emailEnviado=false.
+     * Devuelve 502 si el envío SMTP falla.
+     */
+    @PostMapping("/{id}/reenviar-email")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Reenviar email de aprobación (SUPER_ADMIN)",
+               description = "Reenvía el email de aprobación cuando el envío automático falló (`emailEnviado = false`). " +
+                             "Actualiza `email_enviado = true` si tiene éxito. Devuelve 502 si SMTP falla.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Email enviado correctamente"),
+        @ApiResponse(responseCode = "400", description = "Tipo inválido o empresa no APROBADA"),
+        @ApiResponse(responseCode = "404", description = "Empresa no encontrada"),
+        @ApiResponse(responseCode = "502", description = "Fallo SMTP")
+    })
+    public ResponseEntity<Void> reenviarEmail(
+            @PathVariable UUID id,
+            @Valid @RequestBody ReenviarEmailRequest request) {
+        companyService.reenviarEmail(id, request);
         return ResponseEntity.ok().build();
     }
 }

@@ -29,6 +29,7 @@ public class CompanyResponse {
     private String descripcion;
     private EstadoSolicitud estadoSolicitud;
     private boolean activo;
+    private boolean emailEnviado;
     private OffsetDateTime fechaSolicitud;
     private OffsetDateTime fechaResolucion;
     private OffsetDateTime actualizadoEn;

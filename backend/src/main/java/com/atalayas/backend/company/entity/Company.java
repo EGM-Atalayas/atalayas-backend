@@ -88,6 +88,11 @@ public class Company {
     @Column(name = "fecha_resolucion")
     private OffsetDateTime fechaResolucion;
 
+    // true si el email de aprobación fue enviado correctamente tras el commit
+    @Column(name = "email_enviado", nullable = false)
+    @Builder.Default
+    private boolean emailEnviado = false;
+
     // Gestionado automáticamente — no asignar manualmente en updates
     @Column(name = "actualizado_en", nullable = false)
     private OffsetDateTime actualizadoEn;
