@@ -218,8 +218,8 @@ public class CompanyService {
                             emailService.enviarAprobacion(
                                     u.getEmail(), u.getNombre(), company.getNombreEmpresa());
                         } catch (MailException ex) {
-                            log.warn("No se pudo enviar email de aprobación a {} — empresa={}: {}",
-                                    u.getEmail(), company.getNombreEmpresa(), ex.getMessage());
+                            log.warn("No se pudo enviar email de aprobación a {} — empresa={}",
+                                    u.getEmail(), company.getNombreEmpresa(), ex);
                         }
                         notificationService.crearInterna(
                                 u.getUsuarioId(),
