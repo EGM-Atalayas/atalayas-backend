@@ -5,7 +5,6 @@ import com.atalayas.backend.communication.service.EmailService;
 import com.atalayas.backend.company.repository.CompanyRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.mail.MailException;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -55,8 +54,8 @@ public class CompanyEventListener {
                 log.info("Email de rechazo enviado a {} — empresa={}",
                         event.emailAdmin(), event.nombreEmpresa());
             }
-        } catch (MailException ex) {
-            log.warn("Fallo SMTP tras commit — empresa={} estado={}: {}",
+        } catch (Exception ex) {
+            log.warn("Fallo Resend API tras commit — empresa={} estado={}: {}",
                     event.nombreEmpresa(), event.estadoNuevo(), ex.getMessage(), ex);
         }
     }

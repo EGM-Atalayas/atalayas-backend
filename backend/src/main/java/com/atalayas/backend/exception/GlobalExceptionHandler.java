@@ -3,7 +3,7 @@ package com.atalayas.backend.exception;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.mail.MailException;
+import com.atalayas.backend.exception.EmailSendException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
@@ -165,8 +165,8 @@ public class GlobalExceptionHandler {
      * fallo SMTP no revierta la transacción de BD. Este handler cubre cualquier
      * otro punto del sistema donde pueda escapar sin capturar.
      */
-    @ExceptionHandler(MailException.class)
-    public ResponseEntity<Map<String, Object>> handleMailException(MailException ex) {
+    @ExceptionHandler(EmailSendException.class)
+    public ResponseEntity<Map<String, Object>> handleEmailSend(EmailSendException ex) {
         return buildResponse(HttpStatus.BAD_GATEWAY,
                 "No se pudo enviar el correo electrónico. Inténtalo de nuevo en unos minutos.");
     }
