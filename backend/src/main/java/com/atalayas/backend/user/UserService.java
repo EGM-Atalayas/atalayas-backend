@@ -100,6 +100,21 @@ public class UserService {
         userRepository.save(user);
     }
 
+    @Transactional
+    public void activarUsuario(UUID id) {
+        User user;
+        if (SecurityUtils.isSuperAdmin()) {
+            user = userRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+        } else {
+            UUID empresaId = SecurityUtils.getEmpresaId();
+            user = userRepository.findByUsuarioIdAndEmpresaId(id, empresaId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+        }
+        user.setActivo(true);
+        userRepository.save(user);
+    }
+
     /**
      * Crea un usuario desde el panel de administración.
      * Reglas de seguridad:
