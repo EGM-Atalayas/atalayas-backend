@@ -107,9 +107,9 @@ public class DashboardService {
         long empleadosRegistrados = userRepository.count();
         long empleadosNuevosMes   = userRepository.countByFechaRegistroAfter(inicioMes);
         long modulosPublicados    = moduleRepository.countByActivoTrue();
-        long incidenciasAbiertas  = incidenciaRepository.countByEstado(EstadoIncidencia.ABIERTA);
-        long incidenciasCriticas  = incidenciaRepository.countByEstadoAndPrioridad(
-                                        EstadoIncidencia.ABIERTA, PrioridadIncidencia.CRITICA);
+        List<EstadoIncidencia> activas = List.of(EstadoIncidencia.ABIERTA, EstadoIncidencia.EN_CURSO);
+        long incidenciasAbiertas  = incidenciaRepository.countByEstadoIn(activas);
+        long incidenciasCriticas  = incidenciaRepository.countByEstadoInAndPrioridad(activas, PrioridadIncidencia.CRITICA);
         List<ActividadRecienteDto> actividad = auditService.getActividadReciente(limit);
 
         return SuperAdminDashboardResponse.builder()

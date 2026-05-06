@@ -49,7 +49,12 @@ public class IncidenciaController {
     public ResponseEntity<IncidenciaResponse> cambiarEstado(
             @PathVariable Long id,
             @RequestBody Map<String, String> body) {
-        EstadoIncidencia estado = EstadoIncidencia.valueOf(body.get("estado").toUpperCase());
+        EstadoIncidencia estado;
+        try {
+            estado = EstadoIncidencia.valueOf(body.get("estado").toUpperCase());
+        } catch (IllegalArgumentException | NullPointerException e) {
+            return ResponseEntity.badRequest().build();
+        }
         return ResponseEntity.ok(incidenciaService.cambiarEstado(id, estado));
     }
 }
