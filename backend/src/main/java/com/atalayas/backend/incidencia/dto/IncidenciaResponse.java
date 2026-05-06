@@ -17,7 +17,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class IncidenciaResponse {
 
-    private Long id;
+    private Long incidenciaId;
     private String titulo;
     private String descripcion;
     private EstadoIncidencia estado;
