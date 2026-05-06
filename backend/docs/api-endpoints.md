@@ -320,7 +320,7 @@ El campo `tiempo` es calculado en backend según la antigüedad del evento:
 |--------|------|-----|-------------|
 | `POST` | `/incidencias` | `ADMIN` | Crear nueva incidencia. Si `prioridad = CRITICA` se genera un evento `error` en `audit_log`. |
 | `GET` | `/incidencias` | `ADMIN` | Listar todas las incidencias ordenadas por `creadoEn DESC`. |
-| `PATCH` | `/incidencias/{id}/cerrar` | `ADMIN` | Cierra la incidencia (estado → `CERRADA`). |
+| `PATCH` | `/incidencias/{id}/estado` | `ADMIN` | Cambiar el estado de una incidencia. Body: `{ "estado": "ABIERTA" \| "EN_CURSO" \| "RESUELTA" \| "CERRADA" }`. El valor del campo `estado` es case-insensitive (el backend lo normaliza a mayúsculas). |
 
 **`POST /incidencias` — body:**
 ```json
@@ -336,10 +336,10 @@ El campo `tiempo` es calculado en backend según la antigüedad del evento:
 ```json
 [
   {
-    "id": 5,
+    "incidenciaId": "5",
     "titulo": "Caída del servicio de notificaciones",
     "descripcion": "El servicio de emails no responde desde las 10:00.",
-    "estado": "ABIERTA",
+    "estado": "EN_CURSO",
     "prioridad": "CRITICA",
     "empresaId": null,
     "creadoEn": "2026-04-27T10:05:00Z"
@@ -349,7 +349,8 @@ El campo `tiempo` es calculado en backend según la antigüedad del evento:
 
 | Campo | Valores | Descripción |
 |-------|---------|-------------|
-| `estado` | `ABIERTA` \| `CERRADA` | Estado de la incidencia |
+| `incidenciaId` | `String` (numérico) | Identificador de la incidencia. Usar como `{id}` en el PATCH. |
+| `estado` | `ABIERTA` \| `EN_CURSO` \| `RESUELTA` \| `CERRADA` | Estado actual de la incidencia |
 | `prioridad` | `NORMAL` \| `CRITICA` | Las `CRITICA` generan entrada en `audit_log` automáticamente |
 | `empresaId` | `UUID` \| `null` | `null` = incidencia global de plataforma |
 

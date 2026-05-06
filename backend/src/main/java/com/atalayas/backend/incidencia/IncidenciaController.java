@@ -38,14 +38,8 @@ public class IncidenciaController {
         return ResponseEntity.ok(incidenciaService.listarTodas());
     }
 
-    @PatchMapping("/{id}/cerrar")
-    @Operation(summary = "Cerrar una incidencia")
-    public ResponseEntity<IncidenciaResponse> cerrar(@PathVariable Long id) {
-        return ResponseEntity.ok(incidenciaService.cerrar(id));
-    }
-
     @PatchMapping("/{id}/estado")
-    @Operation(summary = "Cambiar el estado de una incidencia")
+    @Operation(summary = "Cambiar el estado de una incidencia (ABIERTA | EN_CURSO | RESUELTA | CERRADA)")
     public ResponseEntity<IncidenciaResponse> cambiarEstado(
             @PathVariable Long id,
             @RequestBody Map<String, String> body) {

@@ -1,5 +1,6 @@
 package com.atalayas.backend.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -7,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,6 +19,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -34,11 +38,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String jwt = resolveToken(request);
 
+        // Sin token → dejar pasar; Spring Security protege los endpoints protegidos con 401
         if (jwt == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
+        // Token presente → validar. Cualquier fallo = 401 inmediato (no continuar sin auth)
         try {
             final String userEmail = jwtService.extractUsername(jwt);
 
@@ -54,10 +60,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             );
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                } else {
+                    log.warn("Token JWT expirado o inválido para usuario: {}", userEmail);
+                    sendUnauthorized(response, "Token expirado o inválido. Usa /api/v1/auth/refresh-token para renovar la sesión.");
+                    return;
                 }
             }
         } catch (Exception e) {
-            log.error("No se pudo autenticar el token JWT: {}", e.getMessage());
+            log.error("Token JWT malformado o no verificable: {}", e.getMessage());
+            sendUnauthorized(response, "Token malformado o no verificable.");
+            return;
         }
 
         filterChain.doFilter(request, response);
@@ -85,6 +97,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         return null;
+    }
+
+    /**
+     * Escribe una respuesta 401 JSON estructurada y corta la cadena de filtros.
+     * Se usa cuando el token existe pero es inválido o ha expirado.
+     */
+    private void sendUnauthorized(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding("UTF-8");
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", 401);
+        body.put("error", "No autorizado");
+        body.put("message", message);
+        new ObjectMapper().writeValue(response.getOutputStream(), body);
     }
 }
 
