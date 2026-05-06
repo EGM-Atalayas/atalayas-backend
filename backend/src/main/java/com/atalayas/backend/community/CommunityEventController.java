@@ -30,7 +30,7 @@ import java.util.UUID;
  *   POST / PUT / PATCH - admin empresa (solo los suyos) y superadmin
  */
 @RestController
-@RequestMapping("/api/v1/eventos")
+@RequestMapping("/api/v1/comunidad/eventos")
 @RequiredArgsConstructor
 @Tag(name = "Comunidad", description = "Gestión de eventos de comunidad por empresa")
 @SecurityRequirement(name = "bearerAuth")
