@@ -20,7 +20,7 @@ public class IncidenciaMapper {
 
     public IncidenciaResponse toResponse(Incidencia i) {
         return IncidenciaResponse.builder()
-                .incidenciaId(i.getId())
+                .incidenciaId(String.valueOf(i.getId()))
                 .titulo(i.getTitulo())
                 .descripcion(i.getDescripcion())
                 .estado(i.getEstado())
