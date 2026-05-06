@@ -29,6 +29,15 @@ public class Benefit {
     @Column(name = "url_info", length = 500)
     private String urlInfo;
 
+    @Column(name = "icono_url", length = 500)
+    private String iconoUrl;
+
+    @Column(name = "como_acceder", columnDefinition = "TEXT")
+    private String comoAcceder;
+
+    @Column(name = "fecha_fin")
+    private OffsetDateTime fechaFin;
+
     @Column(name = "empresa_id")
     private UUID empresaId;
 

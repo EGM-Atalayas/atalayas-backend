@@ -93,6 +93,9 @@ public class BenefitService {
         beneficio.setTitulo(request.getTitulo());
         beneficio.setDescripcion(request.getDescripcion());
         beneficio.setUrlInfo(request.getUrlInfo());
+        beneficio.setIconoUrl(request.getIconoUrl());
+        beneficio.setComoAcceder(request.getComoAcceder());
+        beneficio.setFechaFin(request.getFechaFin());
 
         log.info("Beneficio actualizado: {} por usuario: {}", beneficioId, user.getEmail());
         return benefitMapper.toResponse(benefitRepository.save(beneficio));

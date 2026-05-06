@@ -23,6 +23,9 @@ public class BenefitResponse {
     private String titulo;
     private String descripcion;
     private String urlInfo;
+    private String iconoUrl;
+    private String comoAcceder;
+    private OffsetDateTime fechaFin;
     private boolean activo;
     private OffsetDateTime creadoEn;
     private OffsetDateTime actualizadoEn;
