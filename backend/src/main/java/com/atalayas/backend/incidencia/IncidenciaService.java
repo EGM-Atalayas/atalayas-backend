@@ -1,6 +1,7 @@
 package com.atalayas.backend.incidencia;
 
 import com.atalayas.backend.audit.service.AuditService;
+import com.atalayas.backend.common.util.SecurityUtils;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.incidencia.dto.IncidenciaRequest;
 import com.atalayas.backend.incidencia.dto.IncidenciaResponse;
@@ -26,6 +27,11 @@ public class IncidenciaService {
     @Transactional
     public IncidenciaResponse crear(IncidenciaRequest request) {
         Incidencia incidencia = incidenciaMapper.toEntity(request);
+
+        if (incidencia.getEmpresaId() == null) {
+            incidencia.setEmpresaId(SecurityUtils.getEmpresaId());
+        }
+
         Incidencia saved = incidenciaRepository.save(incidencia);
 
         if (PrioridadIncidencia.CRITICA.equals(saved.getPrioridad())) {
@@ -62,4 +68,3 @@ public class IncidenciaService {
         return incidenciaMapper.toResponse(incidenciaRepository.save(incidencia));
     }
 }
-
