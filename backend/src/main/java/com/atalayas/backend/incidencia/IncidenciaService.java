@@ -52,5 +52,14 @@ public class IncidenciaService {
         incidencia.setEstado(EstadoIncidencia.CERRADA);
         return incidenciaMapper.toResponse(incidenciaRepository.save(incidencia));
     }
+
+    @Transactional
+    public IncidenciaResponse cambiarEstado(Long id, EstadoIncidencia nuevoEstado) {
+        Incidencia incidencia = incidenciaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Incidencia no encontrada con id: " + id));
+        incidencia.setEstado(nuevoEstado);
+        return incidenciaMapper.toResponse(incidenciaRepository.save(incidencia));
+    }
 }
 
