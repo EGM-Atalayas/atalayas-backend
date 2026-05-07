@@ -4,6 +4,7 @@ import com.atalayas.backend.ai.client.ElevenLabsClient;
 import com.atalayas.backend.ai.client.GeminiClient;
 import com.atalayas.backend.ai.client.GroqClient;
 import com.atalayas.backend.ai.client.RateLimitException;
+import com.atalayas.backend.ai.dto.AiFileResponse;
 import com.atalayas.backend.ai.dto.AiPromptRequest;
 import com.atalayas.backend.ai.dto.AiResponse;
 import com.atalayas.backend.ai.dto.ChatRequest;
