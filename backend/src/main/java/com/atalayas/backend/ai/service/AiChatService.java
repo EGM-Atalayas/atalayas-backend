@@ -1,13 +1,13 @@
 package com.atalayas.backend.ai.service;
 
-import com.atalayas.backend.ai.client.GeminiClient;
+import com.atalayas.backend.ai.client.OpenAiClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 
 /**
- * Chatbot de consulta para empleados con Gemini 2.0 Flash
+ * Chatbot de consulta para empleados con gpt-4o-mini
  * Responde preguntas sobre módulos formativos, protocolos internos
  * y dudas sobre el puesto de trabajo en el contexto de su empresa
  */
@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AiChatService {
 
-    private final GeminiClient geminiClient;
+    private final OpenAiClient openAiClient;
 
     private static final String SYSTEM_PROMPT_TEMPLATE = """
             Eres el asistente virtual de formación de %s, empresa ubicada en
@@ -58,6 +58,6 @@ public class AiChatService {
                 ? String.format("Contexto de la empresa:\n%s\n\nPregunta: %s", contexto, pregunta)
                 : pregunta;
 
-        return geminiClient.completar(systemPrompt, userPrompt);
+        return openAiClient.completar(systemPrompt, userPrompt);
     }
 }
