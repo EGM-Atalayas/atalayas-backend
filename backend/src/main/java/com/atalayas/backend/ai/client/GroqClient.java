@@ -88,6 +88,9 @@ public class GroqClient {
 
             if (response.statusCode() != 200) {
                 log.error("Groq error - status={} body={}", response.statusCode(), response.body());
+                if (response.statusCode() == 429) {
+                    throw new RateLimitException("Groq rate limit alcanzado");
+                }
                 throw new RuntimeException("Error en la API de Groq: " + response.statusCode() + " - " + response.body());
             }
 
@@ -159,7 +162,7 @@ public class GroqClient {
                         response.statusCode(),
                         errorBody.length() > 500 ? errorBody.substring(0, 500) : errorBody);
                 if (response.statusCode() == 429) {
-                    throw new IOException("El asistente no está disponible en este momento (límite de cuota alcanzado). Inténtalo de nuevo en unos minutos.");
+                    throw new RateLimitException("Groq rate limit alcanzado");
                 }
                 if (response.statusCode() == 401 || response.statusCode() == 403) {
                     throw new IOException("Error de autenticación con la API de Groq. Verifica la configuración del servidor.");

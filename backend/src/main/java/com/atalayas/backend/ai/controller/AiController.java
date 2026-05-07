@@ -3,7 +3,7 @@ package com.atalayas.backend.ai.controller;
 import com.atalayas.backend.ai.client.ElevenLabsClient;
 import com.atalayas.backend.ai.client.GeminiClient;
 import com.atalayas.backend.ai.client.GroqClient;
-import com.atalayas.backend.ai.dto.AiFileResponse;
+import com.atalayas.backend.ai.client.RateLimitException;
 import com.atalayas.backend.ai.dto.AiPromptRequest;
 import com.atalayas.backend.ai.dto.AiResponse;
 import com.atalayas.backend.ai.dto.ChatRequest;
@@ -147,6 +147,17 @@ public class AiController {
         StreamingResponseBody stream = outputStream -> {
             try {
                 groqClient.streamCompletions(request.getSystemPrompt(), request.getMessages(), outputStream);
+            } catch (RateLimitException e) {
+                log.warn("Groq rate limit — fallback a Gemini");
+                try {
+                    geminiClient.streamCompletions(request.getSystemPrompt(), request.getMessages(), outputStream);
+                } catch (Exception ex) {
+                    log.error("Error en fallback Gemini: {}", ex.getMessage(), ex);
+                    try {
+                        outputStream.write(("[ERROR] " + ex.getMessage()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        outputStream.flush();
+                    } catch (Exception ignored) {}
+                }
             } catch (Exception e) {
                 log.error("Error en streaming chat: {}", e.getMessage(), e);
                 try {
