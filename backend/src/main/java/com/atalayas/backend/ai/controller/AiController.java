@@ -3,7 +3,6 @@ package com.atalayas.backend.ai.controller;
 import com.atalayas.backend.ai.client.ElevenLabsClient;
 import com.atalayas.backend.ai.client.GeminiClient;
 import com.atalayas.backend.ai.client.GroqClient;
-import com.atalayas.backend.ai.client.OpenAiClient;
 import com.atalayas.backend.ai.dto.AiFileResponse;
 import com.atalayas.backend.ai.dto.AiPromptRequest;
 import com.atalayas.backend.ai.dto.AiResponse;
@@ -34,7 +33,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
- * Endpoints de inteligencia artificial con gpt-4o-mini (principal) y Gemini 2.0 Flash (secundaria)
+ * Endpoints de inteligencia artificial con llama-3.3-70b-versatile (Groq, principal) y Gemini 2.0 Flash (secundaria)
  *
  * Cubre cuatro casos de uso:
  *   - Generación de contenido formativo completo para un módulo
@@ -47,16 +46,15 @@ import java.util.UUID;
 @RequestMapping("/api/v1/ai")
 @RequiredArgsConstructor
 @Tag(name = "Inteligencia Artificial",
-        description = "Generación de contenido y chatbot con gpt-4o-mini (principal) y Gemini 2.0 Flash (secundaria)")
+        description = "Generación de contenido y chatbot con llama-3.3-70b-versatile/Groq (principal) y Gemini 2.0 Flash (secundaria)")
 @SecurityRequirement(name = "bearerAuth")
 public class AiController {
 
     private final AiContentService aiContentService;
     private final AiSummaryService aiSummaryService;
     private final AiFileService aiFileService;
-    private final OpenAiClient openAiClient;
-    private final GeminiClient geminiClient;
     private final GroqClient groqClient;
+    private final GeminiClient geminiClient;
     private final ElevenLabsClient elevenLabsClient;
     private final SupabaseStorageService supabaseStorageService;
 
@@ -91,7 +89,7 @@ public class AiController {
 
         return ResponseEntity.ok(AiResponse.builder()
                 .contenido(contenido)
-                .modelo("gpt-4o-mini")
+                .modelo("llama-3.3-70b-versatile")
                 .generadoEn(OffsetDateTime.now())
                 .build());
     }
@@ -122,7 +120,7 @@ public class AiController {
 
         return ResponseEntity.ok(AiResponse.builder()
                 .contenido(preguntas)
-                .modelo("gpt-4o-mini")
+                .modelo("llama-3.3-70b-versatile")
                 .generadoEn(OffsetDateTime.now())
                 .build());
     }
@@ -148,7 +146,7 @@ public class AiController {
         log.info("Chat streaming - {} mensajes", request.getMessages().size());
         StreamingResponseBody stream = outputStream -> {
             try {
-                openAiClient.streamCompletions(request.getSystemPrompt(), request.getMessages(), outputStream);
+                groqClient.streamCompletions(request.getSystemPrompt(), request.getMessages(), outputStream);
             } catch (Exception e) {
                 log.error("Error en streaming chat: {}", e.getMessage(), e);
                 try {
@@ -186,7 +184,7 @@ public class AiController {
 
         return ResponseEntity.ok(AiResponse.builder()
                 .contenido(resumen)
-                .modelo("gpt-4o-mini")
+                .modelo("llama-3.3-70b-versatile")
                 .generadoEn(OffsetDateTime.now())
                 .build());
     }
