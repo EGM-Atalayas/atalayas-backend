@@ -170,8 +170,17 @@ public class GeminiClient {
 
             if (response.statusCode() != 200) {
                 String errorBody = new String(response.body().readAllBytes(), StandardCharsets.UTF_8);
-                log.error("Gemini stream error - status={} body={}", response.statusCode(), errorBody);
-                throw new IOException("Error en la API de Gemini: " + response.statusCode());
+                String urlSinKey = streamUrl.replaceAll("key=[^&]+", "key=***");
+                log.error("Gemini stream error - status={} url={} body_preview={}",
+                        response.statusCode(), urlSinKey,
+                        errorBody.length() > 500 ? errorBody.substring(0, 500) : errorBody);
+                if (response.statusCode() == 429) {
+                    throw new IOException("El asistente no está disponible en este momento (límite de cuota alcanzado). Inténtalo de nuevo en unos minutos.");
+                }
+                if (response.statusCode() == 401 || response.statusCode() == 403) {
+                    throw new IOException("Error de autenticación con la API de Gemini. Verifica la configuración del servidor.");
+                }
+                throw new IOException("Error en la API de Gemini: status=" + response.statusCode());
             }
 
             // Leer SSE línea a línea y extraer el texto de cada chunk

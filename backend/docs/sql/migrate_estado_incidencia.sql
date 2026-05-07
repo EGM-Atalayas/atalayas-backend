@@ -1,5 +1,5 @@
 -- Ampliar CHECK constraint de incidencia para soportar EN_CURSO y RESUELTA
--- Ejecutar una sola vez en producción (Neon.tech)
+-- Ejecutar una sola vez en producción (Supabase)
 
 ALTER TABLE public.incidencia DROP CONSTRAINT IF EXISTS incidencia_estado_check;
 

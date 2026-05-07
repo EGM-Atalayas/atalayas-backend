@@ -144,8 +144,17 @@ public class AiController {
     })
     public ResponseEntity<StreamingResponseBody> chat(@Valid @RequestBody ChatRequest request) {
         log.info("Chat streaming - {} mensajes", request.getMessages().size());
-        StreamingResponseBody stream = outputStream ->
+        StreamingResponseBody stream = outputStream -> {
+            try {
                 geminiClient.streamCompletions(request.getSystemPrompt(), request.getMessages(), outputStream);
+            } catch (Exception e) {
+                log.error("Error en streaming chat: {}", e.getMessage(), e);
+                try {
+                    outputStream.write(("[ERROR] " + e.getMessage()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    outputStream.flush();
+                } catch (Exception ignored) {}
+            }
+        };
         return ResponseEntity.ok()
                 .contentType(MediaType.TEXT_PLAIN)
                 .body(stream);
