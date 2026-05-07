@@ -1,5 +1,6 @@
 package com.atalayas.backend.security;
 
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -39,6 +40,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Dispatches ASYNC (StreamingResponseBody) — no re-autenticar
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         // Preflight OPTIONS — debe pasar sin autenticación
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(SecurityConstants.PUBLIC_URLS).permitAll()

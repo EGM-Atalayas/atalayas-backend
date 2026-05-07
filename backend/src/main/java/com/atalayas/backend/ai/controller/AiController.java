@@ -3,6 +3,7 @@ package com.atalayas.backend.ai.controller;
 import com.atalayas.backend.ai.client.ElevenLabsClient;
 import com.atalayas.backend.ai.client.GeminiClient;
 import com.atalayas.backend.ai.client.GroqClient;
+import com.atalayas.backend.ai.client.RateLimitException;
 import com.atalayas.backend.ai.dto.AiFileResponse;
 import com.atalayas.backend.ai.dto.AiPromptRequest;
 import com.atalayas.backend.ai.dto.AiResponse;
@@ -33,7 +34,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
- * Endpoints de inteligencia artificial con Gemini 2.0 Flash
+ * Endpoints de inteligencia artificial con llama-3.3-70b-versatile (Groq, principal) y Gemini 2.0 Flash (secundaria)
  *
  * Cubre cuatro casos de uso:
  *   - Generación de contenido formativo completo para un módulo
@@ -46,15 +47,15 @@ import java.util.UUID;
 @RequestMapping("/api/v1/ai")
 @RequiredArgsConstructor
 @Tag(name = "Inteligencia Artificial",
-        description = "Generación de contenido y chatbot con Gemini 2.0 Flash")
+        description = "Generación de contenido y chatbot con llama-3.3-70b-versatile/Groq (principal) y Gemini 2.0 Flash (secundaria)")
 @SecurityRequirement(name = "bearerAuth")
 public class AiController {
 
     private final AiContentService aiContentService;
     private final AiSummaryService aiSummaryService;
     private final AiFileService aiFileService;
-    private final GeminiClient geminiClient;
     private final GroqClient groqClient;
+    private final GeminiClient geminiClient;
     private final ElevenLabsClient elevenLabsClient;
     private final SupabaseStorageService supabaseStorageService;
 
@@ -89,7 +90,7 @@ public class AiController {
 
         return ResponseEntity.ok(AiResponse.builder()
                 .contenido(contenido)
-                .modelo("gemini-2.0-flash")
+                .modelo("llama-3.3-70b-versatile")
                 .generadoEn(OffsetDateTime.now())
                 .build());
     }
@@ -120,7 +121,7 @@ public class AiController {
 
         return ResponseEntity.ok(AiResponse.builder()
                 .contenido(preguntas)
-                .modelo("gemini-2.0-flash")
+                .modelo("llama-3.3-70b-versatile")
                 .generadoEn(OffsetDateTime.now())
                 .build());
     }
@@ -144,8 +145,34 @@ public class AiController {
     })
     public ResponseEntity<StreamingResponseBody> chat(@Valid @RequestBody ChatRequest request) {
         log.info("Chat streaming - {} mensajes", request.getMessages().size());
-        StreamingResponseBody stream = outputStream ->
-                geminiClient.streamCompletions(request.getSystemPrompt(), request.getMessages(), outputStream);
+        StreamingResponseBody stream = outputStream -> {
+            try {
+                groqClient.streamCompletions(request.getSystemPrompt(), request.getMessages(), outputStream);
+            } catch (RateLimitException e) {
+                log.warn("Groq rate limit — fallback a Gemini");
+                try {
+                    geminiClient.streamCompletions(request.getSystemPrompt(), request.getMessages(), outputStream);
+                } catch (RateLimitException ex) {
+                    log.error("Groq y Gemini con rate limit simultáneo");
+                    try {
+                        outputStream.write("El asistente está temporalmente saturado. Por favor, inténtalo de nuevo en unos minutos.".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        outputStream.flush();
+                    } catch (Exception ignored) {}
+                } catch (Exception ex) {
+                    log.error("Error en fallback Gemini: {}", ex.getMessage(), ex);
+                    try {
+                        outputStream.write(("[ERROR] " + ex.getMessage()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        outputStream.flush();
+                    } catch (Exception ignored) {}
+                }
+            } catch (Exception e) {
+                log.error("Error en streaming chat: {}", e.getMessage(), e);
+                try {
+                    outputStream.write(("[ERROR] " + e.getMessage()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    outputStream.flush();
+                } catch (Exception ignored) {}
+            }
+        };
         return ResponseEntity.ok()
                 .contentType(MediaType.TEXT_PLAIN)
                 .body(stream);
@@ -175,7 +202,7 @@ public class AiController {
 
         return ResponseEntity.ok(AiResponse.builder()
                 .contenido(resumen)
-                .modelo("gemini-2.0-flash")
+                .modelo("llama-3.3-70b-versatile")
                 .generadoEn(OffsetDateTime.now())
                 .build());
     }
@@ -306,8 +333,8 @@ public class AiController {
 
         String userPrompt = "Transforma el siguiente documento en contenido formativo de calidad:\n\n" + textoParaPrompt;
 
-        // 3. Llamar a Groq (texto: documentación + video)
-        String respuestaRaw = groqClient.completar(systemPrompt, userPrompt);
+        // 3. Llamar a Gemini (IA secundaria: documentación + video)
+        String respuestaRaw = geminiClient.completar(systemPrompt, userPrompt);
 
         // 4. Parsear campos del JSON devuelto
         String titulo        = extraerCampoJson(respuestaRaw, "titulo");
@@ -351,16 +378,11 @@ public class AiController {
                 .scriptVideo(scriptVideo)
                 .podcastAudioUrl(podcastAudioUrl)
                 .tiposSalida(tiposSalida)
-                .modelo("llama-3.3-70b-versatile")
+                .modelo("gemini-2.0-flash")
                 .generadoEn(OffsetDateTime.now())
                 .build());
     }
 
-    /**
-     * Extrae el valor de un campo de un JSON simple sin librería,
-     * usando la ObjectMapper ya disponible en el contexto de Spring (Jackson).
-     * Si el JSON no es válido devuelve cadena vacía.
-     */
     /** Extrae el valor de texto de un campo JSON. */
     private String extraerCampoJson(String json, String campo) {
         try {

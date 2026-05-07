@@ -1,5 +1,5 @@
 -- Tabla para tokens de recuperación de contraseña
--- Ejecutar en la base de datos de producción (Neon.tech)
+-- Ejecutar en la base de datos de producción (Supabase)
 
 CREATE TABLE IF NOT EXISTS password_reset_token (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),

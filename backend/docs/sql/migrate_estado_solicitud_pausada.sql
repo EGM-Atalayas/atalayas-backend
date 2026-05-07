@@ -1,6 +1,6 @@
 -- ============================================================
 -- Migración: añadir estado PAUSADA, eliminar RECHAZADA
--- Aplicar manualmente en la BD de Neon.tech (ddl-auto=none)
+-- Aplicar manualmente en la BD de Supabase (ddl-auto=none)
 -- Fecha: Abril 2026
 -- ============================================================
 
