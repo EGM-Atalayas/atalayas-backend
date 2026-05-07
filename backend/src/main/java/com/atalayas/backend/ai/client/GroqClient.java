@@ -37,7 +37,7 @@ public class GroqClient {
     @Value("${groq.api.url:https://api.groq.com/openai/v1/chat/completions}")
     private String apiUrl;
 
-    @Value("${groq.model:llama-3.3-70b-versatile}")
+    @Value("${groq.model:llama-3.1-8b-instant}")
     private String model;
 
     @Value("${groq.max-tokens:8192}")
