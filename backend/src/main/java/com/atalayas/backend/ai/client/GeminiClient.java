@@ -175,7 +175,7 @@ public class GeminiClient {
                         response.statusCode(), urlSinKey,
                         errorBody.length() > 500 ? errorBody.substring(0, 500) : errorBody);
                 if (response.statusCode() == 429) {
-                    throw new IOException("El asistente no está disponible en este momento (límite de cuota alcanzado). Inténtalo de nuevo en unos minutos.");
+                    throw new RateLimitException("Gemini rate limit alcanzado");
                 }
                 if (response.statusCode() == 401 || response.statusCode() == 403) {
                     throw new IOException("Error de autenticación con la API de Gemini. Verifica la configuración del servidor.");

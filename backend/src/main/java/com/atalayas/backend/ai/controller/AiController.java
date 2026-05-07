@@ -152,6 +152,12 @@ public class AiController {
                 log.warn("Groq rate limit — fallback a Gemini");
                 try {
                     geminiClient.streamCompletions(request.getSystemPrompt(), request.getMessages(), outputStream);
+                } catch (RateLimitException ex) {
+                    log.error("Groq y Gemini con rate limit simultáneo");
+                    try {
+                        outputStream.write("El asistente está temporalmente saturado. Por favor, inténtalo de nuevo en unos minutos.".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        outputStream.flush();
+                    } catch (Exception ignored) {}
                 } catch (Exception ex) {
                     log.error("Error en fallback Gemini: {}", ex.getMessage(), ex);
                     try {
