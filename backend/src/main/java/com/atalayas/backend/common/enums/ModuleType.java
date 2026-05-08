@@ -6,19 +6,25 @@ package com.atalayas.backend.common.enums;
  */
 public enum ModuleType {
 
-    /** Módulo de formación general, disponible para todas las empresas. */
+    // ── Legacy (compatibilidad con datos históricos) ──────────────────────
+    /** @deprecated Usar FORMACION_BASICA o FORMACION_ESPECIFICA */
     GENERAL,
-
-    /** Módulo especializado asociado a una empresa concreta. */
+    /** @deprecated Usar FORMACION_ESPECIFICA */
     ESPECIALIZADO,
-
-    /** Módulo generado o asistido por IA (es_especializado_ia = true). */
+    /** Módulo generado o asistido por IA. */
     ESPECIALIZADO_IA,
 
-    /** Módulo de cumplimiento normativo. */
+    // ── Valores activos ───────────────────────────────────────────────────
+    IDENTIDAD_CORPORATIVA,
+    FORMACION_BASICA,
+    FORMACION_ESPECIFICA,
+    DESARROLLO_PROFESIONAL,
+    RECOMPENSAS_VENTAJAS,
+    COMUNIDAD,
     CUMPLIMIENTO,
-
-    /** Módulo de onboarding para nuevas incorporaciones. */
+    LIDERAZGO,
+    TECNICO,
+    SOFT_SKILLS,
     ONBOARDING
 }
 

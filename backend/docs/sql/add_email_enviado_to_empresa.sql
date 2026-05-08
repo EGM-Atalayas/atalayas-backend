@@ -1,7 +1,7 @@
 -- ============================================================
 -- Migración: añadir columna email_enviado a la tabla empresa
 -- Prerequisito: endpoint POST /api/v1/empresas/{id}/reenviar-email
--- Aplicar manualmente en la BD de Neon.tech (ddl-auto=none)
+-- Aplicar manualmente en la BD de Supabase (ddl-auto=none)
 -- Fecha: Mayo 2026
 -- ============================================================
 

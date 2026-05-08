@@ -1,12 +1,12 @@
 package com.atalayas.backend.ai.service;
 
-import com.atalayas.backend.ai.client.GeminiClient;
+import com.atalayas.backend.ai.client.GroqClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * Generación de resúmenes automáticos con Gemini 2.0 Flash
+ * Generación de resúmenes automáticos con llama-3.3-70b-versatile (Groq)
  * Útil para resumir documentos internos, manuales técnicos
  * o cualquier texto largo antes de incorporarlo a un módulo
  */
@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AiSummaryService {
 
-    private final GeminiClient geminiClient;
+    private final GroqClient groqClient;
 
     private static final String SYSTEM_PROMPT = """
             Eres un asistente especializado en simplificar documentos empresariales para PYMEs.
@@ -58,6 +58,6 @@ public class AiSummaryService {
                 Máximo 200 palabras en total.
                 """, texto);
 
-        return geminiClient.completar(SYSTEM_PROMPT, userPrompt);
+        return groqClient.completar(SYSTEM_PROMPT, userPrompt);
     }
 }
