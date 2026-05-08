@@ -156,14 +156,12 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 502 — Fallo al enviar correo electrónico (dependencia SMTP externa).
+     * 502 — Fallo al enviar correo electrónico (Resend API).
      * HTTP 502 Bad Gateway es semánticamente correcto: el servidor actuó como
-     * proxy hacia Gmail/SMTP y recibió una respuesta inválida o no recibió
-     * respuesta en el tiempo esperado.
+     * proxy hacia Resend y recibió una respuesta de error o no pudo conectar.
      *
-     * Nota: CompanyService ya captura MailException localmente para que el
-     * fallo SMTP no revierta la transacción de BD. Este handler cubre cualquier
-     * otro punto del sistema donde pueda escapar sin capturar.
+     * EmailSendException envuelve ResendException y se lanza desde EmailService.
+     * Este handler cubre cualquier punto del sistema donde escape sin capturar.
      */
     @ExceptionHandler(EmailSendException.class)
     public ResponseEntity<Map<String, Object>> handleEmailSend(EmailSendException ex) {

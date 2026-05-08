@@ -1,6 +1,6 @@
 # Email y transacciones en CompanyService
 
-> **Estado**: ✅ Implementado (Mayo 2026)
+> **Estado**: ✅ Implementado (Mayo 2026) — usa Resend API (`resend-java:3.1.0`)
 
 ---
 
@@ -28,33 +28,45 @@ HTTP request
 |---|---|---|
 | Email se envía si el commit falla | ✗ posible | ✓ nunca |
 | Email se envía si el commit tiene éxito | ✓ | ✓ |
-| Fallo SMTP revierte cambio de estado | ✗ (con el fix) | ✓ nunca |
-| HTTP response espera al servidor SMTP | ✓ bloquea | ✗ async |
+| Fallo de envío revierte cambio de estado | ✗ (con el fix) | ✓ nunca |
+| HTTP response espera al proveedor de email | ✓ bloquea | ✗ async |
 | Visibilidad del fallo para el admin | ✗ solo logs | ✓ campo `emailEnviado` |
 
 ---
 
-## 1. Config SMTP: puerto 587 (STARTTLS) — Render
-
-El puerto **465** (SMTPS) está bloqueado en Render. La configuración correcta es:
+## 1. Configuración Resend API
 
 ```properties
-spring.mail.host=${MAIL_HOST:smtp.gmail.com}
-spring.mail.port=${MAIL_PORT:587}
-spring.mail.username=${MAIL_USER}
-spring.mail.password=${MAIL_PASSWORD}
-spring.mail.properties.mail.smtp.auth=true
-spring.mail.properties.mail.smtp.starttls.enable=true
-spring.mail.properties.mail.smtp.starttls.required=true
-spring.mail.properties.mail.smtp.connectiontimeout=10000
-spring.mail.properties.mail.smtp.timeout=10000
-spring.mail.properties.mail.smtp.writetimeout=10000
-app.mail.from=${MAIL_USER}
+# Clave de API obtenida en https://resend.com/api-keys
+resend.api.key=${RESEND_API_KEY:re_xxxxxxxxx}
+
+# Dirección remitente verificada en Resend (dominio propio o onboarding@resend.dev para tests)
+app.mail.from=${MAIL_FROM:onboarding@resend.dev}
+
+# URL del frontend — usada en los botones de los emails
+app.frontend.url=${FRONTEND_URL:http://localhost:3000}
 ```
 
-> `MAIL_PASSWORD` debe ser una **App Password de Google** (16 caracteres).
-> Requiere que la cuenta de Gmail tenga la **verificación en dos pasos activada**.
-> La contraseña normal de la cuenta no funciona con SMTP.
+> En producción, `MAIL_FROM` debe ser una dirección de un dominio verificado en
+> el panel de Resend (Settings → Domains). Usar `onboarding@resend.dev` solo
+> permite enviar a la cuenta propia en modo test.
+
+### Bean de configuración
+
+```java
+// config/ResendConfig.java
+@Configuration
+public class ResendConfig {
+
+    @Value("${resend.api.key}")
+    private String apiKey;
+
+    @Bean
+    public Resend resend() {
+        return new Resend(apiKey);
+    }
+}
+```
 
 ---
 
@@ -97,7 +109,7 @@ public void onCompanyEvent(CompanyEvent event) { ... }
 - **`@Async`**: corre en el thread pool de Spring (`@EnableAsync` en `BackendApplication`),
   liberando el hilo HTTP inmediatamente después del commit.
 - **`AFTER_COMMIT`**: garantiza que el evento solo se procesa si la transacción completó con éxito.
-- **`try/catch (MailException)`**: un fallo SMTP no genera excepción no controlada; se registra
+- **`try/catch (Exception)`**: un fallo de Resend API no genera excepción no controlada; se registra
   en log `WARN` con stack trace completo.
 - **`updateEmailEnviado`**: abre una nueva transacción (REQUIRED sobre contexto vacío del hilo async)
   para marcar `email_enviado = true` tras envío exitoso de aprobación.
@@ -106,7 +118,7 @@ public void onCompanyEvent(CompanyEvent event) { ... }
 
 ### `emailEnviado` en `Company`
 
-Campo de auditoría que indica si el email de aprobación fue entregado al servidor SMTP:
+Campo de auditoría que indica si el email de aprobación fue entregado correctamente:
 
 ```java
 @Column(name = "email_enviado", nullable = false)
@@ -134,8 +146,6 @@ UPDATE empresa
     WHERE estado_solicitud = 'APROBADA';
 ```
 
-> El backfill asume que las empresas ya aprobadas recibieron su email antes de esta migración.
-
 ---
 
 ### `CompanyRepository.updateEmailEnviado`
@@ -151,12 +161,58 @@ Llamado exclusivamente desde `CompanyEventListener` (aprobación) y `CompanyServ
 
 ---
 
-## 3. Endpoint de reenvío manual
+## 3. Plantillas HTML de email
+
+Todos los emails usan plantillas HTML inline generadas con `String.formatted()`.
+El estilo es consistente en todos los mensajes: encabezado azul `#1B3F7E`, tarjeta blanca,
+badge de estado coloreado, y footer `© 2026 Atalayas Área Empresarial · Alicante`.
+
+### Plantillas disponibles
+
+| Método | Asunto | Badge | CTA |
+|--------|--------|-------|-----|
+| `enviarAprobacion` | `¡Tu empresa ha sido aprobada en Atalayas!` | 🟢 Verde — "✓ Solicitud aprobada" | Botón → `{frontendUrl}/login` |
+| `enviarRechazo` | `Actualización sobre tu solicitud de alta en Atalayas` | 🔴 Rojo — "✗ Solicitud no aprobada" | Link `soporte@atalayas.com` |
+| `enviarBienvenidaUsuarioCreado` | `Tu cuenta en Atalayas está lista` | 🔵 Azul — "Tu cuenta está lista" | Email destacado + Botón → `{frontendUrl}/login` |
+| `enviarRecuperacionPassword` | `Restablecer contraseña · Atalayas` | — | Botón → `{frontendUrl}/reset-password?token=…` |
+
+### Colores de badge
+
+```
+Aprobación  → background: #ECFDF5  color: #059669  (verde)
+Rechazo     → background: #FEF2F2  color: #DC2626  (rojo)
+Bienvenida  → background: #EFF6FF  color: #1B3F7E  (azul)
+```
+
+### Implementación del envío
+
+```java
+// EmailService — método privado común a los 3 emails de empresa
+private void send(String to, String subject, String html) {
+    try {
+        CreateEmailOptions request = CreateEmailOptions.builder()
+                .from(remitente)   // app.mail.from
+                .to(to)
+                .subject(subject)
+                .html(html)
+                .build();
+        resend.emails().send(request);
+    } catch (ResendException ex) {
+        throw new EmailSendException("Error al enviar email a " + to + ": " + ex.getMessage(), ex);
+    }
+}
+```
+
+`EmailSendException` es capturada por `GlobalExceptionHandler` → devuelve HTTP `502`.
+
+---
+
+## 4. Endpoint de reenvío manual
 
 ### `POST /api/v1/empresas/{id}/reenviar-email`
 
 Permite al superadmin reenviar el email de aprobación cuando `emailEnviado = false`
-(fallo SMTP en el envío automático, visible en el listado de empresas).
+(fallo de Resend API en el envío automático, visible en el listado de empresas).
 
 **Body:**
 ```json
@@ -170,15 +226,15 @@ Permite al superadmin reenviar el email de aprobación cuando `emailEnviado = fa
 | `200`  | Email enviado y `email_enviado = true` persistido |
 | `400`  | `tipo` inválido o empresa no está en estado `APROBADA` |
 | `404`  | Empresa no encontrada |
-| `502`  | Fallo SMTP (`GlobalExceptionHandler` captura `MailException`) |
+| `502`  | Fallo Resend API (`GlobalExceptionHandler` captura `EmailSendException`) |
 
-A diferencia del envío automático, aquí `MailException` **no se captura** en el servicio —
+A diferencia del envío automático, aquí `EmailSendException` **no se captura** en el servicio —
 se propaga y el `GlobalExceptionHandler` devuelve `502` para que el admin sepa
 que el envío falló y pueda reintentar.
 
 ---
 
-## 4. Flujo completo por caso de uso
+## 5. Flujo completo por caso de uso
 
 ### Aprobación (`PATCH /empresas/{id}/solicitud` con `accion: "aprobar"`)
 
@@ -192,6 +248,7 @@ que el envío falló y pueda reintentar.
 ──── hilo async ────────────────────────────────────────────────────────
 7. CompanyEventListener.onCompanyEvent()
 8. emailService.enviarAprobacion(emailAdmin, nombreAdmin, nombreEmpresa)
+   └── Resend API → email HTML con badge verde + botón "Acceder a la plataforma"
 9. companyRepository.updateEmailEnviado(empresaId, true)
 ```
 
@@ -208,25 +265,38 @@ que el envío falló y pueda reintentar.
 ──── hilo async ────────────────────────────────────────────────────────
 8. CompanyEventListener.onCompanyEvent()
 9. emailService.enviarRechazo(emailAdmin, nombreAdmin, nombreEmpresa)
+   └── Resend API → email HTML con badge rojo + contacto soporte@atalayas.com
    (empresa ya no existe en BD — datos viajan en el record inmutable)
 ```
 
 ---
 
-## 5. Diagnóstico de fallos SMTP
+## 6. Diagnóstico de fallos
 
 Si los emails no llegan, buscar en los logs del servidor entradas con nivel `WARN` del logger
 `com.atalayas.backend.company.event.CompanyEventListener`:
 
 ```
-WARN  CompanyEventListener - Fallo SMTP tras commit — empresa=Acme S.L. estado=APROBADA: ...
+WARN  CompanyEventListener - Fallo Resend API tras commit — empresa=Acme S.L. estado=APROBADA: ...
 ```
 
-El mensaje incluye el stack trace completo de la `MailException`. Causas más frecuentes:
+### Errores frecuentes de Resend API
 
 | Error | Causa probable | Solución |
 |-------|---------------|----------|
-| `AuthenticationFailedException` | `MAIL_PASSWORD` no es App Password | Generar App Password en cuenta Google |
-| `ConnectException` / `SocketTimeoutException` | Puerto bloqueado o sin conectividad | Verificar entorno Render (puerto 587 debe estar libre) |
-| `SMTPSendFailedException: 550` | Dirección "From" no autorizada | `app.mail.from` debe coincidir con `spring.mail.username` |
-| `MailSendException: Invalid Addresses` | Email destinatario malformado | Revisar datos del usuario en BD |
+| `422 Unprocessable Entity` | Dominio remitente no verificado | Verificar dominio en Resend → Settings → Domains |
+| `401 Unauthorized` | `RESEND_API_KEY` inválida o expirada | Regenerar API key en resend.com/api-keys |
+| `429 Too Many Requests` | Rate limit superado | Revisar plan de Resend; añadir retry con backoff |
+| `ResendException: Invalid 'to' address` | Email destinatario malformado | Revisar datos del usuario en BD |
+| Timeout / `ConnectException` | Sin conectividad al endpoint Resend | Verificar red del servidor; `api.resend.com` debe ser accesible |
+
+### Test rápido de la API key
+
+```bash
+curl -X POST https://api.resend.com/emails \
+  -H "Authorization: Bearer $RESEND_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"from":"onboarding@resend.dev","to":"test@example.com","subject":"Test","text":"OK"}'
+```
+
+Respuesta esperada: `{"id":"..."}` con HTTP 200.

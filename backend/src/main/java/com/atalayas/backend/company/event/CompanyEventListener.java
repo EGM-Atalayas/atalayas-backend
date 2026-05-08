@@ -14,8 +14,8 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * Escucha CompanyEvent y envía el email correspondiente DESPUÉS del commit de BD.
  *
  * - phase = AFTER_COMMIT garantiza que el email solo sale si la transacción tuvo éxito.
- * - @Async descarga el envío SMTP a un hilo del pool: la respuesta HTTP al admin
- *   no espera al servidor de correo (mejora latencia percibida).
+ * - @Async descarga el envío mediante Resend API a un hilo del pool: la respuesta HTTP al admin
+ *   no espera a la llamada externa (mejora latencia percibida).
  * - Un fallo SMTP no puede causar rollback porque el commit ya ocurrió.
  * - updateEmailEnviado() abre una nueva transacción (REQUIRED sobre contexto vacío)
  *   solo en el caso de aprobación; el rechazo elimina la empresa físicamente.

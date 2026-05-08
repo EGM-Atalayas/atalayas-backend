@@ -70,7 +70,7 @@ public class PasswordResetEmailService {
                           <td style="background:#f5f6f8;padding:20px 40px;text-align:center;
                                      border-top:1px solid #e2e5ea;">
                             <p style="color:#9BA3B0;font-size:12px;margin:0;">
-                              © 2025 Atalayas Área Empresarial · Alicante
+                              © 2026 Atalayas Área Empresarial · Alicante
                             </p>
                           </td>
                         </tr>

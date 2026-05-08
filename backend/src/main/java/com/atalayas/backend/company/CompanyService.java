@@ -355,7 +355,7 @@ public class CompanyService {
     /**
      * POST /api/v1/empresas/{id}/reenviar-email
      * Permite al superadmin reenviar el email de aprobación cuando emailEnviado=false.
-     * Lanza MailException si el envío falla — el GlobalExceptionHandler devuelve 502.
+     * Lanza EmailSendException si el envío falla — el GlobalExceptionHandler devuelve 502.
      */
     @Transactional
     public void reenviarEmail(UUID id, ReenviarEmailRequest request) {
@@ -371,7 +371,7 @@ public class CompanyService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "No se encontró usuario admin para la empresa: " + id));
 
-        // MailException se propaga sin capturar → GlobalExceptionHandler devuelve 502
+        // EmailSendException se propaga sin capturar → GlobalExceptionHandler devuelve 502
         emailService.enviarAprobacion(
                 admin.getEmail(), admin.getNombre(), empresa.getNombreEmpresa());
 
