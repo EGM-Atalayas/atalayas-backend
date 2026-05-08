@@ -11,9 +11,9 @@ import java.util.UUID;
  * Entidad mapeada a la tabla 'empresa' de PostgreSQL.
  *
  * Una empresa representa a una organización del parque empresarial EGM.
- * Puede estar en estado PENDIENTE, APROBADA o RECHAZADA según el proceso
- * de validación del superadmin. Solo las empresas APROBADAS y activas
- * tienen acceso completo a la plataforma.
+ * Puede estar en estado PENDIENTE, APROBADA o PAUSADA según el proceso
+ * de validación del superadmin. Las empresas rechazadas se eliminan físicamente
+ * de la BD. Solo las empresas APROBADAS y activas tienen acceso completo.
  */
 @Entity
 @Table(name = "empresa")
@@ -64,7 +64,7 @@ public class Company {
     // Estado del proceso de alta en la plataforma
     // PENDIENTE → esperando revisión de EGM
     // APROBADA  → acceso completo habilitado
-    // RECHAZADA → solicitud denegada
+    // PAUSADA   → suspendida temporalmente por el superadmin
     @Enumerated(EnumType.STRING)
     @Column(name = "estado_solicitud", nullable = false, length = 20)
     @Builder.Default
@@ -87,6 +87,11 @@ public class Company {
     // Fecha en que el superadmin tomó la decisión de aprobar o rechazar
     @Column(name = "fecha_resolucion")
     private OffsetDateTime fechaResolucion;
+
+    // true si el email de aprobación fue enviado correctamente tras el commit
+    @Column(name = "email_enviado", nullable = false)
+    @Builder.Default
+    private boolean emailEnviado = false;
 
     // Gestionado automáticamente — no asignar manualmente en updates
     @Column(name = "actualizado_en", nullable = false)

@@ -59,6 +59,13 @@ public class OfficialNoticeService {
      */
     @Transactional(readOnly = true)
     public List<OfficialNoticeResponse> listar(User user) {
+        // Sin sesión activa — solo comunicados vigentes (endpoint público)
+        if (user == null) {
+            log.debug("Listando comunicados - acceso anónimo, devolviendo solo vigentes");
+            return noticeRepository.findActivosVigentes()
+                    .stream().map(noticeMapper::toResponse).collect(Collectors.toList());
+        }
+
         boolean esSuperAdmin = isSuperAdmin(user);
 
         log.debug("Listando comunicados - usuarioId={} esSuperAdmin={}",
@@ -71,6 +78,37 @@ public class OfficialNoticeService {
         return notices.stream()
                 .map(noticeMapper::toResponse)
                 .collect(Collectors.toList());
+    }
+
+
+    // ── ACTUALIZAR ───────────────────────────────────────────────────────
+    /**
+     * Actualiza los campos de un comunicado existente.
+     * Solo accesible para ROLE_ADMIN.
+     */
+    @Transactional
+    public OfficialNoticeResponse actualizar(UUID id, OfficialNoticeRequest request, User user) {
+        OfficialNotice notice = noticeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Comunicado no encontrado con id: " + id));
+
+        notice.setTitulo(request.getTitulo());
+        notice.setMensaje(request.getMensaje());
+        notice.setImagenUrl(request.getImagenUrl());
+        notice.setCategoria(request.getCategoria());
+        if (request.getDestacado() != null) notice.setDestacado(request.getDestacado());
+        if (request.getEstado() != null)    notice.setEstado(request.getEstado());
+        notice.setEnlaceUrl(request.getEnlaceUrl());
+        notice.setEnlaceTexto(request.getEnlaceTexto());
+        notice.setVideoUrl(request.getVideoUrl());
+        notice.setAdjuntoUrl(request.getAdjuntoUrl());
+        notice.setAdjuntoNombre(request.getAdjuntoNombre());
+        notice.setFechaPublicacion(request.getFechaPublicacion());
+        notice.setFechaExpiracion(request.getFechaExpiracion());
+
+        notice = noticeRepository.save(notice);
+        log.info("Comunicado actualizado - id={} por usuarioId={}", id, user.getUsuarioId());
+        return noticeMapper.toResponse(notice);
     }
 
 

@@ -56,6 +56,61 @@ public class TrainingModule {
     @Builder.Default
     private boolean esEspecializadoIa = false;
 
+    // Idioma del módulo (es, en, ca…)
+    @Column(name = "idioma", length = 10)
+    @Builder.Default
+    private String idioma = "es";
+
+    // Duración estimada del módulo (corto, medio, largo)
+    @Column(name = "duracion", length = 20)
+    private String duracion;
+
+    // Audiencia: todos | administradores | departamento
+    @Column(name = "audiencia", length = 30)
+    @Builder.Default
+    private String audiencia = "todos";
+
+    // Departamentos destinatarios cuando audiencia = departamento (JSON array string)
+    @Column(name = "departamentos", columnDefinition = "TEXT")
+    private String departamentos;
+
+    // Preguntas del test en formato JSON string
+    @Column(name = "test_preguntas", columnDefinition = "TEXT")
+    private String testPreguntas;
+
+    // URL pública de la imagen de portada (almacenada en Supabase Storage)
+    @Column(name = "imagen_portada_url", length = 500)
+    private String imagenPortadaUrl;
+
+    // Tipos de contenido generados: "documentacion", "podcast", "video" (separados por coma)
+    @Column(name = "tipos_salida", length = 100)
+    @Builder.Default
+    private String tiposSalida = "documentacion";
+
+    // Guion conversacional para podcast (generado por IA)
+    @Column(name = "script_podcast", columnDefinition = "TEXT")
+    private String scriptPodcast;
+
+    // Guion de video en formato JSON de slides (generado por IA)
+    @Column(name = "script_video", columnDefinition = "TEXT")
+    private String scriptVideo;
+
+    // Contenido formativo en Markdown (generado por IA o escrito manualmente)
+    @Column(name = "contenido_markdown", columnDefinition = "TEXT")
+    private String contenidoMarkdown;
+
+    // URL pública del audio MP3 del podcast (almacenado en Supabase Storage)
+    @Column(name = "podcast_audio_url", length = 500)
+    private String podcastAudioUrl;
+
+    // URL pública del adjunto subido manualmente (Supabase Storage)
+    @Column(name = "adjunto_url", length = 500)
+    private String adjuntoUrl;
+
+    // Nombre original del archivo adjunto
+    @Column(name = "adjunto_nombre", length = 255)
+    private String adjuntoNombre;
+
     // Soft delete — false oculta el módulo para empleados pero conserva datos históricos
     @Column(name = "activo", nullable = false)
     @Builder.Default

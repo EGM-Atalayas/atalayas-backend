@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -60,14 +61,18 @@ public class NotificationController {
 
     /**
      * GET /api/v1/notificaciones/me
-     * Todas las notificaciones del usuario autenticado, leídas y no leídas.
+     * Todas las notificaciones del usuario autenticado, con paginación.
+     * Sirve también como endpoint de polling: llamar periódicamente y comparar noLeidas.
+     * ?page=0&size=20 (defaults)
      */
     @GetMapping("/me")
-    @Operation(summary = "Mis notificaciones completas - leídas y no leídas")
-    @ApiResponse(responseCode = "200", description = "Lista de notificaciones")
-    public ResponseEntity<List<NotificationResponse>> listarMias(
-            @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(notificationService.listarMias(user));
+    @Operation(summary = "Mis notificaciones paginadas - leídas y no leídas (polling + panel)")
+    @ApiResponse(responseCode = "200", description = "Página de notificaciones")
+    public ResponseEntity<Page<NotificationResponse>> listarMias(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(notificationService.listarMiasPaginado(user, page, size));
     }
 
 

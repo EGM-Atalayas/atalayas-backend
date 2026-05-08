@@ -28,6 +28,31 @@ public class OfficialNoticeRequest {
     private String imagenUrl;
 
     // Opcional
+    private String categoria;
+
+    // Opcional
+    private Boolean destacado;
+
+    // 'publicado' | 'borrador'
+    private String estado;
+
+    // Recursos opcionales
+    @Size(max = 500)
+    private String enlaceUrl;
+
+    @Size(max = 200)
+    private String enlaceTexto;
+
+    @Size(max = 500)
+    private String videoUrl;
+
+    @Size(max = 500)
+    private String adjuntoUrl;
+
+    @Size(max = 200)
+    private String adjuntoNombre;
+
+    // Opcional
     private OffsetDateTime fechaPublicacion;
 
     // Opcional

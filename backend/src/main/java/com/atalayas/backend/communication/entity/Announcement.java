@@ -58,6 +58,40 @@ public class Announcement {
     @Column(name = "creado_en", updatable = false, nullable = false)
     private OffsetDateTime creadoEn;
 
+    @Column(name = "imagen_url", length = 500)
+    private String imagenUrl;
+
+    @Column(name = "enlace_url", columnDefinition = "TEXT")
+    private String enlaceUrl;
+
+    @Column(name = "enlace_texto", length = 100)
+    private String enlaceTexto;
+
+    @Column(name = "video_url", columnDefinition = "TEXT")
+    private String videoUrl;
+
+    @Column(name = "adjunto_url", columnDefinition = "TEXT")
+    private String adjuntoUrl;
+
+    @Column(name = "adjunto_nombre", length = 200)
+    private String adjuntoNombre;
+
+    /** 'publicado' | 'borrador' — default 'publicado' */
+    @Column(name = "estado", nullable = false, length = 20)
+    @Builder.Default
+    private String estado = "publicado";
+
+    @Column(name = "fijado", nullable = false)
+    @Builder.Default
+    private boolean fijado = false;
+
+    @Column(name = "vistas", nullable = false)
+    @Builder.Default
+    private int vistas = 0;
+
+    @Column(name = "categoria", length = 50)
+    private String categoria;
+
     @Column(name = "actualizado_en", nullable = false)
     private OffsetDateTime actualizadoEn;
 

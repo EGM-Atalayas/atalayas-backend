@@ -41,5 +41,8 @@ public class CreateUserRequest {
     private UUID empresaId;
 
     private String puestoTrabajo;
+
+    @Size(max = 50)
+    private String departamento;
 }
 

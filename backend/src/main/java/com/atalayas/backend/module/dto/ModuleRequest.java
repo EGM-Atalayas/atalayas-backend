@@ -29,5 +29,42 @@ public class ModuleRequest {
     private boolean esEspecializadoIa = false;
 
     private boolean activo = true;
+
+    private String idioma;
+
+    private String duracion;
+
+    /** Audiencia: "todos" | "administradores" | "departamento" */
+    private String audiencia;
+
+    /** Departamentos destinatarios como JSON string (cuando audiencia = "departamento") */
+    private String departamentos;
+
+    /** Preguntas del test serializado como JSON string */
+    private String testPreguntas;
+
+    /** URL pública de la imagen de portada (Supabase Storage) */
+    private String imagenPortadaUrl;
+
+    /** Tipos de salida generados: "documentacion", "podcast", "video" (separados por coma) */
+    private String tiposSalida;
+
+    /** Guion de podcast generado por IA */
+    private String scriptPodcast;
+
+    /** Guion de video (JSON de slides) generado por IA */
+    private String scriptVideo;
+
+    /** Contenido formativo en Markdown (generado por IA o escrito manualmente) */
+    private String contenidoMarkdown;
+
+    /** URL pública del MP3 del podcast (Supabase Storage) */
+    private String podcastAudioUrl;
+
+    /** URL pública del archivo adjunto subido manualmente (Supabase Storage) */
+    private String adjuntoUrl;
+
+    /** Nombre original del archivo adjunto */
+    private String adjuntoNombre;
 }
 

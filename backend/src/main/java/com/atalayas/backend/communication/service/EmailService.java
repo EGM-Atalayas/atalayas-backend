@@ -1,9 +1,11 @@
 package com.atalayas.backend.communication.service;
 
+import com.atalayas.backend.exception.EmailSendException;
+import com.resend.Resend;
+import com.resend.core.exception.ResendException;
+import com.resend.services.emails.model.CreateEmailOptions;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 /**
@@ -14,7 +16,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    private final Resend resend;
 
     @Value("${app.mail.from}")
     private String remitente;
@@ -28,11 +30,8 @@ public class EmailService {
      * @param nombreEmpresa nombre de la empresa aprobada
      */
     public void enviarAprobacion(String emailDestino, String nombre, String nombreEmpresa) {
-        SimpleMailMessage mensaje = new SimpleMailMessage();
-        mensaje.setFrom(remitente);
-        mensaje.setTo(emailDestino);
-        mensaje.setSubject("¡Tu empresa ha sido aprobada en Atalayas!");
-        mensaje.setText(
+        send(emailDestino,
+                "¡Tu empresa ha sido aprobada en Atalayas!",
                 "Hola " + nombre + ",\n\n" +
                 "Nos complace informarte que la solicitud de alta para la empresa \"" + nombreEmpresa + "\" " +
                 "ha sido APROBADA por nuestro equipo.\n\n" +
@@ -40,9 +39,7 @@ public class EmailService {
                 "que registraste durante la solicitud.\n\n" +
                 "Si tienes cualquier duda, no dudes en contactarnos.\n\n" +
                 "Un saludo,\n" +
-                "El equipo de Atalayas"
-        );
-        mailSender.send(mensaje);
+                "El equipo de Atalayas");
     }
 
     /**
@@ -54,20 +51,15 @@ public class EmailService {
      * @param nombreEmpresa nombre de la empresa rechazada
      */
     public void enviarRechazo(String emailDestino, String nombre, String nombreEmpresa) {
-        SimpleMailMessage mensaje = new SimpleMailMessage();
-        mensaje.setFrom(remitente);
-        mensaje.setTo(emailDestino);
-        mensaje.setSubject("Actualización sobre tu solicitud de alta en Atalayas");
-        mensaje.setText(
+        send(emailDestino,
+                "Actualización sobre tu solicitud de alta en Atalayas",
                 "Hola " + nombre + ",\n\n" +
                 "Lamentamos informarte que la solicitud de alta para la empresa \"" + nombreEmpresa + "\" " +
                 "no ha podido ser aprobada en este momento.\n\n" +
                 "Si crees que esto es un error o deseas más información, ponte en contacto con " +
                 "nuestro equipo de soporte respondiendo a este correo.\n\n" +
                 "Un saludo,\n" +
-                "El equipo de Atalayas"
-        );
-        mailSender.send(mensaje);
+                "El equipo de Atalayas");
     }
 
     /**
@@ -78,19 +70,28 @@ public class EmailService {
      * @param nombreEmpresa nombre de la empresa a la que pertenece
      */
     public void enviarBienvenidaUsuarioCreado(String emailDestino, String nombre, String nombreEmpresa) {
-        SimpleMailMessage mensaje = new SimpleMailMessage();
-        mensaje.setFrom(remitente);
-        mensaje.setTo(emailDestino);
-        mensaje.setSubject("Tu cuenta en Atalayas está lista");
-        mensaje.setText(
+        send(emailDestino,
+                "Tu cuenta en Atalayas está lista",
                 "Hola " + nombre + ",\n\n" +
                 "Un administrador de \"" + nombreEmpresa + "\" ha creado tu cuenta en la plataforma Atalayas.\n\n" +
                 "Puedes iniciar sesión con este email (" + emailDestino + ") y la contraseña " +
                 "que el administrador te ha comunicado.\n\n" +
                 "Te recomendamos cambiar tu contraseña tras el primer inicio de sesión.\n\n" +
                 "Un saludo,\n" +
-                "El equipo de Atalayas"
-        );
-        mailSender.send(mensaje);
+                "El equipo de Atalayas");
+    }
+
+    private void send(String to, String subject, String text) {
+        try {
+            CreateEmailOptions request = CreateEmailOptions.builder()
+                    .from(remitente)
+                    .to(to)
+                    .subject(subject)
+                    .text(text)
+                    .build();
+            resend.emails().send(request);
+        } catch (ResendException ex) {
+            throw new EmailSendException("Error al enviar email a " + to + ": " + ex.getMessage(), ex);
+        }
     }
 }

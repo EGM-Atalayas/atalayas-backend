@@ -27,6 +27,7 @@ public class UserProfileResponse {
     private String nombreCompleto;
     private String avatarUrl;
     private String puestoTrabajo;
+    private String departamento;
 
     // FK empresa
     private UUID empresaId;
@@ -36,6 +37,16 @@ public class UserProfileResponse {
     private UUID rolId;
     private String codigoRol;
     private String nombreRol;
+
+    private String bannerUrl;
+    private String bio;
+    private String telefono;
+    private com.atalayas.backend.user.enums.Disponibilidad disponibilidad;
+    private boolean notifNuevoModulo;
+    private boolean notifModuloCompletado;
+    private boolean notifComunicado;
+    private boolean notifPendiente;
+    private boolean modoOscuro;
 
     private boolean activo;
     private boolean terminosAceptados;

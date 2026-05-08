@@ -43,6 +43,36 @@ public class OfficialNotice {
     @Column(name = "imagen_url", length = 500)
     private String imagenUrl;
 
+    // Categoría visible en el feed (General, Novedad, Aviso, Evento)
+    @Column(name = "categoria", length = 50)
+    private String categoria;
+
+    // Si true aparece fijado al principio del listado
+    @Column(name = "destacado", nullable = false)
+    @Builder.Default
+    private boolean destacado = false;
+
+    // 'publicado' | 'borrador' — los borradores solo los ve el superadmin
+    @Column(name = "estado", length = 20)
+    @Builder.Default
+    private String estado = "publicado";
+
+    // Recursos opcionales
+    @Column(name = "enlace_url", length = 500)
+    private String enlaceUrl;
+
+    @Column(name = "enlace_texto", length = 200)
+    private String enlaceTexto;
+
+    @Column(name = "video_url", length = 500)
+    private String videoUrl;
+
+    @Column(name = "adjunto_url", length = 500)
+    private String adjuntoUrl;
+
+    @Column(name = "adjunto_nombre", length = 200)
+    private String adjuntoNombre;
+
     /**
      * Fecha de publicación del comunicado.
      * Permite programar comunicados para una fecha futura enviando

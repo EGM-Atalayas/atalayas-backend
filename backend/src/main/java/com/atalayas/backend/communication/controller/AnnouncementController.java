@@ -70,6 +70,43 @@ public class AnnouncementController {
     }
 
     /**
+     * PUT /api/v1/anuncios/{id}
+     * Edita un anuncio existente.
+     * ROLE_ADMIN puede editar cualquier anuncio.
+     * ROLE_ADMIN_EMPRESA solo puede editar los suyos → 403 si es ajeno/global.
+     * - Anuncio no existe    → 404
+     * - Anuncio de otra emp  → 403
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
+    @Operation(summary = "Editar anuncio — ROLE_ADMIN_EMPRESA solo puede editar los propios")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Anuncio actualizado"),
+        @ApiResponse(responseCode = "403", description = "Anuncio de otra empresa",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Anuncio no encontrado",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
+    public ResponseEntity<AnnouncementResponse> editar(
+            @PathVariable UUID id,
+            @Valid @RequestBody AnnouncementRequest request,
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(announcementService.editar(id, request, user));
+    }
+
+    /**
+     * PATCH /api/v1/anuncios/{id}/vistas
+     * Incrementa el contador de vistas. No requiere rol específico — cualquier usuario autenticado.
+     */
+    @PatchMapping("/{id}/vistas")
+    @Operation(summary = "Registrar vista de un anuncio")
+    @ApiResponse(responseCode = "204", description = "Vista registrada")
+    public ResponseEntity<Void> registrarVista(@PathVariable UUID id) {
+        announcementService.registrarVista(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
      * PATCH /api/v1/anuncios/{id}/desactivar
      * ROLE_ADMIN desactiva cualquier anuncio.
      * ROLE_ADMIN_EMPRESA solo puede desactivar los suyos → 403 si es ajeno/global.

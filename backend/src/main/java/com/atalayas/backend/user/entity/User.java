@@ -1,6 +1,6 @@
 package com.atalayas.backend.user.entity;
 
-import com.atalayas.backend.role.entity.Role;
+import com.atalayas.backend.role.entity.Rol;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -47,6 +47,40 @@ public class User implements UserDetails {
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
 
+    @Column(name = "banner_url", length = 500)
+    private String bannerUrl;
+
+    @Column(name = "bio", length = 300)
+    private String bio;
+
+    @Column(name = "telefono", length = 20)
+    private String telefono;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "disponibilidad", length = 20)
+    @Builder.Default
+    private com.atalayas.backend.user.enums.Disponibilidad disponibilidad = com.atalayas.backend.user.enums.Disponibilidad.DISPONIBLE;
+
+    @Column(name = "notif_nuevo_modulo", nullable = false)
+    @Builder.Default
+    private boolean notifNuevoModulo = true;
+
+    @Column(name = "notif_modulo_completado", nullable = false)
+    @Builder.Default
+    private boolean notifModuloCompletado = true;
+
+    @Column(name = "notif_comunicado", nullable = false)
+    @Builder.Default
+    private boolean notifComunicado = true;
+
+    @Column(name = "notif_pendiente", nullable = false)
+    @Builder.Default
+    private boolean notifPendiente = true;
+
+    @Column(name = "modo_oscuro", nullable = false)
+    @Builder.Default
+    private boolean modoOscuro = false;
+
     // FK a la empresa a la que pertenece el usuario
     @Column(name = "empresa_id")
     private UUID empresaId;
@@ -54,7 +88,7 @@ public class User implements UserDetails {
     // FK al rol
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "rol_id", nullable = false)
-    private Role rol;
+    private Rol rol;
 
     // Contador de intentos fallidos de login bloquea la cuenta a partir de 5
     @Column(name = "intentos_fallidos", nullable = false)
@@ -68,6 +102,10 @@ public class User implements UserDetails {
     // Puesto de trabajo visible en el header debajo del nombre
     @Column(name = "puesto_trabajo", length = 150)
     private String puestoTrabajo;
+
+    // Departamento al que pertenece el empleado (usado para visibilidad de módulos)
+    @Column(name = "departamento", length = 50)
+    private String departamento;
 
     // Soft delete, false significa que la cuenta está desactivada
     @Column(name = "activo", nullable = false)

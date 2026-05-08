@@ -8,6 +8,7 @@ import com.atalayas.backend.communication.repository.AnnouncementRepository;
 import com.atalayas.backend.exception.BusinessException;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
@@ -16,15 +17,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * Lógica de negocio para la gestión de anuncios de empresa
- *
  * Los anuncios son comunicaciones de empresa a empleados, distintos de los
  * comunicados oficiales de EGM (Comunicado), que son globales y solo los
  * crea el superadmin.
- *
  * Reglas de acceso:
  *   - ROLE_ADMIN         - puede crear anuncios globales y gestionar todos
  *   - ROLE_ADMIN_EMPRESA - solo puede crear y gestionar anuncios de su empresa
@@ -37,12 +35,12 @@ public class AnnouncementService {
 
     private final AnnouncementRepository announcementRepository;
     private final AnnouncementMapper announcementMapper;
-
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     // ── CREAR ─────────────────────────────────────────────────────────────
     /**
      * Crea un nuevo anuncio
-     *
      * Solo el superadmin puede marcar un anuncio como global.
      * Si un admin empresa intenta crear un anuncio global, el flag se ignora
      * y se fuerza a false.
@@ -56,14 +54,38 @@ public class AnnouncementService {
 
         Announcement announcement = announcementMapper.toEntity(request, user, esGlobal);
         announcement = announcementRepository.save(announcement);
+
+        // Notificar a los destinatarios del comunicado
+        final String titulo = announcement.getTitulo();
+        final UUID autorId = user.getUsuarioId();
+        if (esGlobal) {
+            // Global: todos los usuarios activos que pertenecen a alguna empresa
+            userRepository.findAll().stream()
+                    .filter(u -> u.isActivo() && u.getEmpresaId() != null && !u.getUsuarioId().equals(autorId))
+                    .forEach(u -> notificationService.crearInterna(
+                            u.getUsuarioId(),
+                            "COMUNICADO_NUEVO",
+                            "Nuevo comunicado: \"" + titulo + "\".",
+                            "/dashboard/comunicacion"
+                    ));
+        } else if (announcement.getEmpresaId() != null) {
+            // De empresa: todos los activos de esa empresa excepto el autor
+            userRepository.findAllByEmpresaIdAndActivoTrue(announcement.getEmpresaId()).stream()
+                    .filter(u -> !u.getUsuarioId().equals(autorId))
+                    .forEach(u -> notificationService.crearInterna(
+                            u.getUsuarioId(),
+                            "COMUNICADO_NUEVO",
+                            "Nuevo comunicado: \"" + titulo + "\".",
+                            "/dashboard/comunicacion"
+                    ));
+        }
+
         return announcementMapper.toResponse(announcement);
     }
-
 
     // ── LISTAR ────────────────────────────────────────────────────────────
     /**
      * Lista los anuncios visibles para el usuario autenticado
-     *
      * La visibilidad depende del rol y la empresa del usuario:
      *   - Superadmin       - todos los anuncios activos de la plataforma
      *   - Con empresa      - los de su empresa + los globales activos
@@ -71,6 +93,13 @@ public class AnnouncementService {
      */
     @Transactional(readOnly = true)
     public List<AnnouncementResponse> listar(User user) {
+        // Sin sesión activa — solo anuncios globales activos (endpoint público)
+        if (user == null) {
+            log.debug("Listando anuncios - acceso anónimo, devolviendo solo globales");
+            return announcementRepository.findAllByEsGlobalTrueAndActivoTrue()
+                    .stream().map(announcementMapper::toResponse).toList();
+        }
+
         boolean superAdmin = isSuperAdmin(user);
         UUID empresaId = user.getEmpresaId();
 
@@ -92,14 +121,58 @@ public class AnnouncementService {
 
         return announcements.stream()
                 .map(announcementMapper::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
+    // ── EDITAR ────────────────────────────────────────────────────────────
+    /**
+     * Edita un anuncio existente.
+     * Superadmin puede editar cualquier anuncio.
+     * Admin empresa solo puede editar los suyos propios.
+     * Los campos de identidad (esGlobal, empresaId, creadoPor) no se modifican.
+     */
+    @Transactional
+    public AnnouncementResponse editar(UUID id, AnnouncementRequest request, User user) {
+        Announcement announcement;
+
+        if (isSuperAdmin(user)) {
+            announcement = announcementRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Anuncio no encontrado con id: " + id));
+        } else {
+            announcement = announcementRepository
+                    .findByAnuncioIdAndEmpresaId(id, user.getEmpresaId())
+                    .orElseThrow(() -> {
+                        if (announcementRepository.existsById(id)) {
+                            return new AccessDeniedException(
+                                    "No tienes permisos para editar este anuncio");
+                        }
+                        return new ResourceNotFoundException(
+                                "Anuncio no encontrado con id: " + id);
+                    });
+        }
+
+        announcementMapper.updateEntity(announcement, request);
+        announcement = announcementRepository.save(announcement);
+        return announcementMapper.toResponse(announcement);
+    }
+
+    // ── REGISTRAR VISTA ───────────────────────────────────────────────────
+    /**
+     * Incrementa el contador de vistas de un anuncio en 1.
+     * Operación no crítica — si el anuncio no existe simplemente se ignora.
+     */
+    @Transactional
+    public void registrarVista(UUID id) {
+        announcementRepository.findById(id).ifPresent(a -> {
+            a.setVistas(a.getVistas() + 1);
+            announcementRepository.save(a);
+        });
+    }
 
     // ── DESACTIVAR ────────────────────────────────────────────────────────
     /**
      * Soft-delete de un anuncio, marca activo = false sin eliminar el registro
-     *
      * Superadmin puede desactivar cualquier anuncio.
      * Admin empresa solo puede desactivar los suyos propios:
      *   - 403 si intenta desactivar uno global o de otra empresa

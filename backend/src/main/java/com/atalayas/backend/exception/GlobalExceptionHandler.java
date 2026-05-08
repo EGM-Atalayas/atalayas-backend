@@ -2,6 +2,8 @@ package com.atalayas.backend.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import com.atalayas.backend.exception.EmailSendException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
@@ -117,6 +119,21 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 400 — Jackson no puede deserializar el cuerpo de la petición.
+     * Ocurre cuando el JSON contiene un valor de enum inválido (ej: "ACTIVA" en lugar
+     * de "APROBADA"), un tipo de dato incorrecto o JSON malformado.
+     * Sin este handler la excepción cae al catch-all y devuelve un 500.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleHttpMessageNotReadable(
+            HttpMessageNotReadableException ex) {
+        String message = ex.getCause() != null
+                ? ex.getCause().getMessage()
+                : "El cuerpo de la petición no es válido o contiene un valor no reconocido";
+        return buildResponse(HttpStatus.BAD_REQUEST, message);
+    }
+
+    /**
      * 413 — Archivo subido supera el límite configurado (spring.servlet.multipart.max-file-size).
      * Sin este handler Spring cierra la conexión HTTP/2 bruscamente (ERR_HTTP2_PROTOCOL_ERROR).
      */
@@ -136,6 +153,22 @@ public class GlobalExceptionHandler {
             NoHandlerFoundException ex) {
         return buildResponse(HttpStatus.NOT_FOUND,
                 "Endpoint no encontrado: " + ex.getHttpMethod() + " " + ex.getRequestURL());
+    }
+
+    /**
+     * 502 — Fallo al enviar correo electrónico (dependencia SMTP externa).
+     * HTTP 502 Bad Gateway es semánticamente correcto: el servidor actuó como
+     * proxy hacia Gmail/SMTP y recibió una respuesta inválida o no recibió
+     * respuesta en el tiempo esperado.
+     *
+     * Nota: CompanyService ya captura MailException localmente para que el
+     * fallo SMTP no revierta la transacción de BD. Este handler cubre cualquier
+     * otro punto del sistema donde pueda escapar sin capturar.
+     */
+    @ExceptionHandler(EmailSendException.class)
+    public ResponseEntity<Map<String, Object>> handleEmailSend(EmailSendException ex) {
+        return buildResponse(HttpStatus.BAD_GATEWAY,
+                "No se pudo enviar el correo electrónico. Inténtalo de nuevo en unos minutos.");
     }
 
     /**

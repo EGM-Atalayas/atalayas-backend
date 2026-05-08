@@ -7,24 +7,24 @@ import com.atalayas.backend.user.entity.User;
 import org.springframework.stereotype.Component;
 
 /**
- * Mapper para convertir entre la entidad Announcement y sus DTOs
+ * Mapper para convertir entre la entidad Announcement y sus DTOs.
  */
 @Component
 public class AnnouncementMapper {
 
-    /**
-     * Construye una entidad Announcement a partir del request y el usuario autenticado.
-     *
-     * El flag esGlobal ya viene resuelto desde el servicio según el rol del usuario,
-     * aquí solo lo asignamos, no lo calculamos.
-     *
-     * Si el anuncio es global no se asocia a ninguna empresa (empresaId = null).
-     * Si no es global, heredamos el empresaId del usuario que lo crea.
-     */
     public Announcement toEntity(AnnouncementRequest request, User user, boolean esGlobal) {
         return Announcement.builder()
                 .titulo(request.getTitulo())
                 .contenido(request.getContenido())
+                .imagenUrl(request.getImagenUrl())
+                .enlaceUrl(request.getEnlaceUrl())
+                .enlaceTexto(request.getEnlaceTexto())
+                .videoUrl(request.getVideoUrl())
+                .adjuntoUrl(request.getAdjuntoUrl())
+                .adjuntoNombre(request.getAdjuntoNombre())
+                .estado(request.getEstado() != null ? request.getEstado() : "publicado")
+                .fijado(request.isFijado())
+                .categoria(request.getCategoria())
                 .esGlobal(esGlobal)
                 .empresaId(esGlobal ? null : user.getEmpresaId())
                 .creadoPor(user.getUsuarioId())
@@ -33,15 +33,41 @@ public class AnnouncementMapper {
     }
 
     /**
-     * Convierte una entidad Announcement en su DTO de respuesta.
-     * Expone todos los campos que el frontend necesita para mostrar el anuncio.
+     * Aplica los campos editables de un AnnouncementRequest sobre una entidad existente.
+     * No modifica: anuncioId, empresaId, creadoPor, creadoEn, activo, esGlobal (seguridad).
      */
+    public void updateEntity(Announcement announcement, AnnouncementRequest request) {
+        announcement.setTitulo(request.getTitulo());
+        announcement.setContenido(request.getContenido());
+        announcement.setImagenUrl(request.getImagenUrl());
+        announcement.setEnlaceUrl(request.getEnlaceUrl());
+        announcement.setEnlaceTexto(request.getEnlaceTexto());
+        announcement.setVideoUrl(request.getVideoUrl());
+        announcement.setAdjuntoUrl(request.getAdjuntoUrl());
+        announcement.setAdjuntoNombre(request.getAdjuntoNombre());
+        if (request.getEstado() != null) {
+            announcement.setEstado(request.getEstado());
+        }
+        announcement.setFijado(request.isFijado());
+        announcement.setCategoria(request.getCategoria());
+    }
+
     public AnnouncementResponse toResponse(Announcement announcement) {
         return AnnouncementResponse.builder()
                 .anuncioId(announcement.getAnuncioId())
                 .empresaId(announcement.getEmpresaId())
                 .titulo(announcement.getTitulo())
                 .contenido(announcement.getContenido())
+                .imagenUrl(announcement.getImagenUrl())
+                .enlaceUrl(announcement.getEnlaceUrl())
+                .enlaceTexto(announcement.getEnlaceTexto())
+                .videoUrl(announcement.getVideoUrl())
+                .adjuntoUrl(announcement.getAdjuntoUrl())
+                .adjuntoNombre(announcement.getAdjuntoNombre())
+                .estado(announcement.getEstado())
+                .fijado(announcement.isFijado())
+                .vistas(announcement.getVistas())
+                .categoria(announcement.getCategoria())
                 .esGlobal(announcement.isEsGlobal())
                 .activo(announcement.isActivo())
                 .creadoPor(announcement.getCreadoPor())

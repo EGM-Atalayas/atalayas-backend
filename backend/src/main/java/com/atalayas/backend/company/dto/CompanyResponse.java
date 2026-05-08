@@ -29,7 +29,13 @@ public class CompanyResponse {
     private String descripcion;
     private EstadoSolicitud estadoSolicitud;
     private boolean activo;
+    private boolean emailEnviado;
     private OffsetDateTime fechaSolicitud;
     private OffsetDateTime fechaResolucion;
     private OffsetDateTime actualizadoEn;
+
+    /** Datos del administrador provisional — solo se rellenan en GET /empresas (getAll). */
+    private String nombre;
+    private String apellidos;
+    private String emailAdmin;
 }

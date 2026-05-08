@@ -1,5 +1,6 @@
 package com.atalayas.backend.security;
 
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -39,9 +40,18 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Dispatches ASYNC (StreamingResponseBody) — no re-autenticar
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
+                        // Preflight OPTIONS — debe pasar sin autenticación
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(SecurityConstants.PUBLIC_URLS).permitAll()
                         // Solicitud de alta de empresa — público, sin cuenta previa
                         .requestMatchers(HttpMethod.POST, "/api/v1/empresas/solicitud").permitAll()
+                        // Contador de vistas — no requiere autenticación (operación no crítica)
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/anuncios/*/vistas").permitAll()
+                        // Lectura pública — sin sesión devuelve solo contenido global/vigente
+                        .requestMatchers(HttpMethod.GET, "/api/v1/anuncios").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/comunicados").permitAll()
                         // Swagger solo accesible para usuarios autenticados
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                             .authenticated()
@@ -70,4 +80,3 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 }
-

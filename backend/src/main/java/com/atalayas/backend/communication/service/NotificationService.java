@@ -10,6 +10,9 @@ import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -84,6 +87,18 @@ public class NotificationService {
                 .stream()
                 .map(notificationMapper::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Versión paginada de listarMias — para el panel con scroll infinito.
+     * El frontend puede llamar ?page=0&size=20 e ir incrementando page.
+     */
+    @Transactional(readOnly = true)
+    public Page<NotificationResponse> listarMiasPaginado(User user, int page, int size) {
+        PageRequest pageable = PageRequest.of(page, size, Sort.by("creadoEn").descending());
+        return notificationRepository
+                .findByDestinatarioIdOrderByCreadoEnDesc(user.getUsuarioId(), pageable)
+                .map(notificationMapper::toResponse);
     }
 
     /**
