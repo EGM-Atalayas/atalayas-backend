@@ -1,6 +1,6 @@
 # Email y transacciones en CompanyService
 
-> **Estado**: ✅ Implementado (Mayo 2026) — usa Resend API (`resend-java:3.1.0`)
+> **Estado**: ✅ Implementado (Mayo 2026) — usa Maileroo API (cliente HTTP nativo Java 21)
 
 ---
 
@@ -34,39 +34,45 @@ HTTP request
 
 ---
 
-## 1. Configuración Resend API
+## 1. Configuración Maileroo API
 
 ```properties
-# Clave de API obtenida en https://resend.com/api-keys
-resend.api.key=${RESEND_API_KEY:re_xxxxxxxxx}
+# Clave de API obtenida en https://maileroo.com → API Keys
+maileroo.api.key=${MAILEROO_API_KEY:}
 
-# Dirección remitente verificada en Resend (dominio propio o onboarding@resend.dev para tests)
-app.mail.from=${MAIL_FROM:onboarding@resend.dev}
+# (Opcional) Endpoint; por defecto https://api.maileroo.com/send
+maileroo.api.url=${MAILEROO_API_URL:https://api.maileroo.com/send}
+
+# Dirección remitente verificada en Maileroo (dominio propio)
+app.mail.from=${MAIL_FROM:noreply@atalayas.com}
 
 # URL del frontend — usada en los botones de los emails
 app.frontend.url=${FRONTEND_URL:http://localhost:3000}
 ```
 
-> En producción, `MAIL_FROM` debe ser una dirección de un dominio verificado en
-> el panel de Resend (Settings → Domains). Usar `onboarding@resend.dev` solo
-> permite enviar a la cuenta propia en modo test.
+> `MAIL_FROM` debe ser una dirección de un dominio verificado en el panel de Maileroo.
 
-### Bean de configuración
+### Cliente HTTP (`MailerooClient`)
+
+No hay SDK externo. Se usa `java.net.http.HttpClient` nativo (Java 21), igual que `GroqClient`
+y `GeminiClient`. El cliente vive en `communication/client/MailerooClient.java`.
 
 ```java
-// config/ResendConfig.java
-@Configuration
-public class ResendConfig {
-
-    @Value("${resend.api.key}")
-    private String apiKey;
-
-    @Bean
-    public Resend resend() {
-        return new Resend(apiKey);
-    }
-}
+// Fragmento del método send()
+HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create(apiUrl))                        // maileroo.api.url
+        .header("Content-Type", "application/json")
+        .header("X-API-Key", apiKey)                    // maileroo.api.key
+        .POST(HttpRequest.BodyPublishers.ofString(bodyJson))
+        .build();
 ```
+
+Body del request:
+```json
+{ "from": "...", "to": "...", "subject": "...", "html": "..." }
+```
+
+Errores HTTP ≥ 300 o fallos de red → `EmailSendException` → `GlobalExceptionHandler` → HTTP 502.
 
 ---
 
@@ -189,17 +195,8 @@ Bienvenida  → background: #EFF6FF  color: #1B3F7E  (azul)
 ```java
 // EmailService — método privado común a los 3 emails de empresa
 private void send(String to, String subject, String html) {
-    try {
-        CreateEmailOptions request = CreateEmailOptions.builder()
-                .from(remitente)   // app.mail.from
-                .to(to)
-                .subject(subject)
-                .html(html)
-                .build();
-        resend.emails().send(request);
-    } catch (ResendException ex) {
-        throw new EmailSendException("Error al enviar email a " + to + ": " + ex.getMessage(), ex);
-    }
+    mailerooClient.send(remitente, to, subject, html);
+    // EmailSendException lanzada por MailerooClient en caso de error
 }
 ```
 
@@ -280,23 +277,23 @@ Si los emails no llegan, buscar en los logs del servidor entradas con nivel `WAR
 WARN  CompanyEventListener - Fallo Resend API tras commit — empresa=Acme S.L. estado=APROBADA: ...
 ```
 
-### Errores frecuentes de Resend API
+### Errores frecuentes de Maileroo API
 
 | Error | Causa probable | Solución |
 |-------|---------------|----------|
-| `422 Unprocessable Entity` | Dominio remitente no verificado | Verificar dominio en Resend → Settings → Domains |
-| `401 Unauthorized` | `RESEND_API_KEY` inválida o expirada | Regenerar API key en resend.com/api-keys |
-| `429 Too Many Requests` | Rate limit superado | Revisar plan de Resend; añadir retry con backoff |
-| `ResendException: Invalid 'to' address` | Email destinatario malformado | Revisar datos del usuario en BD |
-| Timeout / `ConnectException` | Sin conectividad al endpoint Resend | Verificar red del servidor; `api.resend.com` debe ser accesible |
+| HTTP `401 Unauthorized` | `MAILEROO_API_KEY` inválida o ausente | Verificar la clave en maileroo.com → API Keys |
+| HTTP `422 Unprocessable Entity` | Dominio remitente no verificado o body malformado | Verificar dominio en Maileroo; revisar `MAIL_FROM` |
+| HTTP `429 Too Many Requests` | Rate limit superado | Revisar plan de Maileroo; añadir retry con backoff |
+| `ConnectException` / Timeout | Sin conectividad con `api.maileroo.com` | Verificar red del servidor; el puerto 443 debe estar libre |
+| `EmailSendException: … malformado` | Email destinatario malformado | Revisar datos del usuario en BD |
 
 ### Test rápido de la API key
 
 ```bash
-curl -X POST https://api.resend.com/emails \
-  -H "Authorization: Bearer $RESEND_API_KEY" \
+curl -X POST https://api.maileroo.com/send \
+  -H "X-API-Key: $MAILEROO_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"from":"onboarding@resend.dev","to":"test@example.com","subject":"Test","text":"OK"}'
+  -d '{"from":"noreply@atalayas.com","to":"test@example.com","subject":"Test","html":"<p>OK</p>"}'
 ```
 
-Respuesta esperada: `{"id":"..."}` con HTTP 200.
+Respuesta esperada: HTTP 200 con id del mensaje.

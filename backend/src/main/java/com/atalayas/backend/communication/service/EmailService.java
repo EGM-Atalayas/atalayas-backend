@@ -1,9 +1,6 @@
 package com.atalayas.backend.communication.service;
 
-import com.atalayas.backend.exception.EmailSendException;
-import com.resend.Resend;
-import com.resend.core.exception.ResendException;
-import com.resend.services.emails.model.CreateEmailOptions;
+import com.atalayas.backend.communication.client.MailerooClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -16,7 +13,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class EmailService {
 
-    private final Resend resend;
+    private final MailerooClient mailerooClient;
 
     @Value("${app.mail.from}")
     private String remitente;
@@ -252,16 +249,6 @@ public class EmailService {
     }
 
     private void send(String to, String subject, String html) {
-        try {
-            CreateEmailOptions request = CreateEmailOptions.builder()
-                    .from(remitente)
-                    .to(to)
-                    .subject(subject)
-                    .html(html)
-                    .build();
-            resend.emails().send(request);
-        } catch (ResendException ex) {
-            throw new EmailSendException("Error al enviar email a " + to + ": " + ex.getMessage(), ex);
-        }
+        mailerooClient.send(remitente, to, subject, html);
     }
 }
