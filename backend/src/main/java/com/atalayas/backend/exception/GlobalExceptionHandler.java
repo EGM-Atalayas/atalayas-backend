@@ -1,5 +1,6 @@
 package com.atalayas.backend.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -167,6 +168,21 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleEmailSend(EmailSendException ex) {
         return buildResponse(HttpStatus.BAD_GATEWAY,
                 "No se pudo enviar el correo electrónico. Inténtalo de nuevo en unos minutos.");
+    }
+
+    /**
+     * 409 — Violación de integridad de datos en base de datos.
+     * Ocurre cuando se intenta guardar un registro que viola una restricción
+     * de la base de datos (unique, not null, foreign key, etc.).
+     * Ejemplo: email duplicado en actualización de usuario.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrity(
+            DataIntegrityViolationException ex) {
+        String message = ex.getMostSpecificCause() != null
+                ? ex.getMostSpecificCause().getMessage()
+                : "La operación viola una restricción de integridad de datos";
+        return buildResponse(HttpStatus.CONFLICT, message);
     }
 
     /**
