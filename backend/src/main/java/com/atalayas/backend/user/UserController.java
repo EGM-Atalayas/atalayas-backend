@@ -3,6 +3,7 @@ package com.atalayas.backend.user;
 import com.atalayas.backend.user.dto.ChangePasswordRequest;
 import com.atalayas.backend.user.dto.CreateUserRequest;
 import com.atalayas.backend.user.dto.UpdateProfileRequest;
+import com.atalayas.backend.user.dto.UpdateUserRequest;
 import com.atalayas.backend.user.dto.UserProfileResponse;
 import com.atalayas.backend.user.dto.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -93,6 +94,14 @@ public class UserController {
     @Operation(summary = "Obtener usuario por ID (solo admins)")
     public ResponseEntity<UserResponse> getUserById(@PathVariable UUID id) {
         return ResponseEntity.ok(userService.getUserById(id));
+    }
+
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN_EMPRESA', 'ROLE_ADMIN')")
+    @Operation(summary = "Actualizar datos de un usuario (solo admins)")
+    public ResponseEntity<UserResponse> updateUser(@PathVariable UUID id,
+                                                    @Valid @RequestBody UpdateUserRequest request) {
+        return ResponseEntity.ok(userService.updateUser(id, request));
     }
 
     @GetMapping

@@ -11,6 +11,7 @@ import com.atalayas.backend.role.repository.RoleRepository;
 import com.atalayas.backend.user.dto.ChangePasswordRequest;
 import com.atalayas.backend.user.dto.CreateUserRequest;
 import com.atalayas.backend.user.dto.UpdateProfileRequest;
+import com.atalayas.backend.user.dto.UpdateUserRequest;
 import com.atalayas.backend.user.dto.UserProfileResponse;
 import com.atalayas.backend.user.dto.UserResponse;
 import com.atalayas.backend.user.entity.User;
@@ -225,6 +226,36 @@ public class UserService {
         if (request.getNotifPendiente() != null) user.setNotifPendiente(request.getNotifPendiente());
         if (request.getModoOscuro() != null) user.setModoOscuro(request.getModoOscuro());
         return userMapper.toUserProfileResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    public UserResponse updateUser(UUID id, UpdateUserRequest request) {
+        User user;
+        if (SecurityUtils.isSuperAdmin()) {
+            user = userRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+        } else {
+            UUID empresaId = SecurityUtils.getEmpresaId();
+            user = userRepository.findByUsuarioIdAndEmpresaId(id, empresaId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+        }
+
+        if (request.getNombre() != null) user.setNombre(request.getNombre());
+        if (request.getApellidos() != null) user.setApellidos(request.getApellidos());
+        if (request.getEmail() != null) {
+            if (!request.getEmail().equals(user.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
+                throw new IllegalArgumentException("Ya existe un usuario con el email: " + request.getEmail());
+            }
+            user.setEmail(request.getEmail());
+        }
+        if (request.getPuestoTrabajo() != null) {
+            user.setPuestoTrabajo(request.getPuestoTrabajo().orElse(null));
+        }
+        if (request.getDepartamento() != null) {
+            user.setDepartamento(request.getDepartamento().orElse(null));
+        }
+
+        return userMapper.toUserResponse(userRepository.save(user));
     }
 
     @Transactional
