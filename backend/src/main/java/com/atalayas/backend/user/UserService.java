@@ -249,10 +249,10 @@ public class UserService {
             user.setEmail(request.getEmail());
         }
         if (request.getPuestoTrabajo() != null) {
-            user.setPuestoTrabajo(request.getPuestoTrabajo().orElse(null));
+            user.setPuestoTrabajo(request.getPuestoTrabajo());
         }
         if (request.getDepartamento() != null) {
-            user.setDepartamento(request.getDepartamento().orElse(null));
+            user.setDepartamento(request.getDepartamento());
         }
 
         return userMapper.toUserResponse(userRepository.save(user));
