@@ -1,10 +1,12 @@
 package com.atalayas.backend.company;
 
 import com.atalayas.backend.audit.service.AuditService;
+import com.atalayas.backend.common.dto.PaginatedResponse;
 import com.atalayas.backend.common.enums.EstadoSolicitud;
 import com.atalayas.backend.common.enums.RoleType;
 import com.atalayas.backend.communication.service.EmailService;
 import com.atalayas.backend.communication.service.NotificationService;
+import com.atalayas.backend.company.CompanySpecifications;
 import com.atalayas.backend.company.dto.AccionSolicitudRequest;
 import com.atalayas.backend.company.dto.CambioEstadoRequest;
 import com.atalayas.backend.company.dto.CompanyResponse;
@@ -25,6 +27,8 @@ import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -133,6 +137,19 @@ public class CompanyService {
                     return companyMapper.toResponse(empresa, admin);
                 })
                 .collect(Collectors.toList());
+    }
+
+    /** Devuelve empresas paginadas con filtros opcionales — solo ROLE_ADMIN */
+    @Transactional(readOnly = true)
+    public PaginatedResponse<CompanyResponse> getAllPaged(int page, int size, String search, EstadoSolicitud estado) {
+        var spec = CompanySpecifications.filtered(search, estado);
+        var pageResult = companyRepository.findAll(spec,
+                PageRequest.of(page, size, Sort.by("nombreEmpresa").ascending()));
+        return PaginatedResponse.of(pageResult, empresa -> {
+            User admin = userRepository.findAllByEmpresaId(empresa.getEmpresaId())
+                    .stream().findFirst().orElse(null);
+            return companyMapper.toResponse(empresa, admin);
+        });
     }
 
     /** Devuelve solo las empresas pendientes de resolución — solo ROLE_ADMIN */

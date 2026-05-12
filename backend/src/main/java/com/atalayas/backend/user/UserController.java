@@ -1,5 +1,6 @@
 package com.atalayas.backend.user;
 
+import com.atalayas.backend.common.dto.PaginatedResponse;
 import com.atalayas.backend.user.dto.ChangePasswordRequest;
 import com.atalayas.backend.user.dto.CreateUserRequest;
 import com.atalayas.backend.user.dto.UpdateProfileRequest;
@@ -109,6 +110,16 @@ public class UserController {
     @Operation(summary = "Listar todos los usuarios (solo admins)")
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
+    }
+
+    @GetMapping("/paginado")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN_EMPRESA', 'ROLE_ADMIN')")
+    @Operation(summary = "Listar usuarios paginados con búsqueda opcional (solo admins)")
+    public ResponseEntity<PaginatedResponse<UserResponse>> getAllUsersPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String search) {
+        return ResponseEntity.ok(userService.getAllUsersPaged(page, size, search));
     }
 
     @DeleteMapping("/{id}/desactivar")
