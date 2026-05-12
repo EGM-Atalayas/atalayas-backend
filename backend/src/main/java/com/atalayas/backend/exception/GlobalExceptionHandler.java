@@ -28,6 +28,7 @@ import java.util.Map;
  * El catch-all de Exception está al final para que cualquier error
  * inesperado devuelva un 500 con estructura en lugar de romperse.
  */
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -112,7 +113,7 @@ public class GlobalExceptionHandler {
         }
 
         Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", OffsetDateTime.now());
+        body.put("timestamp", OffsetDateTime.now().toString());
         body.put("status", HttpStatus.BAD_REQUEST.value());
         body.put("error", "Validación fallida");
         body.put("fieldErrors", fieldErrors);
@@ -190,10 +191,10 @@ public class GlobalExceptionHandler {
      * No expone el mensaje original para no filtrar información interna al cliente.
      */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-                "Error interno del servidor");
-    }
+public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
+    return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+            ex.getClass().getSimpleName() + ": " + ex.getMessage()); // ← temporal
+}
 
 
     // ── BUILDER DE RESPUESTA ESTRUCTURADA ─────────────────────────────────
@@ -206,7 +207,7 @@ public class GlobalExceptionHandler {
     private ResponseEntity<Map<String, Object>> buildResponse(
             HttpStatus status, String message) {
         Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", OffsetDateTime.now());
+        body.put("timestamp", OffsetDateTime.now().toString());
         body.put("status", status.value());
         body.put("error", status.getReasonPhrase());
         body.put("message", message);
