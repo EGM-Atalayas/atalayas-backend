@@ -33,6 +33,7 @@ public class UserMapper {
                 .terminosAceptados(user.isTerminosAceptados())
                 .intentosFallidos(user.getIntentosFallidos())
                 .fechaRegistro(user.getFechaRegistro())
+                .fechaBaja(user.getFechaBaja())
                 .ultimoLogin(user.getUltimoLogin())
                 .actualizadoEn(user.getActualizadoEn())
                 .build();

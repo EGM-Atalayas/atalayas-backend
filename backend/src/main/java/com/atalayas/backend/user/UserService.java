@@ -98,6 +98,7 @@ public class UserService {
                     .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
         }
         user.setActivo(false);
+        user.setFechaBaja(java.time.OffsetDateTime.now());
         userRepository.save(user);
     }
 
