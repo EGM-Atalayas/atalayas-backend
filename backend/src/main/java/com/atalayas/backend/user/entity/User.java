@@ -115,6 +115,11 @@ public class User implements UserDetails {
     @Column(name = "fecha_registro", updatable = false)
     private OffsetDateTime fechaRegistro;
 
+    // Fecha en la que el usuario fue dado de baja (activo = false)
+    // null si el usuario sigue activo
+    @Column(name = "fecha_baja")
+    private OffsetDateTime fechaBaja;
+
     @Column(name = "ultimo_login")
     private OffsetDateTime ultimoLogin;
 
