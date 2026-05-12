@@ -189,10 +189,10 @@ public class GlobalExceptionHandler {
      * No expone el mensaje original para no filtrar información interna al cliente.
      */
     @ExceptionHandler(Exception.class)
-public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
-     return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+    public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
             "DEBUG_V2: " + ex.getClass().getSimpleName() + ": " + ex.getMessage());
-}
+    }
 
 
     // ── BUILDER DE RESPUESTA ESTRUCTURADA ─────────────────────────────────
