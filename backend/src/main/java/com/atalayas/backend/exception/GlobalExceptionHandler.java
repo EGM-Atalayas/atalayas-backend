@@ -193,8 +193,8 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
 public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
-    return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-            ex.getClass().getSimpleName() + ": " + ex.getMessage()); // ← temporal
+     return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+            "DEBUG_V2: " + ex.getClass().getSimpleName() + ": " + ex.getMessage());
 }
 
 
@@ -204,7 +204,7 @@ public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
      * Construye el cuerpo de respuesta de error estándar de la plataforma.
      * Todos los errores tienen la misma estructura para que el frontend
      * pueda procesarlos de forma uniforme sin casos especiales.
-     */
+     */ 
     private ResponseEntity<Map<String, Object>> buildResponse(
             HttpStatus status, String message) {
         Map<String, Object> body = new HashMap<>();
