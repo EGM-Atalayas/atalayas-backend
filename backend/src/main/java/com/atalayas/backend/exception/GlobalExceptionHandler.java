@@ -17,6 +17,7 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Manejador global de excepciones para toda la aplicación.
