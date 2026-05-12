@@ -242,11 +242,11 @@ public class UserService {
 
         if (request.getNombre() != null) user.setNombre(request.getNombre());
         if (request.getApellidos() != null) user.setApellidos(request.getApellidos());
-        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+        if (request.getEmail() != null && !request.getEmail().isBlank()) { // ← añade isBlank()
             if (!request.getEmail().equals(user.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
                 throw new IllegalArgumentException("Ya existe un usuario con el email: " + request.getEmail());
             }
-            user.setEmail("");
+            user.setEmail(request.getEmail());
         }
         if (request.getPuestoTrabajo() != null) {
             user.setPuestoTrabajo(request.getPuestoTrabajo());
