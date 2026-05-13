@@ -1,5 +1,6 @@
 package com.atalayas.backend.progress;
 
+import com.atalayas.backend.common.dto.PaginatedResponse;
 import com.atalayas.backend.progress.dto.CompleteContentRequest;
 import com.atalayas.backend.progress.dto.ProgressResponse;
 import com.atalayas.backend.user.entity.User;
@@ -141,5 +142,17 @@ public class ProgressController {
             @PathVariable UUID empresaId,
             @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(progressService.progresoPorEmpresa(empresaId, user));
+    }
+
+    @GetMapping("/empresa/{empresaId}/paginado")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
+    @Operation(summary = "Obtener progreso paginado de una empresa para dashboard de admin")
+    @ApiResponse(responseCode = "200", description = "Página de progreso de empleados")
+    public ResponseEntity<PaginatedResponse<ProgressResponse>> progresoPorEmpresaPaged(
+            @PathVariable UUID empresaId,
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size) {
+        return ResponseEntity.ok(progressService.progresoPorEmpresaPaged(empresaId, user, page, size));
     }
 }

@@ -1,5 +1,7 @@
 package com.atalayas.backend.company;
 
+import com.atalayas.backend.common.dto.PaginatedResponse;
+import com.atalayas.backend.common.enums.EstadoSolicitud;
 import com.atalayas.backend.company.dto.AccionSolicitudRequest;
 import com.atalayas.backend.company.dto.CambioEstadoRequest;
 import com.atalayas.backend.company.dto.CompanyResponse;
@@ -52,6 +54,18 @@ public class CompanyController {
     @Operation(summary = "Listar todas las empresas (SUPER_ADMIN)")
     public ResponseEntity<List<CompanyResponse>> getAll() {
         return ResponseEntity.ok(companyService.getAll());
+    }
+
+    @GetMapping("/paginado")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Listar empresas paginadas con filtros opcionales (SUPER_ADMIN)")
+    public ResponseEntity<PaginatedResponse<CompanyResponse>> getAllPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) EstadoSolicitud estado) {
+        return ResponseEntity.ok(companyService.getAllPaged(page, size, search, estado));
     }
 
     @GetMapping("/pendientes")

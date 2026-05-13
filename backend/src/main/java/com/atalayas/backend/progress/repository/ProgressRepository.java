@@ -3,6 +3,8 @@ package com.atalayas.backend.progress.repository;
 import com.atalayas.backend.dashboard.dto.GrupoProjection;
 import com.atalayas.backend.dashboard.dto.ProgressEventProjection;
 import com.atalayas.backend.progress.entity.UserProgress;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -32,6 +34,9 @@ public interface ProgressRepository extends JpaRepository<UserProgress, UUID> {
 
     // Todo el progreso de una empresa (para panel de admin empresa)
     List<UserProgress> findByEmpresaIdOrderByActualizadoEnDesc(UUID empresaId);
+
+    // Versión paginada para el panel de admin empresa
+    Page<UserProgress> findByEmpresaIdOrderByActualizadoEnDesc(UUID empresaId, Pageable pageable);
 
     // Progreso de un empleado filtrado por empresa (seguridad cross-company)
     List<UserProgress> findByUsuarioIdAndEmpresaId(UUID usuarioId, UUID empresaId);

@@ -1,5 +1,6 @@
 package com.atalayas.backend.progress;
 
+import com.atalayas.backend.common.dto.PaginatedResponse;
 import com.atalayas.backend.common.enums.ProgressStatus;
 import com.atalayas.backend.communication.service.NotificationService;
 import com.atalayas.backend.content.entity.ContentItem;
@@ -13,6 +14,8 @@ import com.atalayas.backend.progress.repository.ProgressRepository;
 import com.atalayas.backend.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -166,10 +169,6 @@ public class ProgressService {
 
     // ── PROGRESO DE TODA LA EMPRESA (DASHBOARD ADMIN) ─────────────────────
 
-    /**
-     * Devuelve todo el progreso de los empleados de una empresa.
-     * Admin empresa solo puede consultar su propia empresa.
-     */
     public List<ProgressResponse> progresoPorEmpresa(UUID empresaId, User user) {
         String rol = user.getRol().getCodigoRol();
 
@@ -184,6 +183,21 @@ public class ProgressService {
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    public PaginatedResponse<ProgressResponse> progresoPorEmpresaPaged(UUID empresaId, User user, int page, int size) {
+        String rol = user.getRol().getCodigoRol();
+
+        if ("ROLE_ADMIN_EMPRESA".equals(rol)
+                && !user.getEmpresaId().equals(empresaId)) {
+            throw new UnauthorizedException(
+                    "Solo puedes consultar el progreso de tu empresa");
+        }
+
+        var pageResult = progressRepository.findByEmpresaIdOrderByActualizadoEnDesc(
+                empresaId,
+                PageRequest.of(page, size, Sort.by("actualizadoEn").descending()));
+        return PaginatedResponse.of(pageResult, this::toResponse);
     }
 
 

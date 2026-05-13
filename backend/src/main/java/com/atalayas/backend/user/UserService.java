@@ -8,6 +8,7 @@ import com.atalayas.backend.communication.service.NotificationService;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.role.repository.RoleRepository;
+import com.atalayas.backend.common.dto.PaginatedResponse;
 import com.atalayas.backend.user.dto.ChangePasswordRequest;
 import com.atalayas.backend.user.dto.CreateUserRequest;
 import com.atalayas.backend.user.dto.UpdateProfileRequest;
@@ -19,6 +20,9 @@ import com.atalayas.backend.user.mapper.UserMapper;
 import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -84,6 +88,15 @@ public class UserService {
         return userRepository.findAllByEmpresaId(SecurityUtils.getEmpresaId()).stream()
                 .map(userMapper::toUserResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public PaginatedResponse<UserResponse> getAllUsersPaged(int page, int size, String search) {
+        UUID empresaId = SecurityUtils.isSuperAdmin() ? null : SecurityUtils.getEmpresaId();
+        Specification<User> spec = UserSpecifications.filtered(search, empresaId);
+        var pageResult = userRepository.findAll(spec,
+                PageRequest.of(page, size, Sort.by("apellidos").ascending()));
+        return PaginatedResponse.of(pageResult, userMapper::toUserResponse);
     }
 
     @Transactional

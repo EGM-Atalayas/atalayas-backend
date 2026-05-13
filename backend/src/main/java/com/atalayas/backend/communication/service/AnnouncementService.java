@@ -1,16 +1,20 @@
 package com.atalayas.backend.communication.service;
 
+import com.atalayas.backend.communication.AnnouncementSpecifications;
 import com.atalayas.backend.communication.dto.AnnouncementRequest;
 import com.atalayas.backend.communication.dto.AnnouncementResponse;
 import com.atalayas.backend.communication.entity.Announcement;
 import com.atalayas.backend.communication.mapper.AnnouncementMapper;
 import com.atalayas.backend.communication.repository.AnnouncementRepository;
+import com.atalayas.backend.common.dto.PaginatedResponse;
 import com.atalayas.backend.exception.BusinessException;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.user.entity.User;
 import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -86,14 +90,9 @@ public class AnnouncementService {
     // ── LISTAR ────────────────────────────────────────────────────────────
     /**
      * Lista los anuncios visibles para el usuario autenticado
-     * La visibilidad depende del rol y la empresa del usuario:
-     *   - Superadmin       - todos los anuncios activos de la plataforma
-     *   - Con empresa      - los de su empresa + los globales activos
-     *   - Sin empresa      - solo los globales activos (caso borde defensivo)
      */
     @Transactional(readOnly = true)
     public List<AnnouncementResponse> listar(User user) {
-        // Sin sesión activa — solo anuncios globales activos (endpoint público)
         if (user == null) {
             log.debug("Listando anuncios - acceso anónimo, devolviendo solo globales");
             return announcementRepository.findAllByEsGlobalTrueAndActivoTrue()
@@ -113,7 +112,6 @@ public class AnnouncementService {
         } else if (empresaId != null) {
             announcements = announcementRepository.findVisiblesParaEmpresa(empresaId);
         } else {
-            // Caso defensivo: usuario sin empresa asignada — solo ve globales
             log.warn("Usuario {} no tiene empresaId - devolviendo solo anuncios globales",
                     user.getUsuarioId());
             announcements = announcementRepository.findAllByEsGlobalTrueAndActivoTrue();
@@ -122,6 +120,31 @@ public class AnnouncementService {
         return announcements.stream()
                 .map(announcementMapper::toResponse)
                 .toList();
+    }
+
+    /**
+     * Lista paginada de anuncios visibles para el usuario autenticado.
+     * Soporta búsqueda opcional por título (ILIKE).
+     */
+    @Transactional(readOnly = true)
+    public PaginatedResponse<AnnouncementResponse> listarPaged(User user, int page, int size, String search) {
+        if (user == null) {
+            var spec = AnnouncementSpecifications.visible(null, false, search);
+            var result = announcementRepository.findAll(spec,
+                    PageRequest.of(page, size, Sort.by("creadoEn").descending()));
+            return PaginatedResponse.of(result, announcementMapper::toResponse);
+        }
+
+        boolean superAdmin = isSuperAdmin(user);
+        UUID empresaId = user.getEmpresaId();
+
+        log.debug("Listando anuncios paginados - usuarioId={} superAdmin={} empresaId={} page={} size={}",
+                user.getUsuarioId(), superAdmin, empresaId, page, size);
+
+        var spec = AnnouncementSpecifications.visible(empresaId, superAdmin, search);
+        var result = announcementRepository.findAll(spec,
+                PageRequest.of(page, size, Sort.by("creadoEn").descending()));
+        return PaginatedResponse.of(result, announcementMapper::toResponse);
     }
 
     // ── EDITAR ────────────────────────────────────────────────────────────
