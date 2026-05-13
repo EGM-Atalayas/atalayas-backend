@@ -1,19 +1,19 @@
 package com.atalayas.backend.common.service;
 
+import com.atalayas.backend.ai.service.SupabaseStorageService;
+import lombok.RequiredArgsConstructor;
 import net.coobird.thumbnailator.Thumbnails;
 import net.coobird.thumbnailator.geometry.Positions;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Set;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class ImageService {
 
     private static final Set<String> ALLOWED_TYPES = Set.of(
@@ -22,37 +22,43 @@ public class ImageService {
     private static final long MAX_SIZE_BYTES = 5L * 1024 * 1024; // 5 MB
     private static final int AVATAR_SIZE = 400;
 
-    @Value("${app.upload.dir:uploads}")
-    private String uploadDir;
+    private final SupabaseStorageService supabaseStorageService;
 
     /**
-     * Valida, redimensiona y guarda el avatar.
+     * Valida, redimensiona y sube el avatar a Supabase Storage.
+     *
+     * El bucket "modulos" es público, así que la URL devuelta es accesible
+     * directamente desde el frontend sin autenticación. La imagen sobrevive
+     * a reinicios del backend (a diferencia del almacenamiento en disco local).
      *
      * @param file archivo de imagen recibido del cliente
-     * @return URL relativa accesible vía HTTP, p.ej. {@code /uploads/avatars/{uuid}.jpg}
+     * @return URL pública del avatar en Supabase Storage
      */
     public String processAndSaveAvatar(MultipartFile file) {
         validateFile(file);
 
         String filename = UUID.randomUUID() + ".jpg";
-        Path avatarsDir = Paths.get(uploadDir, "avatars");
+        byte[] processedBytes;
 
-        try {
-            Files.createDirectories(avatarsDir);
-            Path destination = avatarsDir.resolve(filename);
-
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Thumbnails.of(file.getInputStream())
                     .size(AVATAR_SIZE, AVATAR_SIZE)
                     .crop(Positions.CENTER)
                     .outputFormat("jpg")
-                    .toFile(destination.toFile());
-
+                    .toOutputStream(out);
+            processedBytes = out.toByteArray();
         } catch (IOException e) {
             throw new IllegalArgumentException(
                     "No se pudo procesar la imagen: " + e.getMessage(), e);
         }
 
-        return "/uploads/avatars/" + filename;
+        // Subir a Supabase Storage en el bucket "modulos", carpeta "avatares"
+        return supabaseStorageService.subirArchivo(
+                processedBytes,
+                "image/jpeg",
+                "avatares",
+                filename
+        );
     }
 
     private void validateFile(MultipartFile file) {

@@ -182,6 +182,7 @@ public class AuthService {
                 .nombre(user.getNombre())
                 .apellidos(user.getApellidos())
                 .avatarUrl(user.getAvatarUrl())
+                .bannerUrl(user.getBannerUrl())
                 .puestoTrabajo(user.getPuestoTrabajo())
                 .rolId(role.getRolId())
                 .codigoRol(role.getCodigoRol())
