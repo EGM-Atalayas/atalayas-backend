@@ -114,6 +114,8 @@ public class AuthService {
                 .nombre(user.getNombre())
                 .apellidos(user.getApellidos())
                 .avatarUrl(user.getAvatarUrl())
+                .bannerUrl(user.getBannerUrl())
+                .puestoTrabajo(user.getPuestoTrabajo())
                 .rolId(rol.getRolId())
                 .codigoRol(rol.getCodigoRol())
                 .nombreRol(rol.getNombreRol())
