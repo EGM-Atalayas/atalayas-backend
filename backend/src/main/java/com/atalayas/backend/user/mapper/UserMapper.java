@@ -1,6 +1,6 @@
 package com.atalayas.backend.user.mapper;
 
-import com.atalayas.backend.role.entity.Role;
+import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.user.dto.UserProfileResponse;
 import com.atalayas.backend.user.dto.UserResponse;
 import com.atalayas.backend.user.entity.User;
@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 
 /**
  * Mapper para convertir entre la entidad User y sus DTOs.
- *
  * toUserResponse() — vista completa para uso administrativo.
  * toUserProfileResponse() — vista de perfil para el usuario autenticado,
  * incluye nombreCompleto calculado para mostrar en la UI.
@@ -17,7 +16,7 @@ import org.springframework.stereotype.Component;
 public class UserMapper {
 
     public UserResponse toUserResponse(User user) {
-        Role role = user.getRol();
+        Rol role = user.getRol();
         return UserResponse.builder()
                 .usuarioId(user.getUsuarioId())
                 .email(user.getEmail())
@@ -25,22 +24,23 @@ public class UserMapper {
                 .apellidos(user.getApellidos())
                 .avatarUrl(user.getAvatarUrl())
                 .empresaId(user.getEmpresaId())
-                .rolId(role.getRolId())
-                .codigoRol(role.getCodigoRol())
-                .nombreRol(role.getNombreRol())
+                .rolId(role != null ? role.getRolId() : null)
+                .codigoRol(role != null ? role.getCodigoRol() : null)
+                .nombreRol(role != null ? role.getNombreRol() : null)
                 .puestoTrabajo(user.getPuestoTrabajo())
                 .departamento(user.getDepartamento())
                 .activo(user.isActivo())
                 .terminosAceptados(user.isTerminosAceptados())
                 .intentosFallidos(user.getIntentosFallidos())
                 .fechaRegistro(user.getFechaRegistro())
+                .fechaBaja(user.getFechaBaja())
                 .ultimoLogin(user.getUltimoLogin())
                 .actualizadoEn(user.getActualizadoEn())
                 .build();
     }
 
     public UserProfileResponse toUserProfileResponse(User user) {
-        Role role = user.getRol();
+        Rol role = user.getRol();
         return UserProfileResponse.builder()
                 .usuarioId(user.getUsuarioId())
                 .email(user.getEmail())

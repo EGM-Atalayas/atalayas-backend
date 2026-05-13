@@ -94,11 +94,7 @@
             <groupId>jakarta.annotation</groupId>
             <artifactId>jakarta.annotation-api</artifactId>
         </dependency>
-        <!-- Email (SMTP) -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
-        </dependency>
+        <!-- Email (Maileroo API — cliente HTTP nativo, sin SDK externo) -->
 
         <!-- Extracción de texto: PDF (PDFBox) y DOCX (Apache POI) -->
         <dependency>

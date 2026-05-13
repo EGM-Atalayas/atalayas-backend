@@ -4,8 +4,12 @@ import com.atalayas.backend.common.enums.EstadoSolicitud;
 import com.atalayas.backend.company.entity.Company;
 import com.atalayas.backend.dashboard.dto.SectorDistribucionDto;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+import org.springframework.data.repository.query.Param;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -42,4 +46,10 @@ public interface CompanyRepository extends JpaRepository<Company, UUID> {
            "GROUP BY c.sector " +
            "ORDER BY COUNT(c) DESC")
     List<SectorDistribucionDto> findSectorDistribucion();
+
+    /** Actualiza la bandera email_enviado de una empresa — llamado desde CompanyEventListener tras commit. */
+    @Modifying
+    @Transactional
+    @Query("UPDATE Company c SET c.emailEnviado = :enviado WHERE c.empresaId = :id")
+    void updateEmailEnviado(@Param("id") UUID id, @Param("enviado") boolean enviado);
 }

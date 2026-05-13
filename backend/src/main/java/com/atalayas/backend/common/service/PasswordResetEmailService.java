@@ -1,22 +1,19 @@
 package com.atalayas.backend.common.service;
 
+import com.atalayas.backend.communication.client.MailerooClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class PasswordResetEmailService {
 
-    private final JavaMailSender mailSender;
+    private final MailerooClient mailerooClient;
 
     @Value("${app.mail.from}")
     private String from;
@@ -71,7 +68,7 @@ public class PasswordResetEmailService {
                           <td style="background:#f5f6f8;padding:20px 40px;text-align:center;
                                      border-top:1px solid #e2e5ea;">
                             <p style="color:#9BA3B0;font-size:12px;margin:0;">
-                              © 2025 Atalayas Área Empresarial · Alicante
+                              © 2026 Atalayas Área Empresarial · Alicante
                             </p>
                           </td>
                         </tr>
@@ -83,16 +80,10 @@ public class PasswordResetEmailService {
                 """.formatted(nombre, enlace);
 
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(from);
-            helper.setTo(destinatario);
-            helper.setSubject("Restablecer contraseña · Atalayas");
-            helper.setText(html, true);
-            mailSender.send(message);
-            log.info("[EmailService] Correo de recuperación enviado a {}", destinatario);
-        } catch (MessagingException e) {
-            log.error("[EmailService] Error al enviar correo a {}: {}", destinatario, e.getMessage());
+            mailerooClient.send(from, destinatario, "Restablecer contraseña · Atalayas", html);
+            log.info("[MailerooClient] Correo de recuperación enviado a {}", destinatario);
+        } catch (Exception e) {
+            log.error("[MailerooClient] Error al enviar correo a {}: {}", destinatario, e.getMessage());
         }
     }
 }

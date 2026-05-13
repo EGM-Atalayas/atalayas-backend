@@ -3,6 +3,7 @@ package com.atalayas.backend.user;
 import com.atalayas.backend.user.dto.ChangePasswordRequest;
 import com.atalayas.backend.user.dto.CreateUserRequest;
 import com.atalayas.backend.user.dto.UpdateProfileRequest;
+import com.atalayas.backend.user.dto.UpdateUserRequest;
 import com.atalayas.backend.user.dto.UserProfileResponse;
 import com.atalayas.backend.user.dto.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -95,6 +96,14 @@ public class UserController {
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN_EMPRESA', 'ROLE_ADMIN')")
+    @Operation(summary = "Actualizar datos de un usuario (solo admins)")
+    public ResponseEntity<UserResponse> updateUser(@PathVariable UUID id,
+                                                    @Valid @RequestBody UpdateUserRequest request) {
+        return ResponseEntity.ok(userService.updateUser(id, request));
+    }
+
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN_EMPRESA', 'ROLE_ADMIN')")
     @Operation(summary = "Listar todos los usuarios (solo admins)")
@@ -108,5 +117,13 @@ public class UserController {
     public ResponseEntity<Void> desactivarUsuario(@PathVariable UUID id) {
         userService.desactivarUsuario(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/activar")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN_EMPRESA', 'ROLE_ADMIN')")
+    @Operation(summary = "Activar usuario (solo admins)")
+    public ResponseEntity<Void> activarUsuario(@PathVariable UUID id) {
+        userService.activarUsuario(id);
+        return ResponseEntity.ok().build();
     }
 }

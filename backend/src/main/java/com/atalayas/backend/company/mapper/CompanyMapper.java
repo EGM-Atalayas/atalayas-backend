@@ -42,6 +42,7 @@ public class CompanyMapper {
                 .descripcion(company.getDescripcion())
                 .estadoSolicitud(company.getEstadoSolicitud())
                 .activo(company.isActivo())
+                .emailEnviado(company.isEmailEnviado())
                 .fechaSolicitud(company.getFechaSolicitud())
                 .fechaResolucion(company.getFechaResolucion())
                 .actualizadoEn(company.getActualizadoEn())

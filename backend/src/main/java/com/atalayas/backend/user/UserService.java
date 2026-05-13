@@ -6,11 +6,12 @@ import com.atalayas.backend.common.util.SecurityUtils;
 import com.atalayas.backend.communication.service.EmailService;
 import com.atalayas.backend.communication.service.NotificationService;
 import com.atalayas.backend.exception.ResourceNotFoundException;
-import com.atalayas.backend.role.entity.Role;
+import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.role.repository.RoleRepository;
 import com.atalayas.backend.user.dto.ChangePasswordRequest;
 import com.atalayas.backend.user.dto.CreateUserRequest;
 import com.atalayas.backend.user.dto.UpdateProfileRequest;
+import com.atalayas.backend.user.dto.UpdateUserRequest;
 import com.atalayas.backend.user.dto.UserProfileResponse;
 import com.atalayas.backend.user.dto.UserResponse;
 import com.atalayas.backend.user.entity.User;
@@ -97,12 +98,27 @@ public class UserService {
                     .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
         }
         user.setActivo(false);
+        user.setFechaBaja(java.time.OffsetDateTime.now());
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void activarUsuario(UUID id) {
+        User user;
+        if (SecurityUtils.isSuperAdmin()) {
+            user = userRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+        } else {
+            UUID empresaId = SecurityUtils.getEmpresaId();
+            user = userRepository.findByUsuarioIdAndEmpresaId(id, empresaId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+        }
+        user.setActivo(true);
         userRepository.save(user);
     }
 
     /**
      * Crea un usuario desde el panel de administración.
-     *
      * Reglas de seguridad:
      * - ROLE_ADMIN_EMPRESA: crea usuarios solo en su propia empresa.
      *   No puede asignar ROLE_ADMIN.
@@ -129,7 +145,7 @@ public class UserService {
         }
 
         // 3. Buscar rol
-        Role role = roleRepository.findById(request.getRolId())
+        Rol role = roleRepository.findById(request.getRolId())
                 .orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado con id: " + request.getRolId()));
 
         // 4. ROLE_ADMIN_EMPRESA no puede crear usuarios con ROLE_ADMIN
@@ -149,27 +165,40 @@ public class UserService {
                 .departamento(request.getDepartamento())
                 .build();
 
-        user = userRepository.save(user);
+        final User savedUser = userRepository.save(user);
         log.info("Usuario creado por admin - usuarioId={} empresaId={} rol={}",
-                user.getUsuarioId(), empresaId, role.getCodigoRol());
+                savedUser.getUsuarioId(), empresaId, role.getCodigoRol());
 
-        // 6. Notificación interna de bienvenida
+        // 6. Notificación interna de bienvenida al nuevo usuario
         notificationService.crearInterna(
-                user.getUsuarioId(),
+                savedUser.getUsuarioId(),
                 "BIENVENIDA",
-                "¡Bienvenido/a " + user.getNombre() + "! Explora tus módulos formativos.",
+                "¡Bienvenido/a " + savedUser.getNombre() + "! Explora tus módulos formativos.",
                 "/dashboard"
         );
+
+        // 6b. Notificar al/los admin empresa que hay un nuevo empleado
+        if (role.getRoleType() == RoleType.ROLE_EMPLEADO) {
+            userRepository.findAllByEmpresaIdAndActivoTrue(empresaId).stream()
+                    .filter(u -> "ROLE_ADMIN_EMPRESA".equals(u.getRol().getCodigoRol())
+                            && !u.getUsuarioId().equals(savedUser.getUsuarioId()))
+                    .forEach(admin -> notificationService.crearInterna(
+                            admin.getUsuarioId(),
+                            "EMPLEADO_NUEVO",
+                            savedUser.getNombre() + " " + savedUser.getApellidos() + " se ha unido a tu empresa.",
+                            "/dashboard/admin"
+                    ));
+        }
 
         // 7. Email de bienvenida — el fallo de email no revierte la creación
         try {
             emailService.enviarBienvenidaUsuarioCreado(
-                    user.getEmail(), user.getNombre(), empresaId.toString());
+                    savedUser.getEmail(), savedUser.getNombre(), empresaId.toString());
         } catch (Exception e) {
-            log.warn("No se pudo enviar el email de bienvenida a {}: {}", user.getEmail(), e.getMessage());
+            log.warn("No se pudo enviar el email de bienvenida a {}: {}", savedUser.getEmail(), e.getMessage());
         }
 
-        return userMapper.toUserResponse(user);
+        return userMapper.toUserResponse(savedUser);
     }
 
     @Transactional
@@ -198,6 +227,36 @@ public class UserService {
         if (request.getNotifPendiente() != null) user.setNotifPendiente(request.getNotifPendiente());
         if (request.getModoOscuro() != null) user.setModoOscuro(request.getModoOscuro());
         return userMapper.toUserProfileResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    public UserResponse updateUser(UUID id, UpdateUserRequest request) {
+        User user;
+        if (SecurityUtils.isSuperAdmin()) {
+            user = userRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+        } else {
+            UUID empresaId = SecurityUtils.getEmpresaId();
+            user = userRepository.findByUsuarioIdAndEmpresaId(id, empresaId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+        }
+
+        if (request.getNombre() != null) user.setNombre(request.getNombre());
+        if (request.getApellidos() != null) user.setApellidos(request.getApellidos());
+        if (request.getEmail() != null && !request.getEmail().isBlank()) { // ← añade isBlank()
+            if (!request.getEmail().equals(user.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
+                throw new IllegalArgumentException("Ya existe un usuario con el email: " + request.getEmail());
+            }
+            user.setEmail(request.getEmail());
+        }
+        if (request.getPuestoTrabajo() != null) {
+            user.setPuestoTrabajo(request.getPuestoTrabajo());
+        }
+        if (request.getDepartamento() != null) {
+            user.setDepartamento(request.getDepartamento());
+        }
+
+        return userMapper.toUserResponse(userRepository.save(user));
     }
 
     @Transactional

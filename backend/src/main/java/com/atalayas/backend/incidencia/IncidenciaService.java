@@ -1,6 +1,7 @@
 package com.atalayas.backend.incidencia;
 
 import com.atalayas.backend.audit.service.AuditService;
+import com.atalayas.backend.common.util.SecurityUtils;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.incidencia.dto.IncidenciaRequest;
 import com.atalayas.backend.incidencia.dto.IncidenciaResponse;
@@ -14,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +27,11 @@ public class IncidenciaService {
     @Transactional
     public IncidenciaResponse crear(IncidenciaRequest request) {
         Incidencia incidencia = incidenciaMapper.toEntity(request);
+
+        if (incidencia.getEmpresaId() == null) {
+            incidencia.setEmpresaId(SecurityUtils.getEmpresaId());
+        }
+
         Incidencia saved = incidenciaRepository.save(incidencia);
 
         if (PrioridadIncidencia.CRITICA.equals(saved.getPrioridad())) {
@@ -42,16 +47,15 @@ public class IncidenciaService {
         return incidenciaRepository.findAllByOrderByCreadoEnDesc()
                 .stream()
                 .map(incidenciaMapper::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Transactional
-    public IncidenciaResponse cerrar(Long id) {
+    public IncidenciaResponse cambiarEstado(Long id, EstadoIncidencia nuevoEstado) {
         Incidencia incidencia = incidenciaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Incidencia no encontrada con id: " + id));
-        incidencia.setEstado(EstadoIncidencia.CERRADA);
-        return incidenciaMapper.toResponse(incidenciaRepository.save(incidencia));
+        incidencia.setEstado(nuevoEstado);
+        return incidenciaMapper.toResponse(incidenciaRepository.saveAndFlush(incidencia));
     }
 }
-

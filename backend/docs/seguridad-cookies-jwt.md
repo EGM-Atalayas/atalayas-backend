@@ -460,10 +460,12 @@ config.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"))
 
 | Token | Acción al expirar |
 |---|---|
-| `accessToken` (1h) | El filtro rechaza la petición con 401 → frontend llama a `/refresh-token` |
+| `accessToken` (1h) | El filtro intercepta la petición **antes de llegar al controlador** y responde `401` inmediato con `{"message":"Token expirado o inválido. Usa /api/v1/auth/refresh-token..."}` → el frontend debe llamar a `POST /auth/refresh-token` |
 | `refreshToken` (7d) | `/refresh-token` devuelve 401 → frontend redirige al login |
 
 Los tokens se **rotan en cada refresco**: `/refresh-token` emite un par completamente nuevo y sobreescribe ambas cookies.
+
+> 🔜 **Mejora futura:** implementar un interceptor de refresh automático en el frontend para que los 401 por token expirado sean transparentes para el usuario. Ver → [seguridad-token-expiration.md](./seguridad-token-expiration.md).
 
 ### 8.5 Bloqueo de cuenta
 

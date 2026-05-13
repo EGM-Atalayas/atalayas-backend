@@ -1,6 +1,6 @@
 package com.atalayas.backend.user.entity;
 
-import com.atalayas.backend.role.entity.Role;
+import com.atalayas.backend.role.entity.Rol;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -88,7 +88,7 @@ public class User implements UserDetails {
     // FK al rol
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "rol_id", nullable = false)
-    private Role rol;
+    private Rol rol;
 
     // Contador de intentos fallidos de login bloquea la cuenta a partir de 5
     @Column(name = "intentos_fallidos", nullable = false)
@@ -114,6 +114,11 @@ public class User implements UserDetails {
 
     @Column(name = "fecha_registro", updatable = false)
     private OffsetDateTime fechaRegistro;
+
+    // Fecha en la que el usuario fue dado de baja (activo = false)
+    // null si el usuario sigue activo
+    @Column(name = "fecha_baja")
+    private OffsetDateTime fechaBaja;
 
     @Column(name = "ultimo_login")
     private OffsetDateTime ultimoLogin;

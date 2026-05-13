@@ -30,7 +30,7 @@ import java.util.UUID;
  *   POST / PUT / PATCH - admin empresa (solo los suyos) y superadmin
  */
 @RestController
-@RequestMapping("/api/v1/eventos")
+@RequestMapping("/api/v1/comunidad/eventos")
 @RequiredArgsConstructor
 @Tag(name = "Comunidad", description = "Gestión de eventos de comunidad por empresa")
 @SecurityRequirement(name = "bearerAuth")
@@ -40,7 +40,7 @@ public class CommunityEventController {
 
 
     /**
-     * POST /api/v1/eventos
+     * POST /api/v1/comunidad/eventos
      * Crea un evento de comunidad
      * Admin empresa crea en su empresa
      * Superadmin puede crear globales
@@ -63,7 +63,7 @@ public class CommunityEventController {
 
 
     /**
-     * GET /api/v1/eventos
+     * GET /api/v1/comunidad/eventos
      * Lista los eventos visibles para el usuario autenticado
      * Empleado: activos de su empresa + globales activos
      * Admin empresa: todos los de su empresa + globales activos
@@ -80,7 +80,7 @@ public class CommunityEventController {
 
 
     /**
-     * GET /api/v1/eventos/{id}
+     * GET /api/v1/comunidad/eventos/{id}
      * Devuelve un evento por ID
      * Devuelve 403 si el evento no pertenece a la empresa del usuario
      */
@@ -101,7 +101,7 @@ public class CommunityEventController {
 
 
     /**
-     * PUT /api/v1/eventos/{id}
+     * PUT /api/v1/comunidad/eventos/{id}
      * Actualiza un evento, solo superadmin puede cambiar el flag esGlobal
      * Admin empresa solo puede editar los suyos - 403 si es ajeno o global
      */
@@ -124,7 +124,7 @@ public class CommunityEventController {
 
 
     /**
-     * PATCH /api/v1/eventos/{id}/desactivar
+     * PATCH /api/v1/comunidad/eventos/{id}/desactivar
      * Soft delete del evento
      * Admin empresa solo puede desactivar los suyos - 403 si es ajeno o global
      */

@@ -8,19 +8,23 @@ import com.atalayas.backend.communication.service.NotificationService;
 import com.atalayas.backend.company.dto.AccionSolicitudRequest;
 import com.atalayas.backend.company.dto.CambioEstadoRequest;
 import com.atalayas.backend.company.dto.CompanyResponse;
+import com.atalayas.backend.company.dto.ReenviarEmailRequest;
 import com.atalayas.backend.company.dto.SolicitudAltaEmpresaRequest;
 import com.atalayas.backend.company.dto.SolicitudAltaEmpresaResponse;
 import com.atalayas.backend.company.dto.SolicitudPendienteResponse;
 import com.atalayas.backend.company.entity.Company;
+import com.atalayas.backend.company.event.CompanyEvent;
 import com.atalayas.backend.company.mapper.CompanyMapper;
 import com.atalayas.backend.company.repository.CompanyRepository;
 import com.atalayas.backend.exception.BusinessException;
 import com.atalayas.backend.exception.ResourceNotFoundException;
-import com.atalayas.backend.role.entity.Role;
+import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.role.repository.RoleRepository;
 import com.atalayas.backend.user.entity.User;
 import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +43,7 @@ import java.util.stream.Collectors;
  * Solo ROLE_ADMIN puede aprobar, rechazar y gestionar empresas.
  * El alta pública (formulario de solicitud) no requiere autenticación.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CompanyService {
@@ -51,6 +56,7 @@ public class CompanyService {
     private final EmailService emailService;
     private final NotificationService notificationService;
     private final AuditService auditService;
+    private final ApplicationEventPublisher eventPublisher;
 
 
     // ── SOLICITUD DE ALTA ─────────────────────────────────────────────────
@@ -79,7 +85,7 @@ public class CompanyService {
 
         // Paso 2 — Buscar el rol ADMIN_EMPRESA en BD
         // Si no existe es un error de configuración del sistema, no del usuario
-        Role roleAdminEmpresa = roleRepository
+        Rol roleAdminEmpresa = roleRepository
                 .findByCodigoRol(RoleType.ROLE_ADMIN_EMPRESA.name())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Rol ROLE_ADMIN_EMPRESA no encontrado en BD. " +
@@ -105,7 +111,7 @@ public class CompanyService {
                         admin.getUsuarioId(),
                         "SOLICITUD_EMPRESA",
                         "Nueva solicitud de registro: " + savedCompany.getNombreEmpresa(),
-                        "/admin/solicitudes"
+                        "/superadmin/solicitudes"
                 )
         );
 
@@ -153,13 +159,10 @@ public class CompanyService {
     /**
      * Cambia el estado de una empresa — solo ROLE_ADMIN.
      *
-     * Transiciones permitidas desde este endpoint (PATCH /{id}/estado):
-     *   PENDIENTE → APROBADA  : activa empresa y usuarios, envía emails y notificaciones
+     * Transiciones permitidas:
+     *   PENDIENTE → APROBADA  : activa empresa y usuarios, publica CompanyEvent → email tras commit
      *   APROBADA  → PAUSADA   : desactiva empresa y usuarios temporalmente
      *   PAUSADA   → APROBADA  : reactiva empresa y usuarios
-     *
-     * El rechazo (con hard delete) solo se puede realizar desde PATCH /{id}/solicitud.
-     * Cualquier otra transición devuelve 400 Bad Request.
      */
     @Transactional
     public CompanyResponse cambiarEstado(UUID id, CambioEstadoRequest request) {
@@ -206,9 +209,17 @@ public class CompanyService {
                     userRepository.save(u);
 
                     if (actual == EstadoSolicitud.PENDIENTE) {
-                        // Primera aprobación: email de bienvenida + notificación interna
-                        emailService.enviarAprobacion(
-                                u.getEmail(), u.getNombre(), company.getNombreEmpresa());
+                        // Email enviado DESPUÉS del commit vía CompanyEventListener (@Async + AFTER_COMMIT)
+                        // → un fallo SMTP nunca revierte el cambio de estado en BD
+                        eventPublisher.publishEvent(new CompanyEvent(
+                                company.getEmpresaId(),
+                                company.getNombreEmpresa(),
+                                u.getEmail(),
+                                u.getNombre(),
+                                actual,
+                                destino
+                        ));
+
                         notificationService.crearInterna(
                                 u.getUsuarioId(),
                                 "BIENVENIDA",
@@ -218,7 +229,6 @@ public class CompanyService {
                                 "/dashboard"
                         );
                     }
-                    // Reactivación desde PAUSADA: sin email, solo se reactiva el acceso
                 }
             }
 
@@ -242,7 +252,7 @@ public class CompanyService {
     }
 
 
-    // ── SOLICITUDES (nuevo frontend superadmin) ──────────────────────────────
+    // ── SOLICITUDES ──────────────────────────────────────────────────────────
 
     /**
      * Activa o desactiva una empresa APROBADA (toggle de activo).
@@ -288,18 +298,17 @@ public class CompanyService {
 
     /**
      * PATCH /api/v1/empresas/{id}/solicitud
-     * Aprueba o rechaza una solicitud mediante el campo {@code accion}: "aprobar" | "rechazar".
+     * Aprueba o rechaza una solicitud (accion: "aprobar" | "rechazar").
      *
-     * - "aprobar": delega en {@link #cambiarEstado} (activa empresa y usuarios, envía emails).
-     * - "rechazar": envía email de rechazo y elimina físicamente usuarios y empresa de la BD
-     *               (en ese orden para respetar la FK usuario → empresa).
+     * - "aprobar": delega en cambiarEstado → publica CompanyEvent → email tras commit.
+     * - "rechazar": captura datos del usuario ANTES del hard delete, publica CompanyEvent
+     *               con estadoNuevo=RECHAZADA → email tras commit → hard delete.
      */
     @Transactional
     public void resolverSolicitud(UUID id, AccionSolicitudRequest request) {
         boolean aprobar = "aprobar".equalsIgnoreCase(request.getAccion());
 
         if (aprobar) {
-            // Capturar nombre antes de cambiarEstado para tenerlo disponible en el audit
             Company empresa = findOrThrow(id);
             String nombreEmpresa = empresa.getNombreEmpresa();
 
@@ -307,13 +316,10 @@ public class CompanyService {
             cambio.setNuevoEstado(EstadoSolicitud.APROBADA);
             cambiarEstado(id, cambio);
 
-            // REQUIRES_NEW en registrar() garantiza que el audit se persiste
-            // independientemente de si la transacción padre hace rollback
             auditService.registrar(
                     "Empresa \"" + nombreEmpresa + "\" aprobada", "success");
 
         } else {
-            // Rechazo: capturar datos antes de borrar, luego hard delete
             Company empresa = findOrThrow(id);
 
             if (empresa.getEstadoSolicitud() != EstadoSolicitud.PENDIENTE) {
@@ -321,21 +327,60 @@ public class CompanyService {
                         "Solo se pueden rechazar empresas en estado PENDIENTE");
             }
 
-            // Notificar por email antes de borrar
+            // Capturar datos ANTES del delete y publicar evento.
+            // CompanyEventListener envía el email DESPUÉS del commit (AFTER_COMMIT + @Async),
+            // cuando la empresa ya no existe en BD — los datos viajan en el record inmutable.
             List<User> usuarios = userRepository.findAllByEmpresaIdAndActivoFalse(empresa.getEmpresaId());
             for (User u : usuarios) {
-                emailService.enviarRechazo(u.getEmail(), u.getNombre(), empresa.getNombreEmpresa());
+                eventPublisher.publishEvent(new CompanyEvent(
+                        empresa.getEmpresaId(),
+                        empresa.getNombreEmpresa(),
+                        u.getEmail(),
+                        u.getNombre(),
+                        EstadoSolicitud.PENDIENTE,
+                        EstadoSolicitud.RECHAZADA
+                ));
             }
 
             String nombreEmpresa = empresa.getNombreEmpresa();
 
-            // Hard delete: primero usuarios (FK), luego empresa
             userRepository.deleteAllByEmpresaId(empresa.getEmpresaId());
             companyRepository.delete(empresa);
 
             auditService.registrar(
                     "Solicitud de \"" + nombreEmpresa + "\" rechazada y eliminada", "warning");
         }
+    }
+
+    /**
+     * POST /api/v1/empresas/{id}/reenviar-email
+     * Permite al superadmin reenviar el email de aprobación cuando emailEnviado=false.
+     * Lanza EmailSendException si el envío falla — el GlobalExceptionHandler devuelve 502.
+     */
+    @Transactional
+    public void reenviarEmail(UUID id, ReenviarEmailRequest request) {
+        Company empresa = findOrThrow(id);
+
+        if (empresa.getEstadoSolicitud() != EstadoSolicitud.APROBADA) {
+            throw new BusinessException(
+                    "Solo se puede reenviar email a empresas en estado APROBADA");
+        }
+
+        User admin = userRepository.findAllByEmpresaId(empresa.getEmpresaId()).stream()
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No se encontró usuario admin para la empresa: " + id));
+
+        // EmailSendException se propaga sin capturar → GlobalExceptionHandler devuelve 502
+        emailService.enviarAprobacion(
+                admin.getEmail(), admin.getNombre(), empresa.getNombreEmpresa());
+
+        empresa.setEmailEnviado(true);
+        companyRepository.save(empresa);
+
+        auditService.registrar(
+                "Email de aprobación reenviado a empresa \"" + empresa.getNombreEmpresa() + "\"",
+                "info");
     }
 
 
@@ -347,3 +392,4 @@ public class CompanyService {
                         "Empresa no encontrada con id: " + id));
     }
 }
+

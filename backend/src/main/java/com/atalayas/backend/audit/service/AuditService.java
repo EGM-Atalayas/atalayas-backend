@@ -33,9 +33,14 @@ public class AuditService {
     private final AuditLogRepository auditLogRepository;
 
     /**
-     * Persiste un nuevo evento de auditoría en su propia transacción independiente.
-     * REQUIRES_NEW garantiza que el log se graba aunque la transacción del llamador
-     * haga rollback (p. ej. si un email falla después de aprobar una empresa).
+     * Persiste un nuevo evento de auditoría.
+     *
+     * Se usa REQUIRES_NEW para abrir una transacción independiente de la del
+     * llamador: si la transacción padre hace rollback (p. ej. por un fallo SMTP
+     * no capturado), el audit log se persiste igualmente como traza de lo
+     * ocurrido. application.properties aumenta hikari.leak-detection-threshold
+     * a 30 s para evitar falsos positivos mientras la conexión de audit está
+     * abierta en paralelo.
      *
      * @param texto Descripción legible del evento.
      * @param tipo  "info" | "success" | "warning" | "error"

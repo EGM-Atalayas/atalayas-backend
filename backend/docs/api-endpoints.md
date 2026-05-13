@@ -88,6 +88,7 @@
 | `PATCH` | `/empresas/{id}/estado` | `ADMIN` | Cambiar estado de una empresa activa (ver tabla de transiciones). No permite rechazar. |
 | `PATCH` | `/empresas/{id}/solicitud` | `ADMIN` | Aprobar o rechazar una solicitud. Body: `{ "accion": "aprobar" \| "rechazar" }`. |
 | `PATCH` | `/empresas/{id}/activacion` | `ADMIN` | Toggle `activo` de una empresa aprobada y todos sus usuarios. |
+| `POST` | `/empresas/{id}/reenviar-email` | `ADMIN` | Reenvía el email de aprobación al admin cuando `emailEnviado = false`. Devuelve `502` si SMTP falla. |
 
 ### `PATCH /empresas/{id}/estado` — Transiciones
 **Body:** `{ "nuevoEstado": "APROBADA" | "PAUSADA" }`
@@ -98,16 +99,29 @@
 | **`APROBADA`** | ❌ | ✅ | ❌ |
 | **`PAUSADA`** | ✅ | ❌ | ❌ |
 
-| Transición | `company.activo` | Usuarios | Email | Notif. interna | Audit log |
-|---|:---:|---|---|:---:|:---:|
-| `PENDIENTE → APROBADA` | `true` | Se activan (`activo = true`) | ✉ Bienvenida | ✅ | ✅ `success` |
-| `PENDIENTE → (rechazo)` | — *(borrado físico)* | Eliminados de BD | ✉ Rechazo | ❌ | ✅ `warning` |
-| `APROBADA → PAUSADA` | `false` | Se desactivan (`activo = false`) | Ninguno | ❌ | ❌ |
-| `PAUSADA → APROBADA` | `true` | Se reactivan (`activo = true`) | Ninguno | ❌ | ❌ |
+| Transición | `company.activo` | `emailEnviado` | Usuarios | Email | Notif. interna | Audit log |
+|---|:---:|:---:|---|---|:---:|:---:|
+| `PENDIENTE → APROBADA` | `true` | `true` tras envío | Se activan (`activo = true`) | ✉ Bienvenida (async, post-commit) | ✅ | ✅ `success` |
+| `PENDIENTE → (rechazo)` | — *(borrado físico)* | — | Eliminados de BD | ✉ Rechazo (async, post-commit) | ❌ | ✅ `warning` |
+| `APROBADA → PAUSADA` | `false` | sin cambio | Se desactivan (`activo = false`) | Ninguno | ❌ | ❌ |
+| `PAUSADA → APROBADA` | `true` | sin cambio | Se reactivan (`activo = true`) | Ninguno | ❌ | ❌ |
 
 > ⚠️ El **rechazo** elimina físicamente la empresa y sus usuarios de la BD (hard delete). Es irreversible.
+> Los emails se envían **siempre después del commit** vía `@TransactionalEventListener(AFTER_COMMIT) + @Async` — un fallo SMTP nunca revierte el cambio de estado en BD.
+> Si `emailEnviado = false` en una empresa APROBADA, el superadmin puede reenviar el email manualmente con `POST /{id}/reenviar-email`.
 > El audit log de aprobación y rechazo se persiste en transacción independiente (`REQUIRES_NEW`) — siempre se graba aunque falle el envío de email.
 > Transiciones prohibidas o no-op devuelven `400 Bad Request` con mensaje descriptivo.
+
+### `POST /empresas/{id}/reenviar-email` — reenvío manual
+
+**Body:** `{ "tipo": "aprobacion" }` _(único valor en v1)_
+
+| Código | Situación |
+|--------|-----------|
+| `200`  | Email enviado y `email_enviado = true` persistido |
+| `400`  | `tipo` inválido o empresa no está en estado `APROBADA` |
+| `404`  | Empresa no encontrada |
+| `502`  | Fallo SMTP (capturado por `GlobalExceptionHandler`) |
 ---
 ## 4. Dashboard · `/api/v1/dashboard`
 | Método | Ruta | Rol | Descripción |
@@ -217,31 +231,52 @@ El campo `tiempo` es calculado en backend según la antigüedad del evento:
 | `GET` | `/progreso/empresa/{empresaId}` | `ADMIN_EMPRESA` | Progreso de todos los empleados de una empresa (dashboard). |
 ---
 ## 8. Anuncios · `/api/v1/anuncios`
-| Método | Ruta | Rol mínimo | Descripción |
+> `GET /anuncios` es **público**: sin sesión devuelve solo anuncios globales activos. Con sesión devuelve los de la empresa + globales (o todos si es `ADMIN`).
+
+| Método | Ruta | Rol / Auth | Descripción |
 |--------|------|-----------|-------------|
 | `POST` | `/anuncios` | `ADMIN_EMPRESA` | Crear anuncio. ADMIN puede crear globales (`esGlobal = true`). |
-| `GET` | `/anuncios` | Cualquiera | Listar anuncios de empresa + globales. ADMIN ve toda la plataforma. |
+| `GET` | `/anuncios` | ❌ Pública ¹ | Listar anuncios. Sin sesión: solo globales activos. Con sesión: empresa + globales. ADMIN ve toda la plataforma. |
 | `PATCH` | `/anuncios/{id}/desactivar` | `ADMIN_EMPRESA` | Soft-delete. ADMIN_EMPRESA solo desactiva los propios. |
 | `DELETE` | `/anuncios/{id}` | `ADMIN_EMPRESA` | Alias REST de `PATCH /{id}/desactivar`. Misma lógica. |
+
+¹ Sin token devuelve solo anuncios con `esGlobal = true` y `activo = true`.
 ---
 ## 9. Comunicados · `/api/v1/comunicados`
 > Comunicados oficiales de EGM para toda la plataforma. Solo gestionables por `ADMIN`.
+> `GET /comunicados` es **público**: sin sesión devuelve solo los vigentes y activos.
+
 | Método | Ruta | Rol | Descripción |
 |--------|------|-----|-------------|
 | `POST` | `/comunicados` | `ADMIN` | Crear comunicado oficial. |
-| `GET` | `/comunicados` | Cualquiera | Listar vigentes. ADMIN ve el histórico completo (expirados/desactivados incluidos). |
+| `GET` | `/comunicados` | ❌ Pública ¹ | Listar comunicados. Sin sesión: solo vigentes activos. ADMIN ve el histórico completo (expirados/desactivados incluidos). |
 | `PATCH` | `/comunicados/{id}/desactivar` | `ADMIN` | Desactivar comunicado. |
+
+¹ Sin token devuelve `findActivosVigentes()` — comunicados con `activo = true` y `fechaExpiracion` no superada.
 ---
 ## 10. Notificaciones · `/api/v1/notificaciones`
-> Se generan automáticamente en eventos clave (ej. aprobación de empresa) y también manualmente.
+> Se generan automáticamente en eventos clave (ej. aprobación de empresa) via `NotificationService#crearInterna` y también manualmente via endpoint.
+> → [Documentación detallada del módulo](modulos/notificaciones.md)
+
 | Método | Ruta | Rol mínimo | Descripción |
 |--------|------|-----------|-------------|
-| `POST` | `/notificaciones` | `ADMIN_EMPRESA` | Crear notificación manual para un usuario. |
-| `GET` | `/notificaciones/me` | Cualquiera | Todas mis notificaciones (leídas + no leídas). |
-| `GET` | `/notificaciones/me/no-leidas` | Cualquiera | Solo las no leídas (para la campana del frontend). |
+| `POST` | `/notificaciones` | `ADMIN` o `ADMIN_EMPRESA` | Crear notificación manual para un usuario. `ROLE_EMPLEADO` → `403`. |
+| `GET` | `/notificaciones/me` | Cualquiera | Mis notificaciones paginadas (leídas + no leídas). Params: `?page=0&size=20`. Devuelve `Page<NotificationResponse>`. |
+| `GET` | `/notificaciones/me/no-leidas` | Cualquiera | Solo las no leídas (para la campana del frontend). Devuelve `List<NotificationResponse>`. |
 | `GET` | `/notificaciones/me/contador` | Cualquiera | Número de no leídas. Respuesta: `{ "noLeidas": N }`. |
-| `PATCH` | `/notificaciones/{id}/leer` | Cualquiera | Marcar una notificación como leída. Solo el destinatario puede ejecutarlo. |
-| `PATCH` | `/notificaciones/me/leer-todas` | Cualquiera | Marcar todas como leídas. Respuesta: `{ "actualizadas": N }`. |
+| `PATCH` | `/notificaciones/{id}/leer` | Cualquiera | Marcar una notificación como leída. `400` si ya leída o no es el destinatario. `404` si no existe. |
+| `PATCH` | `/notificaciones/me/leer-todas` | Cualquiera | Marcar todas las no leídas como leídas. Solo afecta al usuario autenticado. Respuesta: `{ "actualizadas": N }`. |
+
+**`NotificationRequest` — campos:**
+
+| Campo | Tipo | Requerido | Validación |
+|-------|------|:---------:|------------|
+| `destinatarioId` | `UUID` | ✅ | `@NotNull` |
+| `tipo` | `String` | ✅ | `@NotBlank`, máx. 100 chars |
+| `mensaje` | `String` | ✅ | `@NotBlank` |
+| `enlace` | `String` | ❌ | Máx. 500 chars — URL relativa al recurso relacionado |
+
+**`NotificationResponse` — campos:** `notificacionId`, `destinatarioId`, `tipo`, `mensaje`, `enlace`, `leido`, `creadoEn`, `actualizadoEn`.
 ---
 ## 11. Eventos de Comunidad · `/api/v1/eventos`
 | Método | Ruta | Rol mínimo | Descripción |
@@ -285,7 +320,7 @@ El campo `tiempo` es calculado en backend según la antigüedad del evento:
 |--------|------|-----|-------------|
 | `POST` | `/incidencias` | `ADMIN` | Crear nueva incidencia. Si `prioridad = CRITICA` se genera un evento `error` en `audit_log`. |
 | `GET` | `/incidencias` | `ADMIN` | Listar todas las incidencias ordenadas por `creadoEn DESC`. |
-| `PATCH` | `/incidencias/{id}/cerrar` | `ADMIN` | Cierra la incidencia (estado → `CERRADA`). |
+| `PATCH` | `/incidencias/{id}/estado` | `ADMIN` | Cambiar el estado de una incidencia. Body: `{ "estado": "ABIERTA" \| "EN_CURSO" \| "RESUELTA" \| "CERRADA" }`. El valor del campo `estado` es case-insensitive (el backend lo normaliza a mayúsculas). |
 
 **`POST /incidencias` — body:**
 ```json
@@ -301,10 +336,10 @@ El campo `tiempo` es calculado en backend según la antigüedad del evento:
 ```json
 [
   {
-    "id": 5,
+    "incidenciaId": "5",
     "titulo": "Caída del servicio de notificaciones",
     "descripcion": "El servicio de emails no responde desde las 10:00.",
-    "estado": "ABIERTA",
+    "estado": "EN_CURSO",
     "prioridad": "CRITICA",
     "empresaId": null,
     "creadoEn": "2026-04-27T10:05:00Z"
@@ -314,24 +349,27 @@ El campo `tiempo` es calculado en backend según la antigüedad del evento:
 
 | Campo | Valores | Descripción |
 |-------|---------|-------------|
-| `estado` | `ABIERTA` \| `CERRADA` | Estado de la incidencia |
+| `incidenciaId` | `String` (numérico) | Identificador de la incidencia. Usar como `{id}` en el PATCH. |
+| `estado` | `ABIERTA` \| `EN_CURSO` \| `RESUELTA` \| `CERRADA` | Estado actual de la incidencia |
 | `prioridad` | `NORMAL` \| `CRITICA` | Las `CRITICA` generan entrada en `audit_log` automáticamente |
 | `empresaId` | `UUID` \| `null` | `null` = incidencia global de plataforma |
 
 ---
 ## Resumen de endpoints públicos (sin autenticación)
-| Método | Ruta |
-|--------|------|
-| `POST` | `/auth/login` |
-| `POST` | `/auth/register` |
-| `POST` | `/auth/refresh-token` |
-| `POST` | `/auth/logout` |
-| `POST` | `/auth/forgot-password` |
-| `POST` | `/auth/reset-password` |
-| `POST` | `/empresas/solicitud` |
-| `GET` | `/empresas/aprobadas` |
-| `GET` | `/swagger-ui/**` |
-| `GET` | `/v3/api-docs/**` |
+| Método | Ruta | Nota |
+|--------|------|------|
+| `POST` | `/auth/login` | |
+| `POST` | `/auth/register` | |
+| `POST` | `/auth/refresh-token` | |
+| `POST` | `/auth/logout` | |
+| `POST` | `/auth/forgot-password` | |
+| `POST` | `/auth/reset-password` | |
+| `POST` | `/empresas/solicitud` | |
+| `GET` | `/empresas/aprobadas` | |
+| `GET` | `/anuncios` | Sin sesión: solo globales activos |
+| `GET` | `/comunicados` | Sin sesión: solo vigentes activos |
+| `GET` | `/swagger-ui/**` | |
+| `GET` | `/v3/api-docs/**` | |
 ---
 ## Notas de seguridad multi-tenant
 - Los usuarios con `ROLE_ADMIN_EMPRESA` están **aislados por empresa**: acceder por ID a recursos de otra empresa devuelve `404` (no `403`, para no exponer la existencia del recurso).
