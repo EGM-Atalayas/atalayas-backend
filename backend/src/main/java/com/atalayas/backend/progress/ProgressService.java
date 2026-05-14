@@ -19,6 +19,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -123,14 +125,19 @@ public class ProgressService {
                     "/formacion/contenido/" + request.getContenidoId()
             );
 
-            // Comprobar si el módulo completo ha sido terminado y generar certificado
-            // (se ejecuta de forma asíncrona en transacción independiente)
+            // Generar certificado si el módulo está al 100%.
+            // Se registra en afterCommit para garantizar que el registro de progreso
+            // ya está visible en BD antes de que CertificadoService cuente los completados.
             if (contenido.getModuloId() != null && targetEmpresaId != null) {
-                certificadoService.generarSiModuloCompletado(
-                        targetUsuarioId,
-                        contenido.getModuloId(),
-                        targetEmpresaId
-                );
+                final UUID fUserId    = targetUsuarioId;
+                final UUID fModuloId  = contenido.getModuloId();
+                final UUID fEmpresaId = targetEmpresaId;
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        certificadoService.generarSiModuloCompletado(fUserId, fModuloId, fEmpresaId);
+                    }
+                });
             }
         }
 
