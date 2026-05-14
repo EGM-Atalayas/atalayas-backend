@@ -61,17 +61,27 @@ public class CertificadoService {
     private final SupabaseStorageService    supabaseStorageService;
     private final NotificationService       notificationService;
 
-    // ── PUNTO DE ENTRADA ───────────────────────────────────────────────────
+    // ── PUNTOS DE ENTRADA ──────────────────────────────────────────────────
+
+    /**
+     * Llamado directamente por el frontend cuando el empleado termina el último
+     * contenido del módulo (sin depender del conteo de trazabilidad_lectura).
+     *
+     * Obtiene el usuario del contexto de seguridad y delega en {@link #doGenerar}.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public String solicitarCertificado(UUID moduloId) {
+        var user     = com.atalayas.backend.common.util.SecurityUtils.getCurrentUser();
+        UUID userId    = user.getUsuarioId();
+        UUID empresaId = user.getEmpresaId();
+        if (empresaId == null) throw new IllegalStateException("Usuario sin empresa asignada");
+        return doGenerar(userId, moduloId, empresaId);
+    }
 
     /**
      * Comprueba si el usuario ha completado todos los contenidos activos del módulo
      * y, en caso afirmativo, genera y persiste el certificado.
-     *
-     * Se llama desde {@link com.atalayas.backend.progress.ProgressService} tras
-     * marcar un contenido como completado por primera vez.
-     *
-     * Se ejecuta en transacción independiente para aislar posibles errores de
-     * generación PDF del guardado de progreso.
+     * Se llama desde ProgressService vía afterCommit.
      */
     @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -88,36 +98,42 @@ public class CertificadoService {
                     .countByUsuarioIdAndModuloIdAndCompletadoTrue(usuarioId, moduloId);
             if (completados < totalContenidos) return;
 
-            // 3. Evitar duplicados: si ya existe un certificado para este par usuario+módulo, salir
-            boolean yaGenerado = asignacionRepository.existsCertificado(
-                    usuarioId, empresaId, TipoDocumento.CERTIFICADO.name(),
-                    buildDescripcionClave(moduloId));
-            if (yaGenerado) {
-                log.debug("Certificado ya generado para usuario={} módulo={}", usuarioId, moduloId);
-                return;
-            }
+            doGenerar(usuarioId, moduloId, empresaId);
 
-            // 4. Cargar datos del módulo y del empleado
-            TrainingModule modulo = moduleRepository.findById(moduloId).orElse(null);
-            if (modulo == null) {
-                log.warn("Módulo {} no encontrado al generar certificado", moduloId);
-                return;
-            }
-            User empleado = userRepository.findById(usuarioId).orElse(null);
-            if (empleado == null) {
-                log.warn("Usuario {} no encontrado al generar certificado", usuarioId);
-                return;
-            }
+        } catch (Exception e) {
+            log.error("Error generando certificado para usuario={} módulo={}: {}",
+                    usuarioId, moduloId, e.getMessage(), e);
+        }
+    }
 
-            // 5. Generar PDF
+    /**
+     * Lógica central: genera el PDF, lo sube a Supabase y crea el Documento.
+     * Devuelve la URL del certificado generado (o del ya existente si ya había uno).
+     */
+    private String doGenerar(UUID usuarioId, UUID moduloId, UUID empresaId) {
+        // Evitar duplicados
+        boolean yaGenerado = asignacionRepository.existsCertificado(
+                usuarioId, empresaId, TipoDocumento.CERTIFICADO.name(),
+                buildDescripcionClave(moduloId));
+        if (yaGenerado) {
+            log.debug("Certificado ya existente para usuario={} módulo={}", usuarioId, moduloId);
+            return asignacionRepository.findCertificadoUrl(usuarioId, buildDescripcionClave(moduloId))
+                    .orElse("");
+        }
+
+        TrainingModule modulo = moduleRepository.findById(moduloId)
+                .orElseThrow(() -> new com.atalayas.backend.exception.ResourceNotFoundException(
+                        "Módulo no encontrado: " + moduloId));
+        User empleado = userRepository.findById(usuarioId)
+                .orElseThrow(() -> new com.atalayas.backend.exception.ResourceNotFoundException(
+                        "Usuario no encontrado: " + usuarioId));
+
+        try {
             byte[] pdfBytes = generarPdf(empleado, modulo);
-
-            // 6. Subir a Supabase Storage
             String filename = "certificado-" + UUID.randomUUID() + ".pdf";
             String url = supabaseStorageService.subirArchivo(
                     pdfBytes, "application/pdf", "documentos", filename);
 
-            // 7. Persistir Documento
             Documento doc = Documento.builder()
                     .empresaId(empresaId)
                     .titulo("Certificado de " + modulo.getNombre())
@@ -127,13 +143,12 @@ public class CertificadoService {
                     .archivoNombre(filename)
                     .mimeType("application/pdf")
                     .tamanoBytes((long) pdfBytes.length)
-                    .subidoPor(usuarioId)          // generado automáticamente por el propio sistema
+                    .subidoPor(usuarioId)
                     .requiereFirma(false)
                     .activo(true)
                     .build();
             doc = documentoRepository.save(doc);
 
-            // 8. Crear asignación para el empleado
             asignacionRepository.save(DocumentoAsignacion.builder()
                     .documentoId(doc.getDocumentoId())
                     .usuarioId(usuarioId)
@@ -141,21 +156,18 @@ public class CertificadoService {
                     .firmado(false)
                     .build());
 
-            // 9. Notificación interna
             notificationService.crearInterna(
                     usuarioId,
                     "CERTIFICADO_GENERADO",
-                    "🎓 ¡Has completado \"" + modulo.getNombre() + "\"! Tu certificado ya está disponible.",
+                    "¡Has completado \"" + modulo.getNombre() + "\"! Tu certificado ya está disponible.",
                     "/dashboard/perfil#mis-documentos"
             );
 
-            log.info("Certificado generado - usuario={} módulo={} doc={}",
-                    usuarioId, moduloId, doc.getDocumentoId());
+            log.info("Certificado generado - usuario={} módulo={} doc={}", usuarioId, moduloId, doc.getDocumentoId());
+            return url;
 
         } catch (Exception e) {
-            // No propagamos la excepción para no revertir el progreso del empleado
-            log.error("Error generando certificado para usuario={} módulo={}: {}",
-                    usuarioId, moduloId, e.getMessage(), e);
+            throw new IllegalStateException("Error generando PDF del certificado: " + e.getMessage(), e);
         }
     }
 
