@@ -3,6 +3,8 @@ package com.atalayas.backend.documento;
 import com.atalayas.backend.documento.dto.AsignacionDetalleResponse;
 import com.atalayas.backend.documento.dto.DocumentoResponse;
 import com.atalayas.backend.documento.dto.DocumentoUploadRequest;
+import com.atalayas.backend.documento.dto.FirmarDocumentoRequest;
+import com.atalayas.backend.documento.dto.FirmarDocumentoResponse;
 import com.atalayas.backend.documento.enums.TipoDocumento;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -107,6 +109,14 @@ public class DocumentoController {
     public ResponseEntity<Void> marcarVisto(@PathVariable("id") UUID id) {
         documentoService.marcarVisto(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/me/{id}/firmar")
+    @Operation(summary = "Firmar un documento: estampa la firma en el PDF y lo guarda en Supabase")
+    public ResponseEntity<FirmarDocumentoResponse> firmar(
+            @PathVariable("id") UUID id,
+            @RequestBody @jakarta.validation.Valid FirmarDocumentoRequest request) {
+        return ResponseEntity.ok(documentoService.firmarDocumento(id, request));
     }
 
     @GetMapping("/me/certificado/{moduloId}")
