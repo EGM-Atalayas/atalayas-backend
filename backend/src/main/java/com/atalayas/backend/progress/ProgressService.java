@@ -5,6 +5,7 @@ import com.atalayas.backend.common.enums.ProgressStatus;
 import com.atalayas.backend.communication.service.NotificationService;
 import com.atalayas.backend.content.entity.ContentItem;
 import com.atalayas.backend.content.repository.ContentRepository;
+import com.atalayas.backend.documento.CertificadoService;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.exception.UnauthorizedException;
 import com.atalayas.backend.progress.dto.CompleteContentRequest;
@@ -46,6 +47,7 @@ public class ProgressService {
     private final ProgressRepository progressRepository;
     private final ContentRepository contentRepository;
     private final NotificationService notificationService;
+    private final CertificadoService certificadoService;
 
 
     // ── REGISTRAR O ACTUALIZAR PROGRESO ───────────────────────────────────
@@ -120,6 +122,16 @@ public class ProgressService {
                     "¡Has completado \"" + contenido.getTitulo() + "\"! Sigue así.",
                     "/formacion/contenido/" + request.getContenidoId()
             );
+
+            // Comprobar si el módulo completo ha sido terminado y generar certificado
+            // (se ejecuta de forma asíncrona en transacción independiente)
+            if (contenido.getModuloId() != null && targetEmpresaId != null) {
+                certificadoService.generarSiModuloCompletado(
+                        targetUsuarioId,
+                        contenido.getModuloId(),
+                        targetEmpresaId
+                );
+            }
         }
 
         return toResponse(progressRepository.save(progreso));

@@ -210,6 +210,17 @@ public class DocumentoService {
         }
     }
 
+    /**
+     * Devuelve la URL del certificado auto-generado para un módulo concreto.
+     * El frontend lo llama al pulsar "Descargar certificado": si existe la versión
+     * guardada en Supabase la abre directamente; si no, genera localmente con jsPDF.
+     */
+    public Optional<String> obtenerUrlCertificadoModulo(UUID moduloId) {
+        UUID userId = SecurityUtils.getCurrentUser().getUsuarioId();
+        String clave = "cert:modulo:" + moduloId;
+        return asignacionRepository.findCertificadoUrl(userId, clave);
+    }
+
     // ── INTERNOS ────────────────────────────────────────────────────────────
 
     private Documento obtenerDocumentoEmpresa(UUID documentoId) {
