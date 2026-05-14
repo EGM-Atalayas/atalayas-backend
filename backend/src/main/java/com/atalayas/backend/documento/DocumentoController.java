@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -106,5 +107,14 @@ public class DocumentoController {
     public ResponseEntity<Void> marcarVisto(@PathVariable("id") UUID id) {
         documentoService.marcarVisto(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/me/certificado/{moduloId}")
+    @Operation(summary = "Obtener URL del certificado auto-generado para un módulo")
+    public ResponseEntity<Map<String, String>> getCertificadoModulo(
+            @PathVariable("moduloId") UUID moduloId) {
+        return documentoService.obtenerUrlCertificadoModulo(moduloId)
+                .map(url -> ResponseEntity.ok(Map.of("url", url)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

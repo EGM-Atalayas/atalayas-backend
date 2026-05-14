@@ -44,6 +44,9 @@ public interface ProgressRepository extends JpaRepository<UserProgress, UUID> {
     // Cuántos contenidos ha completado un empleado en su empresa
     long countByUsuarioIdAndEmpresaIdAndCompletadoTrue(UUID usuarioId, UUID empresaId);
 
+    // Cuántos contenidos de un módulo concreto ha completado un empleado (para saber si terminó el módulo)
+    long countByUsuarioIdAndModuloIdAndCompletadoTrue(UUID usuarioId, UUID moduloId);
+
     // Cuántos empleados han completado un contenido concreto (para dashboard)
     long countByContenidoIdAndCompletadoTrue(UUID contenidoId);
 
