@@ -18,6 +18,7 @@ import com.atalayas.backend.user.entity.User;
 import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -266,7 +267,7 @@ public class DocumentoService {
 
         // 4. Estampar firma con PDFBox
         byte[] pdfFirmado;
-        try (PDDocument document = PDDocument.load(pdfOriginal);
+        try (PDDocument document = Loader.loadPDF(pdfOriginal);
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
             // Última página
