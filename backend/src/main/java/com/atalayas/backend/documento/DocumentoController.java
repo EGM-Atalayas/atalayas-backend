@@ -42,6 +42,7 @@ import java.util.UUID;
 public class DocumentoController {
 
     private final DocumentoService documentoService;
+    private final CertificadoService certificadoService;
     private final ObjectMapper objectMapper;
 
     // ── ADMIN ───────────────────────────────────────────────────────────────
@@ -117,6 +118,19 @@ public class DocumentoController {
             @PathVariable("id") UUID id,
             @RequestBody @jakarta.validation.Valid FirmarDocumentoRequest request) {
         return ResponseEntity.ok(documentoService.firmarDocumento(id, request));
+    }
+
+    /**
+     * El frontend llama a este endpoint cuando el empleado completa el último
+     * contenido del módulo. Genera (o devuelve el existente) el certificado PDF
+     * y lo guarda en "Mis documentos".
+     */
+    @PostMapping("/me/certificado/{moduloId}")
+    @Operation(summary = "Generar o recuperar certificado al completar un módulo")
+    public ResponseEntity<Map<String, String>> generarCertificado(
+            @PathVariable("moduloId") UUID moduloId) {
+        String url = certificadoService.solicitarCertificado(moduloId);
+        return ResponseEntity.ok(Map.of("url", url));
     }
 
     @GetMapping("/me/certificado/{moduloId}")
