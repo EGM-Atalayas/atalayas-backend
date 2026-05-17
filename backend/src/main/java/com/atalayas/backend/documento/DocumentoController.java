@@ -1,10 +1,12 @@
 package com.atalayas.backend.documento;
 
 import com.atalayas.backend.documento.dto.AsignacionDetalleResponse;
+import com.atalayas.backend.documento.dto.DocumentoAsignarRequest;
+import com.atalayas.backend.documento.dto.DocumentoDesasignarRequest;
 import com.atalayas.backend.documento.dto.DocumentoResponse;
+import com.atalayas.backend.documento.dto.DocumentoUpdateRequest;
 import com.atalayas.backend.documento.dto.DocumentoUploadRequest;
-import com.atalayas.backend.documento.dto.FirmarDocumentoRequest;
-import com.atalayas.backend.documento.dto.FirmarDocumentoResponse;
+import com.atalayas.backend.documento.dto.FirmaRequest;
 import com.atalayas.backend.documento.enums.TipoDocumento;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -89,6 +91,35 @@ public class DocumentoController {
         return ResponseEntity.ok(documentoService.listarAsignaciones(id));
     }
 
+    @PostMapping("/{id}/asignaciones")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
+    @Operation(summary = "Añadir nuevas asignaciones a un documento existente (ignora duplicados)")
+    public ResponseEntity<Void> añadirAsignaciones(
+            @PathVariable("id") UUID id,
+            @RequestBody DocumentoAsignarRequest body) {
+        documentoService.añadirAsignaciones(id, body);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}/asignaciones")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
+    @Operation(summary = "Eliminar asignaciones concretas de un documento")
+    public ResponseEntity<Void> eliminarAsignaciones(
+            @PathVariable("id") UUID id,
+            @RequestBody @Valid DocumentoDesasignarRequest body) {
+        documentoService.eliminarAsignaciones(id, body);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
+    @Operation(summary = "Actualizar metadatos de un documento (título, descripción, tipo, requiere firma)")
+    public ResponseEntity<DocumentoResponse> actualizar(
+            @PathVariable("id") UUID id,
+            @RequestBody @Valid DocumentoUpdateRequest body) {
+        return ResponseEntity.ok(documentoService.actualizarDocumento(id, body));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
     @Operation(summary = "Desactivar documento (soft delete)")
@@ -113,24 +144,12 @@ public class DocumentoController {
     }
 
     @PostMapping("/me/{id}/firmar")
-    @Operation(summary = "Firmar un documento: estampa la firma en el PDF y lo guarda en Supabase")
-    public ResponseEntity<FirmarDocumentoResponse> firmar(
+    @Operation(summary = "Estampar firma manuscrita sobre el PDF y persistir resultado")
+    public ResponseEntity<Map<String, String>> firmar(
             @PathVariable("id") UUID id,
-            @RequestBody @jakarta.validation.Valid FirmarDocumentoRequest request) {
-        return ResponseEntity.ok(documentoService.firmarDocumento(id, request));
-    }
-
-    /**
-     * El frontend llama a este endpoint cuando el empleado completa el último
-     * contenido del módulo. Genera (o devuelve el existente) el certificado PDF
-     * y lo guarda en "Mis documentos".
-     */
-    @PostMapping("/me/certificado/{moduloId}")
-    @Operation(summary = "Generar o recuperar certificado al completar un módulo")
-    public ResponseEntity<Map<String, String>> generarCertificado(
-            @PathVariable("moduloId") UUID moduloId) {
-        String url = certificadoService.solicitarCertificado(moduloId);
-        return ResponseEntity.ok(Map.of("url", url));
+            @RequestBody @Valid FirmaRequest body) {
+        String firmaUrl = documentoService.firmarDocumento(id, body.getFirmaBase64());
+        return ResponseEntity.ok(Map.of("firmaUrl", firmaUrl));
     }
 
     @GetMapping("/me/certificado/{moduloId}")

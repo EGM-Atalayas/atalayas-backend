@@ -32,4 +32,6 @@ public class RegisterRequest {
     private UUID rolId;
 
     private String puestoTrabajo;
+
+    private String departamento;
 }
