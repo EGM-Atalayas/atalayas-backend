@@ -469,7 +469,7 @@ public class DocumentoService {
 
         // 4. Estampar firma sobre la última página con PDFBox
         byte[] pdfFirmado;
-        try (PDDocument pdf = PDDocument.load(pdfBytes)) {
+        try (PDDocument pdf = Loader.loadPDF(pdfBytes)) {
             int lastPageIdx = pdf.getNumberOfPages() - 1;
             var lastPage = pdf.getPage(lastPageIdx);
             var mediaBox = lastPage.getMediaBox();
@@ -490,7 +490,7 @@ public class DocumentoService {
                 cs.drawImage(firmaImg, x, y, drawW, drawH);
             }
 
-            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
             pdf.save(out);
             pdfFirmado = out.toByteArray();
         } catch (IOException e) {
