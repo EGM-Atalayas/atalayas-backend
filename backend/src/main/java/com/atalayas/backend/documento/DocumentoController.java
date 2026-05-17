@@ -1,7 +1,10 @@
 package com.atalayas.backend.documento;
 
 import com.atalayas.backend.documento.dto.AsignacionDetalleResponse;
+import com.atalayas.backend.documento.dto.DocumentoAsignarRequest;
+import com.atalayas.backend.documento.dto.DocumentoDesasignarRequest;
 import com.atalayas.backend.documento.dto.DocumentoResponse;
+import com.atalayas.backend.documento.dto.DocumentoUpdateRequest;
 import com.atalayas.backend.documento.dto.DocumentoUploadRequest;
 import com.atalayas.backend.documento.dto.FirmaRequest;
 import com.atalayas.backend.documento.enums.TipoDocumento;
@@ -85,6 +88,35 @@ public class DocumentoController {
     @Operation(summary = "Ver detalle de asignaciones de un documento")
     public ResponseEntity<List<AsignacionDetalleResponse>> listarAsignaciones(@PathVariable("id") UUID id) {
         return ResponseEntity.ok(documentoService.listarAsignaciones(id));
+    }
+
+    @PostMapping("/{id}/asignaciones")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
+    @Operation(summary = "Añadir nuevas asignaciones a un documento existente (ignora duplicados)")
+    public ResponseEntity<Void> añadirAsignaciones(
+            @PathVariable("id") UUID id,
+            @RequestBody DocumentoAsignarRequest body) {
+        documentoService.añadirAsignaciones(id, body);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}/asignaciones")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
+    @Operation(summary = "Eliminar asignaciones concretas de un documento")
+    public ResponseEntity<Void> eliminarAsignaciones(
+            @PathVariable("id") UUID id,
+            @RequestBody @Valid DocumentoDesasignarRequest body) {
+        documentoService.eliminarAsignaciones(id, body);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
+    @Operation(summary = "Actualizar metadatos de un documento (título, descripción, tipo, requiere firma)")
+    public ResponseEntity<DocumentoResponse> actualizar(
+            @PathVariable("id") UUID id,
+            @RequestBody @Valid DocumentoUpdateRequest body) {
+        return ResponseEntity.ok(documentoService.actualizarDocumento(id, body));
     }
 
     @DeleteMapping("/{id}")

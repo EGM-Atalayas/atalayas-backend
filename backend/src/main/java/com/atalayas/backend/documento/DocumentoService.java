@@ -4,7 +4,10 @@ import com.atalayas.backend.ai.service.SupabaseStorageService;
 import com.atalayas.backend.common.util.SecurityUtils;
 import com.atalayas.backend.communication.service.NotificationService;
 import com.atalayas.backend.documento.dto.AsignacionDetalleResponse;
+import com.atalayas.backend.documento.dto.DocumentoAsignarRequest;
+import com.atalayas.backend.documento.dto.DocumentoDesasignarRequest;
 import com.atalayas.backend.documento.dto.DocumentoResponse;
+import com.atalayas.backend.documento.dto.DocumentoUpdateRequest;
 import com.atalayas.backend.documento.dto.DocumentoUploadRequest;
 import com.atalayas.backend.documento.entity.Documento;
 import com.atalayas.backend.documento.entity.DocumentoAsignacion;
@@ -177,6 +180,90 @@ public class DocumentoService {
         return asigs.stream()
                 .map(a -> mapper.toAsignacionDetalle(a, userMap.get(a.getUsuarioId())))
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public DocumentoResponse actualizarDocumento(UUID documentoId, DocumentoUpdateRequest request) {
+        Documento doc = obtenerDocumentoEmpresa(documentoId);
+        doc.setTitulo(request.getTitulo().trim());
+        doc.setDescripcion(request.getDescripcion() != null && !request.getDescripcion().isBlank()
+                ? request.getDescripcion().trim() : null);
+        doc.setTipo(request.getTipo());
+        doc.setRequiereFirma(request.isRequiereFirma());
+        doc = documentoRepository.save(doc);
+
+        DocumentoResponse resp = mapper.toResponse(doc);
+        resp.setTotalAsignados((int) asignacionRepository.findByDocumentoId(doc.getDocumentoId()).size());
+        resp.setTotalVistos((int) asignacionRepository.countByDocumentoIdAndVistoTrue(doc.getDocumentoId()));
+        resp.setTotalFirmados((int) asignacionRepository.countByDocumentoIdAndFirmadoTrue(doc.getDocumentoId()));
+        return resp;
+    }
+
+    @Transactional
+    public void añadirAsignaciones(UUID documentoId, DocumentoAsignarRequest request) {
+        User admin = SecurityUtils.getCurrentUser();
+        UUID empresaId = admin.getEmpresaId();
+        if (empresaId == null) throw new AccessDeniedException("Usuario sin empresa asignada");
+
+        Documento doc = obtenerDocumentoEmpresa(documentoId);
+
+        // Resolver destinatarios usando la misma lógica que la subida
+        // Reutilizamos DocumentoUploadRequest como adaptador
+        DocumentoUploadRequest uploadReq = new DocumentoUploadRequest();
+        uploadReq.setAsignarATodos(request.isAsignarATodos());
+        uploadReq.setUsuariosIds(request.getUsuariosIds());
+        uploadReq.setDepartamentos(request.getDepartamentos());
+        Set<UUID> destinatarios = resolverDestinatarios(empresaId, uploadReq);
+
+        // Ya asignados — evitar duplicados (la tabla tiene unique constraint)
+        Set<UUID> yaAsignados = asignacionRepository.findByDocumentoId(documentoId)
+                .stream().map(DocumentoAsignacion::getUsuarioId).collect(Collectors.toSet());
+
+        int nuevos = 0;
+        for (UUID userId : destinatarios) {
+            if (yaAsignados.contains(userId)) continue;
+            asignacionRepository.save(
+                    DocumentoAsignacion.builder()
+                            .documentoId(doc.getDocumentoId())
+                            .usuarioId(userId)
+                            .visto(false)
+                            .firmado(false)
+                            .build()
+            );
+            nuevos++;
+
+            if (request.isNotificar()) {
+                try {
+                    notificationService.crearInterna(
+                            userId,
+                            "DOCUMENTO_NUEVO",
+                            "Tienes un nuevo documento disponible: " + doc.getTitulo(),
+                            "/dashboard/perfil#mis-documentos"
+                    );
+                } catch (Exception e) {
+                    log.warn("No se pudo notificar a {} sobre documento {}: {}", userId, documentoId, e.getMessage());
+                }
+            }
+        }
+        log.info("Asignaciones añadidas - docId={} nuevas={}", documentoId, nuevos);
+    }
+
+    @Transactional
+    public void eliminarAsignaciones(UUID documentoId, DocumentoDesasignarRequest request) {
+        Documento doc = obtenerDocumentoEmpresa(documentoId);
+
+        // Verificar que las asignaciones pertenecen a este documento
+        List<DocumentoAsignacion> aEliminar = asignacionRepository.findAllById(request.getAsignacionIds())
+                .stream()
+                .filter(a -> a.getDocumentoId().equals(doc.getDocumentoId()))
+                .toList();
+
+        if (aEliminar.isEmpty()) {
+            throw new ResourceNotFoundException("No se encontraron asignaciones válidas para eliminar");
+        }
+
+        asignacionRepository.deleteAll(aEliminar);
+        log.info("Asignaciones eliminadas - docId={} cantidad={}", documentoId, aEliminar.size());
     }
 
     @Transactional
