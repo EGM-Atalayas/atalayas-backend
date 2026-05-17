@@ -21,7 +21,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
+
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -221,7 +231,103 @@ public class DocumentoService {
         return asignacionRepository.findCertificadoUrl(userId, clave);
     }
 
+    /**
+     * Estampa la firma manuscrita (PNG en Base64) sobre la última página del PDF
+     * y sube el resultado a Supabase como nuevo archivo.
+     *
+     * @param documentoId  UUID del documento (asignado al usuario actual)
+     * @param firmaBase64  Imagen PNG de la firma, codificada en Base64 (sin prefijo data:...)
+     * @return URL pública del PDF firmado en Supabase
+     */
+    @Transactional
+    public String firmarDocumento(UUID documentoId, String firmaBase64) {
+        UUID userId = SecurityUtils.getCurrentUser().getUsuarioId();
+
+        // 1. Obtener asignación
+        DocumentoAsignacion asig = asignacionRepository
+                .findByDocumentoIdAndUsuarioId(documentoId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Documento no asignado al usuario"));
+
+        Documento doc = documentoRepository.findById(documentoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Documento no encontrado"));
+
+        if (!doc.isActivo()) throw new ResourceNotFoundException("Documento no disponible");
+        if (!doc.isRequiereFirma()) throw new IllegalStateException("Este documento no requiere firma");
+        if (asig.isFirmado()) throw new IllegalStateException("El documento ya ha sido firmado");
+
+        // 2. Descargar PDF original desde Supabase (URL pública)
+        byte[] pdfBytes = descargarBytes(doc.getArchivoUrl());
+
+        // 3. Decodificar firma PNG
+        String base64Clean = firmaBase64.replaceFirst("^data:image/[^;]+;base64,", "");
+        byte[] firmaBytes = java.util.Base64.getDecoder().decode(base64Clean);
+
+        // 4. Estampar firma sobre la última página con PDFBox
+        byte[] pdfFirmado;
+        try (PDDocument pdf = PDDocument.load(pdfBytes)) {
+            int lastPageIdx = pdf.getNumberOfPages() - 1;
+            var lastPage = pdf.getPage(lastPageIdx);
+            var mediaBox = lastPage.getMediaBox();
+
+            PDImageXObject firmaImg = PDImageXObject.createFromByteArray(pdf, firmaBytes, "firma");
+
+            // Área de firma: esquina inferior derecha, máximo 200x60 pts manteniendo proporción
+            float maxW = 200f, maxH = 60f;
+            float imgW = firmaImg.getWidth(), imgH = firmaImg.getHeight();
+            float scale = Math.min(maxW / imgW, maxH / imgH);
+            float drawW = imgW * scale, drawH = imgH * scale;
+            float margin = 36f;
+            float x = mediaBox.getWidth() - drawW - margin;
+            float y = margin;
+
+            try (PDPageContentStream cs = new PDPageContentStream(
+                    pdf, lastPage, PDPageContentStream.AppendMode.APPEND, true, true)) {
+                cs.drawImage(firmaImg, x, y, drawW, drawH);
+            }
+
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            pdf.save(out);
+            pdfFirmado = out.toByteArray();
+        } catch (IOException e) {
+            throw new IllegalArgumentException("No se pudo procesar el PDF para la firma: " + e.getMessage(), e);
+        }
+
+        // 5. Subir PDF firmado a Supabase
+        String filename = "firmado-" + UUID.randomUUID() + ".pdf";
+        String firmaUrl = supabaseStorageService.subirArchivo(pdfFirmado, "application/pdf", "documentos", filename);
+
+        // 6. Persistir estado de firma en la asignación
+        asig.setFirmado(true);
+        asig.setFechaFirma(OffsetDateTime.now());
+        asig.setFirmaUrl(firmaUrl);
+        // Marcar también como visto si no lo estaba
+        if (!asig.isVisto()) {
+            asig.setVisto(true);
+            asig.setFechaVisto(OffsetDateTime.now());
+        }
+        asignacionRepository.save(asig);
+
+        log.info("Documento firmado - docId={} userId={} firmaUrl={}", documentoId, userId, firmaUrl);
+        return firmaUrl;
+    }
+
     // ── INTERNOS ────────────────────────────────────────────────────────────
+
+    /** Descarga bytes de una URL pública (Supabase Storage u otra CDN). */
+    private byte[] descargarBytes(String url) {
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest req = HttpRequest.newBuilder(URI.create(url)).GET().build();
+            HttpResponse<byte[]> resp = client.send(req, HttpResponse.BodyHandlers.ofByteArray());
+            if (resp.statusCode() != 200) {
+                throw new IllegalStateException("No se pudo descargar el archivo: HTTP " + resp.statusCode());
+            }
+            return resp.body();
+        } catch (IOException | InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Error descargando el archivo original: " + e.getMessage(), e);
+        }
+    }
 
     private Documento obtenerDocumentoEmpresa(UUID documentoId) {
         Documento d = documentoRepository.findById(documentoId)
