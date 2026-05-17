@@ -44,6 +44,7 @@ import java.util.UUID;
 public class DocumentoController {
 
     private final DocumentoService documentoService;
+    private final CertificadoService certificadoService;
     private final ObjectMapper objectMapper;
 
     // ── ADMIN ───────────────────────────────────────────────────────────────
