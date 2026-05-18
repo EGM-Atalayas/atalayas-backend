@@ -46,7 +46,7 @@ public class DocumentoMapper {
                 .usuarioId(a.getUsuarioId())
                 .nombre(user != null ? user.getNombre() : null)
                 .apellidos(user != null ? user.getApellidos() : null)
-                .departamento(user != null ? user.getDepartamento() : null)
+                .departamento(user != null && user.getDepartamento() != null ? user.getDepartamento().getNombre() : null)
                 .fechaAsignacion(a.getFechaAsignacion())
                 .visto(a.isVisto())
                 .fechaVisto(a.getFechaVisto())
