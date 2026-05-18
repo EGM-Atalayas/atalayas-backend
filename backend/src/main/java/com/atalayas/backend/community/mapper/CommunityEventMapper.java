@@ -37,6 +37,9 @@ public class CommunityEventMapper {
                 .esGlobal(esGlobal)
                 .fechaInicio(request.getFechaInicio())
                 .fechaFin(request.getFechaFin())
+                .lugar(request.getLugar())
+                .latitud(request.getLatitud())
+                .longitud(request.getLongitud())
                 .creadoPor(creadoPor)
                 .activo(true)
                 .build();
@@ -57,6 +60,9 @@ public class CommunityEventMapper {
                 .activo(e.isActivo())
                 .fechaInicio(e.getFechaInicio())
                 .fechaFin(e.getFechaFin())
+                .lugar(e.getLugar())
+                .latitud(e.getLatitud())
+                .longitud(e.getLongitud())
                 .creadoEn(e.getCreadoEn())
                 .actualizadoEn(e.getActualizadoEn())
                 .build();

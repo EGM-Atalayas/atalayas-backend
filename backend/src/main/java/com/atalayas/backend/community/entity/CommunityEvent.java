@@ -3,6 +3,7 @@ package com.atalayas.backend.community.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -49,6 +50,18 @@ public class CommunityEvent {
     // Fecha de fin opcional
     @Column(name = "fecha_fin")
     private OffsetDateTime fechaFin;
+
+    // ── Ubicación (todos opcionales) ────────────────────────────
+    // Dirección o nombre del lugar en texto libre
+    @Column(name = "lugar", length = 255)
+    private String lugar;
+
+    // Coordenadas para mostrar en mapa
+    @Column(name = "latitud", precision = 10, scale = 7)
+    private BigDecimal latitud;
+
+    @Column(name = "longitud", precision = 10, scale = 7)
+    private BigDecimal longitud;
 
     // Soft delete
     @Column(name = "activo", nullable = false)

@@ -121,6 +121,9 @@ public class CommunityEventService {
         evento.setDescripcion(request.getDescripcion());
         evento.setFechaInicio(request.getFechaInicio());
         evento.setFechaFin(request.getFechaFin());
+        evento.setLugar(request.getLugar());
+        evento.setLatitud(request.getLatitud());
+        evento.setLongitud(request.getLongitud());
 
         // Solo superadmin puede promocionar o degradar un evento a global
         if (user.getRol().getRoleType() == RoleType.ROLE_ADMIN) {
