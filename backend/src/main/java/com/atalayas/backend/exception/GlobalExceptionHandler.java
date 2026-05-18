@@ -190,8 +190,11 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-            "DEBUG_V2: " + ex.getClass().getSimpleName() + ": " + ex.getMessage());
+        Throwable root = ex;
+        while (root.getCause() != null) root = root.getCause();
+        String detail = ex.getClass().getSimpleName() + ": " + ex.getMessage()
+            + (root != ex ? " | caused by: " + root.getClass().getSimpleName() + ": " + root.getMessage() : "");
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "ERR500: " + detail);
     }
 
 
