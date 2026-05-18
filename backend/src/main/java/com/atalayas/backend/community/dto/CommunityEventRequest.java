@@ -1,9 +1,12 @@
 package com.atalayas.backend.community.dto;
 
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -33,4 +36,15 @@ public class CommunityEventRequest {
 
     // Fecha de fin opcional - null = evento sin fecha límite
     private OffsetDateTime fechaFin;
+
+    // ── Ubicación (todos opcionales) ────────────────────────────
+    private String lugar;
+
+    @DecimalMin(value = "-90",  message = "La latitud debe estar entre -90 y 90")
+    @DecimalMax(value = "90",   message = "La latitud debe estar entre -90 y 90")
+    private BigDecimal latitud;
+
+    @DecimalMin(value = "-180", message = "La longitud debe estar entre -180 y 180")
+    @DecimalMax(value = "180",  message = "La longitud debe estar entre -180 y 180")
+    private BigDecimal longitud;
 }
