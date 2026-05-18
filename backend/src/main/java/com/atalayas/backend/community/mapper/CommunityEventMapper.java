@@ -40,6 +40,7 @@ public class CommunityEventMapper {
                 .lugar(request.getLugar())
                 .latitud(request.getLatitud())
                 .longitud(request.getLongitud())
+                .imagenUrl(request.getImagenUrl())
                 .creadoPor(creadoPor)
                 .activo(true)
                 .build();
@@ -63,6 +64,7 @@ public class CommunityEventMapper {
                 .lugar(e.getLugar())
                 .latitud(e.getLatitud())
                 .longitud(e.getLongitud())
+                .imagenUrl(e.getImagenUrl())
                 .creadoEn(e.getCreadoEn())
                 .actualizadoEn(e.getActualizadoEn())
                 .build();

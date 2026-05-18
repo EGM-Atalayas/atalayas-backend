@@ -63,6 +63,10 @@ public class CommunityEvent {
     @Column(name = "longitud", precision = 10, scale = 7)
     private BigDecimal longitud;
 
+    // URL pública de la imagen de portada (subida a Supabase Storage)
+    @Column(name = "imagen_url", length = 500)
+    private String imagenUrl;
+
     // Soft delete
     @Column(name = "activo", nullable = false)
     @Builder.Default

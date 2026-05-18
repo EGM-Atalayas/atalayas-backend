@@ -47,4 +47,7 @@ public class CommunityEventRequest {
     @DecimalMin(value = "-180", message = "La longitud debe estar entre -180 y 180")
     @DecimalMax(value = "180",  message = "La longitud debe estar entre -180 y 180")
     private BigDecimal longitud;
+
+    /** URL pública de la imagen de portada (ya subida a Supabase Storage) */
+    private String imagenUrl;
 }
