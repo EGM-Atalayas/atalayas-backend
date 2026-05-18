@@ -1,6 +1,7 @@
 package com.atalayas.backend.user;
 
 import com.atalayas.backend.common.dto.PaginatedResponse;
+import com.atalayas.backend.user.dto.AdminResetPasswordRequest;
 import com.atalayas.backend.user.dto.ChangePasswordRequest;
 import com.atalayas.backend.user.dto.CreateUserRequest;
 import com.atalayas.backend.user.dto.UpdateProfileRequest;
@@ -136,5 +137,14 @@ public class UserController {
     public ResponseEntity<Void> activarUsuario(@PathVariable UUID id) {
         userService.activarUsuario(id);
         return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{id}/reset-password")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN_EMPRESA', 'ROLE_ADMIN')")
+    @Operation(summary = "Resetear contraseña de un empleado (solo admins)")
+    public ResponseEntity<Void> resetPassword(@PathVariable UUID id,
+                                              @Valid @RequestBody AdminResetPasswordRequest request) {
+        userService.adminResetPassword(id, request);
+        return ResponseEntity.noContent().build();
     }
 }
