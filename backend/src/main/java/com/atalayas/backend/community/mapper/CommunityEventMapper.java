@@ -1,9 +1,9 @@
-﻿package com.atalayas.backend.community.mapper;
+package com.atalayas.backend.community.mapper;
 
 import com.atalayas.backend.community.dto.CommunityEventRequest;
 import com.atalayas.backend.community.dto.CommunityEventResponse;
 import com.atalayas.backend.community.entity.CommunityEvent;
-import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.user.entity.User;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;

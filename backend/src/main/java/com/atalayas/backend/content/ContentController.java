@@ -1,7 +1,7 @@
-﻿package com.atalayas.backend.content;
+package com.atalayas.backend.content;
 
 import com.atalayas.backend.content.dto.*;
-import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;

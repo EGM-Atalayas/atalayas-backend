@@ -11,7 +11,7 @@ import com.atalayas.backend.progress.dto.ProgressResponse;
 import com.atalayas.backend.progress.entity.UserProgress;
 import com.atalayas.backend.progress.repository.ProgressRepository;
 import com.atalayas.backend.support.TestFixtures;
-import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.user.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

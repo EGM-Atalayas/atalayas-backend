@@ -1,6 +1,6 @@
-package com.atalayas.backend.usuario.departamento.repository;
+package com.atalayas.backend.department.repository;
 
-import com.atalayas.backend.usuario.departamento.entity.Departamento;
+import com.atalayas.backend.department.entity.Departamento;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

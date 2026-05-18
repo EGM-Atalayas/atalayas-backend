@@ -1,8 +1,8 @@
-﻿package com.atalayas.backend.eventos;
+package com.atalayas.backend.eventos;
 
 import com.atalayas.backend.eventos.dto.EventoRequest;
 import com.atalayas.backend.eventos.dto.EventoResponse;
-import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;

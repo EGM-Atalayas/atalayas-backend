@@ -1,4 +1,4 @@
-﻿package com.atalayas.backend.module;
+package com.atalayas.backend.module;
 
 import com.atalayas.backend.common.enums.RoleType;
 import com.atalayas.backend.communication.service.NotificationService;
@@ -9,8 +9,8 @@ import com.atalayas.backend.module.dto.ModuleResponse;
 import com.atalayas.backend.module.entity.TrainingModule;
 import com.atalayas.backend.module.mapper.ModuleMapper;
 import com.atalayas.backend.module.repository.ModuleRepository;
-import com.atalayas.backend.usuario.entity.User;
-import com.atalayas.backend.usuario.repository.UserRepository;
+import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

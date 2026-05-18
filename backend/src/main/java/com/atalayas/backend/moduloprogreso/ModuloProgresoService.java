@@ -1,4 +1,4 @@
-﻿package com.atalayas.backend.moduloprogreso;
+package com.atalayas.backend.moduloprogreso;
 
 import com.atalayas.backend.common.util.SecurityUtils;
 import com.atalayas.backend.documento.CertificadoService;
@@ -6,7 +6,7 @@ import com.atalayas.backend.moduloprogreso.dto.GuardarProgresoRequest;
 import com.atalayas.backend.moduloprogreso.dto.ModuloProgresoResponse;
 import com.atalayas.backend.moduloprogreso.entity.ModuloProgreso;
 import com.atalayas.backend.moduloprogreso.repository.ModuloProgresoRepository;
-import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
