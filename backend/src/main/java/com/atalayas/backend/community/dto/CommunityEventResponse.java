@@ -31,6 +31,7 @@ public class CommunityEventResponse {
     private String         lugar;
     private BigDecimal     latitud;
     private BigDecimal     longitud;
+    private String         imagenUrl;
     private OffsetDateTime creadoEn;
     private OffsetDateTime actualizadoEn;
 }

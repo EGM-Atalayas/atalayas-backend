@@ -124,6 +124,7 @@ public class CommunityEventService {
         evento.setLugar(request.getLugar());
         evento.setLatitud(request.getLatitud());
         evento.setLongitud(request.getLongitud());
+        evento.setImagenUrl(request.getImagenUrl());
 
         // Solo superadmin puede promocionar o degradar un evento a global
         if (user.getRol().getRoleType() == RoleType.ROLE_ADMIN) {
