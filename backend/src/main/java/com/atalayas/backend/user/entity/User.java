@@ -1,5 +1,6 @@
 package com.atalayas.backend.user.entity;
 
+import com.atalayas.backend.department.entity.Departamento;
 import com.atalayas.backend.role.entity.Rol;
 import jakarta.persistence.*;
 import lombok.*;
@@ -104,9 +105,9 @@ public class User implements UserDetails {
     private String puestoTrabajo;
 
     // Departamento al que pertenece el empleado (usado para visibilidad de módulos)
-    // TODO: migrar a @ManyToOne Departamento cuando se ejecute la migración de BD
-    @Column(name = "departamento", length = 50)
-    private String departamento;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "departamento_id")
+    private Departamento departamento;
 
     // Soft delete, false significa que la cuenta está desactivada
     @Column(name = "activo", nullable = false)

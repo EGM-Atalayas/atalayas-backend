@@ -46,7 +46,6 @@ public class AuthService {
                 .empresaId(request.getEmpresaId())
                 .rol(rol)
                 .puestoTrabajo(request.getPuestoTrabajo())
-                .departamento(request.getDepartamento())
                 .build();
 
         userRepository.save(user);

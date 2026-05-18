@@ -9,6 +9,7 @@ import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.role.repository.RoleRepository;
 import com.atalayas.backend.common.dto.PaginatedResponse;
+import com.atalayas.backend.department.repository.DepartamentoRepository;
 import com.atalayas.backend.user.dto.ChangePasswordRequest;
 import com.atalayas.backend.user.dto.CreateUserRequest;
 import com.atalayas.backend.user.dto.UpdateProfileRequest;
@@ -53,6 +54,7 @@ public class UserService {
     private final NotificationService notificationService;
     private final EmailService emailService;
     private final ImageService imageService;
+    private final DepartamentoRepository departamentoRepository;
 
     @Transactional(readOnly = true)
     public UserProfileResponse getCurrentUserProfile() {
@@ -166,7 +168,12 @@ public class UserService {
             throw new AccessDeniedException("No tienes permisos para crear usuarios con el rol ROLE_ADMIN");
         }
 
-        // 5. Crear y persistir el usuario
+        // 5. Resolver departamento por nombre si se proporcionó
+        var departamentoEntity = (request.getDepartamento() != null && !request.getDepartamento().isBlank())
+                ? departamentoRepository.findByNombreIgnoreCaseAndActivoTrue(request.getDepartamento()).orElse(null)
+                : null;
+
+        // 6. Crear y persistir el usuario
         User user = User.builder()
                 .nombre(request.getNombre())
                 .apellidos(request.getApellidos())
@@ -175,7 +182,7 @@ public class UserService {
                 .empresaId(empresaId)
                 .rol(role)
                 .puestoTrabajo(request.getPuestoTrabajo())
-                .departamento(request.getDepartamento())
+                .departamento(departamentoEntity)
                 .build();
 
         final User savedUser = userRepository.save(user);
@@ -266,7 +273,8 @@ public class UserService {
             user.setPuestoTrabajo(request.getPuestoTrabajo());
         }
         if (request.getDepartamento() != null) {
-            user.setDepartamento(request.getDepartamento());
+            departamentoRepository.findByNombreIgnoreCaseAndActivoTrue(request.getDepartamento())
+                    .ifPresentOrElse(user::setDepartamento, () -> user.setDepartamento(null));
         }
 
         return userMapper.toUserResponse(userRepository.save(user));
