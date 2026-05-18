@@ -46,7 +46,8 @@ public class AuthService {
                 .empresaId(request.getEmpresaId())
                 .rol(rol)
                 .puestoTrabajo(request.getPuestoTrabajo())
-                .build(); // departamento se asigna posteriormente desde UserService
+                .departamento(request.getDepartamento())
+                .build();
 
         userRepository.save(user);
         return buildAuthResponse(user);
