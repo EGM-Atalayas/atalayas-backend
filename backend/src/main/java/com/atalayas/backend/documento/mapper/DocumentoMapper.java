@@ -1,10 +1,10 @@
-package com.atalayas.backend.documento.mapper;
+﻿package com.atalayas.backend.documento.mapper;
 
 import com.atalayas.backend.documento.dto.AsignacionDetalleResponse;
 import com.atalayas.backend.documento.dto.DocumentoResponse;
 import com.atalayas.backend.documento.entity.Documento;
 import com.atalayas.backend.documento.entity.DocumentoAsignacion;
-import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.usuario.entity.User;
 import org.springframework.stereotype.Component;
 
 @Component

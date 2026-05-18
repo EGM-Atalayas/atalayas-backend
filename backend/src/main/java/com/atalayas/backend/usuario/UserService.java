@@ -1,4 +1,4 @@
-package com.atalayas.backend.user;
+package com.atalayas.backend.usuario;
 
 import com.atalayas.backend.common.enums.RoleType;
 import com.atalayas.backend.common.service.ImageService;
@@ -9,15 +9,16 @@ import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.role.repository.RoleRepository;
 import com.atalayas.backend.common.dto.PaginatedResponse;
-import com.atalayas.backend.user.dto.ChangePasswordRequest;
-import com.atalayas.backend.user.dto.CreateUserRequest;
-import com.atalayas.backend.user.dto.UpdateProfileRequest;
-import com.atalayas.backend.user.dto.UpdateUserRequest;
-import com.atalayas.backend.user.dto.UserProfileResponse;
-import com.atalayas.backend.user.dto.UserResponse;
-import com.atalayas.backend.user.entity.User;
-import com.atalayas.backend.user.mapper.UserMapper;
-import com.atalayas.backend.user.repository.UserRepository;
+import com.atalayas.backend.usuario.departamento.repository.DepartamentoRepository;
+import com.atalayas.backend.usuario.dto.ChangePasswordRequest;
+import com.atalayas.backend.usuario.dto.CreateUserRequest;
+import com.atalayas.backend.usuario.dto.UpdateProfileRequest;
+import com.atalayas.backend.usuario.dto.UpdateUserRequest;
+import com.atalayas.backend.usuario.dto.UserProfileResponse;
+import com.atalayas.backend.usuario.dto.UserResponse;
+import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.usuario.mapper.UserMapper;
+import com.atalayas.backend.usuario.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -34,8 +35,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * 🔒 Servicio filtrado por empresaId.
- * 👑 SUPER_ADMIN bypassa el filtro y puede acceder a usuarios de cualquier empresa.
+ * Servicio filtrado por empresaId.
+ * SUPER_ADMIN bypassa el filtro y puede acceder a usuarios de cualquier empresa.
  *
  * <p>Regla de enmascarado: si un ADMIN/EMPLEADO accede al ID de un usuario
  * de otra empresa, se lanza {@link ResourceNotFoundException} (HTTP 404)
@@ -53,6 +54,7 @@ public class UserService {
     private final NotificationService notificationService;
     private final EmailService emailService;
     private final ImageService imageService;
+    private final DepartamentoRepository departamentoRepository;
 
     @Transactional(readOnly = true)
     public UserProfileResponse getCurrentUserProfile() {
@@ -166,7 +168,12 @@ public class UserService {
             throw new AccessDeniedException("No tienes permisos para crear usuarios con el rol ROLE_ADMIN");
         }
 
-        // 5. Crear y persistir el usuario
+        // 5. Resolver departamento por nombre (si se proporcionó)
+        var departamentoEntity = (request.getDepartamento() != null && !request.getDepartamento().isBlank())
+                ? departamentoRepository.findByNombreIgnoreCaseAndActivoTrue(request.getDepartamento()).orElse(null)
+                : null;
+
+        // 6. Crear y persistir el usuario
         User user = User.builder()
                 .nombre(request.getNombre())
                 .apellidos(request.getApellidos())
@@ -175,14 +182,14 @@ public class UserService {
                 .empresaId(empresaId)
                 .rol(role)
                 .puestoTrabajo(request.getPuestoTrabajo())
-                .departamento(request.getDepartamento())
+                .departamento(departamentoEntity)
                 .build();
 
         final User savedUser = userRepository.save(user);
         log.info("Usuario creado por admin - usuarioId={} empresaId={} rol={}",
                 savedUser.getUsuarioId(), empresaId, role.getCodigoRol());
 
-        // 6. Notificación interna de bienvenida al nuevo usuario
+        // 7. Notificación interna de bienvenida al nuevo usuario
         notificationService.crearInterna(
                 savedUser.getUsuarioId(),
                 "BIENVENIDA",
@@ -190,7 +197,7 @@ public class UserService {
                 "/dashboard"
         );
 
-        // 6b. Notificar al/los admin empresa que hay un nuevo empleado
+        // 7b. Notificar al/los admin empresa que hay un nuevo empleado
         if (role.getRoleType() == RoleType.ROLE_EMPLEADO) {
             userRepository.findAllByEmpresaIdAndActivoTrue(empresaId).stream()
                     .filter(u -> "ROLE_ADMIN_EMPRESA".equals(u.getRol().getCodigoRol())
@@ -203,7 +210,7 @@ public class UserService {
                     ));
         }
 
-        // 7. Email de bienvenida — el fallo de email no revierte la creación
+        // 8. Email de bienvenida — el fallo de email no revierte la creación
         try {
             emailService.enviarBienvenidaUsuarioCreado(
                     savedUser.getEmail(), savedUser.getNombre(), empresaId.toString());
@@ -256,7 +263,7 @@ public class UserService {
 
         if (request.getNombre() != null) user.setNombre(request.getNombre());
         if (request.getApellidos() != null) user.setApellidos(request.getApellidos());
-        if (request.getEmail() != null && !request.getEmail().isBlank()) { // ← añade isBlank()
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
             if (!request.getEmail().equals(user.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
                 throw new IllegalArgumentException("Ya existe un usuario con el email: " + request.getEmail());
             }
@@ -266,7 +273,8 @@ public class UserService {
             user.setPuestoTrabajo(request.getPuestoTrabajo());
         }
         if (request.getDepartamento() != null) {
-            user.setDepartamento(request.getDepartamento());
+            departamentoRepository.findByNombreIgnoreCaseAndActivoTrue(request.getDepartamento())
+                    .ifPresentOrElse(user::setDepartamento, () -> user.setDepartamento(null));
         }
 
         return userMapper.toUserResponse(userRepository.save(user));

@@ -1,10 +1,10 @@
-package com.atalayas.backend.communication.controller;
+﻿package com.atalayas.backend.communication.controller;
 
 import com.atalayas.backend.common.dto.PaginatedResponse;
 import com.atalayas.backend.communication.dto.AnnouncementRequest;
 import com.atalayas.backend.communication.dto.AnnouncementResponse;
 import com.atalayas.backend.communication.service.AnnouncementService;
-import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.usuario.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;

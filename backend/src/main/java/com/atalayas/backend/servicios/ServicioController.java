@@ -1,9 +1,9 @@
-package com.atalayas.backend.servicios;
+﻿package com.atalayas.backend.servicios;
 
 import com.atalayas.backend.servicios.dto.ServicioRequest;
 import com.atalayas.backend.servicios.dto.ServicioResponse;
 import com.atalayas.backend.servicios.enums.CategoriaServicio;
-import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.usuario.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;

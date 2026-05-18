@@ -1,6 +1,6 @@
-package com.atalayas.backend.user.dto;
+package com.atalayas.backend.usuario.dto;
 
-import com.atalayas.backend.user.enums.Disponibilidad;
+import com.atalayas.backend.usuario.enums.Disponibilidad;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 

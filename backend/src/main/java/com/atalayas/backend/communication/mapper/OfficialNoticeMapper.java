@@ -1,9 +1,9 @@
-package com.atalayas.backend.communication.mapper;
+﻿package com.atalayas.backend.communication.mapper;
 
 import com.atalayas.backend.communication.dto.OfficialNoticeRequest;
 import com.atalayas.backend.communication.dto.OfficialNoticeResponse;
 import com.atalayas.backend.communication.entity.OfficialNotice;
-import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.usuario.entity.User;
 import org.springframework.stereotype.Component;
 
 /**

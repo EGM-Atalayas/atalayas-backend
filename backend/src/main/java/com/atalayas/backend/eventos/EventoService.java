@@ -1,4 +1,4 @@
-package com.atalayas.backend.eventos;
+﻿package com.atalayas.backend.eventos;
 
 import com.atalayas.backend.eventos.dto.EventoRequest;
 import com.atalayas.backend.eventos.dto.EventoResponse;
@@ -7,7 +7,7 @@ import com.atalayas.backend.eventos.enums.EstadoEvento;
 import com.atalayas.backend.eventos.mapper.EventoMapper;
 import com.atalayas.backend.eventos.repository.EventoRepository;
 import com.atalayas.backend.exception.ResourceNotFoundException;
-import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.usuario.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

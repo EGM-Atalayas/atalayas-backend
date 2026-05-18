@@ -1,4 +1,4 @@
-package com.atalayas.backend.documento;
+﻿package com.atalayas.backend.documento;
 
 import com.atalayas.backend.communication.service.NotificationService;
 import com.atalayas.backend.content.repository.ContentRepository;
@@ -11,8 +11,8 @@ import com.atalayas.backend.module.entity.TrainingModule;
 import com.atalayas.backend.module.repository.ModuleRepository;
 import com.atalayas.backend.progress.repository.ProgressRepository;
 import com.atalayas.backend.ai.service.SupabaseStorageService;
-import com.atalayas.backend.user.entity.User;
-import com.atalayas.backend.user.repository.UserRepository;
+import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.usuario.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.pdmodel.PDDocument;

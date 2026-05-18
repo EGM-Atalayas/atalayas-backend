@@ -1,4 +1,4 @@
-package com.atalayas.backend.communication.service;
+﻿package com.atalayas.backend.communication.service;
 
 import com.atalayas.backend.communication.AnnouncementSpecifications;
 import com.atalayas.backend.communication.dto.AnnouncementRequest;
@@ -9,8 +9,8 @@ import com.atalayas.backend.communication.repository.AnnouncementRepository;
 import com.atalayas.backend.common.dto.PaginatedResponse;
 import com.atalayas.backend.exception.BusinessException;
 import com.atalayas.backend.exception.ResourceNotFoundException;
-import com.atalayas.backend.user.entity.User;
-import com.atalayas.backend.user.repository.UserRepository;
+import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.usuario.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;

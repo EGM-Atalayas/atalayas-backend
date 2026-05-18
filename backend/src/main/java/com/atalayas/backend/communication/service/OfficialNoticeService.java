@@ -1,4 +1,4 @@
-package com.atalayas.backend.communication.service;
+﻿package com.atalayas.backend.communication.service;
 
 import com.atalayas.backend.communication.dto.OfficialNoticeRequest;
 import com.atalayas.backend.communication.dto.OfficialNoticeResponse;
@@ -7,7 +7,7 @@ import com.atalayas.backend.communication.mapper.OfficialNoticeMapper;
 import com.atalayas.backend.communication.repository.OfficialNoticeRepository;
 import com.atalayas.backend.exception.BusinessException;
 import com.atalayas.backend.exception.ResourceNotFoundException;
-import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.usuario.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

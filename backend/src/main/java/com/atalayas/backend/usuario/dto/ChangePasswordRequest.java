@@ -1,4 +1,4 @@
-package com.atalayas.backend.user.dto;
+package com.atalayas.backend.usuario.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

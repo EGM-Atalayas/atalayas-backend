@@ -1,10 +1,10 @@
-package com.atalayas.backend.auth.service;
+﻿package com.atalayas.backend.auth.service;
 
 import com.atalayas.backend.auth.entity.PasswordResetToken;
 import com.atalayas.backend.auth.repository.PasswordResetTokenRepository;
 import com.atalayas.backend.common.service.PasswordResetEmailService;
-import com.atalayas.backend.user.entity.User;
-import com.atalayas.backend.user.repository.UserRepository;
+import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.usuario.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;

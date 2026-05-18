@@ -1,6 +1,6 @@
-package com.atalayas.backend.user;
+package com.atalayas.backend.usuario;
 
-import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.usuario.entity.User;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -38,4 +38,3 @@ public class UserSpecifications {
         };
     }
 }
-

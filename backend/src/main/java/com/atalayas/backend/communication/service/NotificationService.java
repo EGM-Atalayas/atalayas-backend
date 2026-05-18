@@ -1,4 +1,4 @@
-package com.atalayas.backend.communication.service;
+﻿package com.atalayas.backend.communication.service;
 
 import com.atalayas.backend.communication.dto.NotificationRequest;
 import com.atalayas.backend.communication.dto.NotificationResponse;
@@ -7,7 +7,7 @@ import com.atalayas.backend.communication.mapper.NotificationMapper;
 import com.atalayas.backend.communication.repository.NotificationRepository;
 import com.atalayas.backend.exception.BusinessException;
 import com.atalayas.backend.exception.ResourceNotFoundException;
-import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.usuario.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

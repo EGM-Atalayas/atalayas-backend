@@ -1,6 +1,6 @@
-package com.atalayas.backend.sugerencia;
+﻿package com.atalayas.backend.sugerencia;
 
-import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.usuario.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;

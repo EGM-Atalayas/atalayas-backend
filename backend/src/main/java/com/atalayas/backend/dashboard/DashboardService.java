@@ -1,4 +1,4 @@
-package com.atalayas.backend.dashboard;
+﻿package com.atalayas.backend.dashboard;
 
 import com.atalayas.backend.audit.service.AuditService;
 import com.atalayas.backend.common.enums.EstadoSolicitud;
@@ -23,7 +23,7 @@ import com.atalayas.backend.incidencia.enums.PrioridadIncidencia;
 import com.atalayas.backend.incidencia.repository.IncidenciaRepository;
 import com.atalayas.backend.module.repository.ModuleRepository;
 import com.atalayas.backend.progress.repository.ProgressRepository;
-import com.atalayas.backend.user.repository.UserRepository;
+import com.atalayas.backend.usuario.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
