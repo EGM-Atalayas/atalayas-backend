@@ -1,4 +1,4 @@
-﻿package com.atalayas.backend.content;
+package com.atalayas.backend.content;
 
 import com.atalayas.backend.common.enums.RoleType;
 import com.atalayas.backend.content.dto.*;
@@ -9,7 +9,7 @@ import com.atalayas.backend.content.repository.ContentRepository;
 import com.atalayas.backend.content.repository.QuestionRepository;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.exception.UnauthorizedException;
-import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

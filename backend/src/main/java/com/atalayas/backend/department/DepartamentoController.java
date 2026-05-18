@@ -1,7 +1,7 @@
-package com.atalayas.backend.usuario.departamento;
+package com.atalayas.backend.department;
 
-import com.atalayas.backend.usuario.departamento.dto.DepartamentoResponse;
-import com.atalayas.backend.usuario.departamento.service.DepartamentoService;
+import com.atalayas.backend.department.dto.DepartamentoResponse;
+import com.atalayas.backend.department.service.DepartamentoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

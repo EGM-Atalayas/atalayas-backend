@@ -1,6 +1,6 @@
-﻿package com.atalayas.backend.security;
+package com.atalayas.backend.security;
 
-import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.user.entity.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;

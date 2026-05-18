@@ -1,6 +1,6 @@
-﻿package com.atalayas.backend.auth.entity;
+package com.atalayas.backend.auth.entity;
 
-import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 

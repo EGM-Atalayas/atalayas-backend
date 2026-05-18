@@ -1,9 +1,9 @@
-﻿package com.atalayas.backend.module.mapper;
+package com.atalayas.backend.module.mapper;
 
 import com.atalayas.backend.module.dto.ModuleRequest;
 import com.atalayas.backend.module.dto.ModuleResponse;
 import com.atalayas.backend.module.entity.TrainingModule;
-import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.user.entity.User;
 import org.springframework.stereotype.Component;
 
 

@@ -1,4 +1,4 @@
-package com.atalayas.backend.usuario.departamento.dto;
+package com.atalayas.backend.department.dto;
 
 import java.util.UUID;
 

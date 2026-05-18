@@ -1,4 +1,4 @@
-﻿package com.atalayas.backend.rewards;
+package com.atalayas.backend.rewards;
 
 import com.atalayas.backend.common.enums.RoleType;
 import com.atalayas.backend.exception.ResourceNotFoundException;
@@ -8,7 +8,7 @@ import com.atalayas.backend.rewards.dto.BenefitResponse;
 import com.atalayas.backend.rewards.entity.Benefit;
 import com.atalayas.backend.rewards.mapper.BenefitMapper;
 import com.atalayas.backend.rewards.repository.BenefitRepository;
-import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

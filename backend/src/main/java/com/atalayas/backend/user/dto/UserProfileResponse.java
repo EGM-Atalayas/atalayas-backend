@@ -1,5 +1,6 @@
-package com.atalayas.backend.usuario.dto;
+package com.atalayas.backend.user.dto;
 
+import com.atalayas.backend.user.enums.Disponibilidad;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,20 +10,25 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
- * Respuesta completa de un usuario (tabla usuario).
- * Usada en listados administrativos y consultas por ID.
+ * Vista de perfil del usuario autenticado (tabla usuario).
+ *
+ * Incluye nombreCompleto calculado para mostrar en la cabecera
+ * y en la página de perfil sin necesitar concatenarlo en el frontend.
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserResponse {
+public class UserProfileResponse {
 
     private UUID usuarioId;
     private String email;
     private String nombre;
     private String apellidos;
+    private String nombreCompleto;
     private String avatarUrl;
+    private String puestoTrabajo;
+    private String departamento;
 
     // FK empresa
     private UUID empresaId;
@@ -33,14 +39,20 @@ public class UserResponse {
     private String codigoRol;
     private String nombreRol;
 
-    private String puestoTrabajo;
-    private String departamento;
+    private String bannerUrl;
+    private String bio;
+    private String telefono;
+    private Disponibilidad disponibilidad;
+    private boolean notifNuevoModulo;
+    private boolean notifModuloCompletado;
+    private boolean notifComunicado;
+    private boolean notifPendiente;
+    private boolean modoOscuro;
+
     private boolean activo;
     private boolean terminosAceptados;
-    private int intentosFallidos;
 
     private OffsetDateTime fechaRegistro;
-    private OffsetDateTime fechaBaja;
     private OffsetDateTime ultimoLogin;
     private OffsetDateTime actualizadoEn;
 }

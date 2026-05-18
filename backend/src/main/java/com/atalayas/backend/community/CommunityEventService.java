@@ -1,4 +1,4 @@
-﻿package com.atalayas.backend.community;
+package com.atalayas.backend.community;
 
 import com.atalayas.backend.common.enums.RoleType;
 import com.atalayas.backend.community.dto.CommunityEventRequest;
@@ -8,7 +8,7 @@ import com.atalayas.backend.community.mapper.CommunityEventMapper;
 import com.atalayas.backend.community.repository.CommunityEventRepository;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.exception.UnauthorizedException;
-import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

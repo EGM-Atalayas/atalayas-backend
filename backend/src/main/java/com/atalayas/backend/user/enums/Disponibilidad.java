@@ -1,4 +1,4 @@
-package com.atalayas.backend.usuario.enums;
+package com.atalayas.backend.user.enums;
 
 public enum Disponibilidad {
     DISPONIBLE,
