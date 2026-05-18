@@ -1,7 +1,6 @@
 package com.atalayas.backend.user.entity;
 
 import com.atalayas.backend.role.entity.Rol;
-import com.atalayas.backend.department.entity.Departamento;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -105,9 +104,9 @@ public class User implements UserDetails {
     private String puestoTrabajo;
 
     // Departamento al que pertenece el empleado (usado para visibilidad de módulos)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "departamento_id")
-    private Departamento departamento;
+    // TODO: migrar a @ManyToOne Departamento cuando se ejecute la migración de BD
+    @Column(name = "departamento", length = 50)
+    private String departamento;
 
     // Soft delete, false significa que la cuenta está desactivada
     @Column(name = "activo", nullable = false)
