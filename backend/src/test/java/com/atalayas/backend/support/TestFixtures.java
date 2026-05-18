@@ -1,7 +1,7 @@
 package com.atalayas.backend.support;
 
 import com.atalayas.backend.role.entity.Rol;
-import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.user.entity.User;
 
 import java.util.UUID;
 

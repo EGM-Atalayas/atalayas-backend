@@ -1,9 +1,9 @@
-package com.atalayas.backend.usuario.mapper;
+package com.atalayas.backend.user.mapper;
 
 import com.atalayas.backend.role.entity.Rol;
-import com.atalayas.backend.usuario.dto.UserProfileResponse;
-import com.atalayas.backend.usuario.dto.UserResponse;
-import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.user.dto.UserProfileResponse;
+import com.atalayas.backend.user.dto.UserResponse;
+import com.atalayas.backend.user.entity.User;
 import org.springframework.stereotype.Component;
 
 /**

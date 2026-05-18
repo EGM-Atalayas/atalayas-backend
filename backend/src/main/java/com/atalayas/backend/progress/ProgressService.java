@@ -1,4 +1,4 @@
-﻿package com.atalayas.backend.progress;
+package com.atalayas.backend.progress;
 
 import com.atalayas.backend.common.dto.PaginatedResponse;
 import com.atalayas.backend.common.enums.ProgressStatus;
@@ -12,7 +12,7 @@ import com.atalayas.backend.progress.dto.CompleteContentRequest;
 import com.atalayas.backend.progress.dto.ProgressResponse;
 import com.atalayas.backend.progress.entity.UserProgress;
 import com.atalayas.backend.progress.repository.ProgressRepository;
-import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;

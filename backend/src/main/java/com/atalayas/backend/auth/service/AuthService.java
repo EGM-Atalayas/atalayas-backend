@@ -1,4 +1,4 @@
-﻿package com.atalayas.backend.auth.service;
+package com.atalayas.backend.auth.service;
 
 import com.atalayas.backend.auth.dto.AuthResponse;
 import com.atalayas.backend.auth.dto.LoginRequest;
@@ -9,8 +9,8 @@ import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.role.repository.RoleRepository;
 import com.atalayas.backend.security.JwtService;
 import com.atalayas.backend.security.SecurityConstants;
-import com.atalayas.backend.usuario.entity.User;
-import com.atalayas.backend.usuario.repository.UserRepository;
+import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

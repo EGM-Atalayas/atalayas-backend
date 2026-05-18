@@ -1,4 +1,4 @@
-package com.atalayas.backend.usuario.departamento.entity;
+package com.atalayas.backend.department.entity;
 
 import jakarta.persistence.*;
 import lombok.*;

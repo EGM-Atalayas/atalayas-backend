@@ -1,4 +1,4 @@
-﻿package com.atalayas.backend.servicios;
+package com.atalayas.backend.servicios;
 
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.servicios.dto.ServicioRequest;
@@ -7,7 +7,7 @@ import com.atalayas.backend.servicios.entity.Servicio;
 import com.atalayas.backend.servicios.enums.CategoriaServicio;
 import com.atalayas.backend.servicios.mapper.ServicioMapper;
 import com.atalayas.backend.servicios.repository.ServicioRepository;
-import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

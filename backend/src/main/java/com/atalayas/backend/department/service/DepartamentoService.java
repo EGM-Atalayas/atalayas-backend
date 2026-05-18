@@ -1,8 +1,8 @@
-package com.atalayas.backend.usuario.departamento.service;
+package com.atalayas.backend.department.service;
 
-import com.atalayas.backend.usuario.departamento.dto.DepartamentoResponse;
-import com.atalayas.backend.usuario.departamento.entity.Departamento;
-import com.atalayas.backend.usuario.departamento.repository.DepartamentoRepository;
+import com.atalayas.backend.department.dto.DepartamentoResponse;
+import com.atalayas.backend.department.entity.Departamento;
+import com.atalayas.backend.department.repository.DepartamentoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

@@ -1,9 +1,9 @@
-﻿package com.atalayas.backend.communication.controller;
+package com.atalayas.backend.communication.controller;
 
 import com.atalayas.backend.communication.dto.OfficialNoticeRequest;
 import com.atalayas.backend.communication.dto.OfficialNoticeResponse;
 import com.atalayas.backend.communication.service.OfficialNoticeService;
-import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;

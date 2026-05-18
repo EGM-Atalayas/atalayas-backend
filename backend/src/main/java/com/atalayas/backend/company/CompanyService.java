@@ -1,4 +1,4 @@
-﻿package com.atalayas.backend.company;
+package com.atalayas.backend.company;
 
 import com.atalayas.backend.audit.service.AuditService;
 import com.atalayas.backend.common.dto.PaginatedResponse;
@@ -22,8 +22,8 @@ import com.atalayas.backend.exception.BusinessException;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.role.repository.RoleRepository;
-import com.atalayas.backend.usuario.entity.User;
-import com.atalayas.backend.usuario.repository.UserRepository;
+import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;

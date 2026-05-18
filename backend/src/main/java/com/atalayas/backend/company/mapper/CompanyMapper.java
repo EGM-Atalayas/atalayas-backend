@@ -1,4 +1,4 @@
-﻿package com.atalayas.backend.company.mapper;
+package com.atalayas.backend.company.mapper;
 
 import com.atalayas.backend.company.dto.CompanyRequest;
 import com.atalayas.backend.company.dto.CompanyResponse;
@@ -6,7 +6,7 @@ import com.atalayas.backend.company.dto.SolicitudAltaEmpresaRequest;
 import com.atalayas.backend.company.dto.SolicitudAltaEmpresaResponse;
 import com.atalayas.backend.company.dto.SolicitudPendienteResponse;
 import com.atalayas.backend.company.entity.Company;
-import com.atalayas.backend.usuario.entity.User;
+import com.atalayas.backend.user.entity.User;
 import org.springframework.stereotype.Component;
 
 /**
