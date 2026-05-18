@@ -1,9 +1,9 @@
-package com.atalayas.backend.user.mapper;
+package com.atalayas.backend.usuario.mapper;
 
 import com.atalayas.backend.role.entity.Rol;
-import com.atalayas.backend.user.dto.UserProfileResponse;
-import com.atalayas.backend.user.dto.UserResponse;
-import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.usuario.dto.UserProfileResponse;
+import com.atalayas.backend.usuario.dto.UserResponse;
+import com.atalayas.backend.usuario.entity.User;
 import org.springframework.stereotype.Component;
 
 /**
@@ -28,7 +28,7 @@ public class UserMapper {
                 .codigoRol(role != null ? role.getCodigoRol() : null)
                 .nombreRol(role != null ? role.getNombreRol() : null)
                 .puestoTrabajo(user.getPuestoTrabajo())
-                .departamento(user.getDepartamento())
+                .departamento(user.getDepartamento() != null ? user.getDepartamento().getNombre() : null)
                 .activo(user.isActivo())
                 .terminosAceptados(user.isTerminosAceptados())
                 .intentosFallidos(user.getIntentosFallidos())
@@ -58,7 +58,7 @@ public class UserMapper {
                 .notifPendiente(user.isNotifPendiente())
                 .modoOscuro(user.isModoOscuro())
                 .puestoTrabajo(user.getPuestoTrabajo())
-                .departamento(user.getDepartamento())
+                .departamento(user.getDepartamento() != null ? user.getDepartamento().getNombre() : null)
                 .empresaId(user.getEmpresaId())
                 .rolId(role.getRolId())
                 .codigoRol(role.getCodigoRol())

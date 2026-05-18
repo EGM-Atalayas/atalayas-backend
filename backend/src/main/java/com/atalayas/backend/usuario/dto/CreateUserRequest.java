@@ -1,4 +1,4 @@
-package com.atalayas.backend.user.dto;
+package com.atalayas.backend.usuario.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -45,4 +45,3 @@ public class CreateUserRequest {
     @Size(max = 50)
     private String departamento;
 }
-

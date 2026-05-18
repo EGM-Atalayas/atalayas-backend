@@ -1,6 +1,7 @@
-package com.atalayas.backend.user.entity;
+package com.atalayas.backend.usuario.entity;
 
 import com.atalayas.backend.role.entity.Rol;
+import com.atalayas.backend.usuario.departamento.entity.Departamento;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -59,7 +60,7 @@ public class User implements UserDetails {
     @Enumerated(EnumType.STRING)
     @Column(name = "disponibilidad", length = 20)
     @Builder.Default
-    private com.atalayas.backend.user.enums.Disponibilidad disponibilidad = com.atalayas.backend.user.enums.Disponibilidad.DISPONIBLE;
+    private com.atalayas.backend.usuario.enums.Disponibilidad disponibilidad = com.atalayas.backend.usuario.enums.Disponibilidad.DISPONIBLE;
 
     @Column(name = "notif_nuevo_modulo", nullable = false)
     @Builder.Default
@@ -104,8 +105,9 @@ public class User implements UserDetails {
     private String puestoTrabajo;
 
     // Departamento al que pertenece el empleado (usado para visibilidad de módulos)
-    @Column(name = "departamento", length = 50)
-    private String departamento;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "departamento_id")
+    private Departamento departamento;
 
     // Soft delete, false significa que la cuenta está desactivada
     @Column(name = "activo", nullable = false)

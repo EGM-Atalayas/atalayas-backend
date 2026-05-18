@@ -1,6 +1,6 @@
-package com.atalayas.backend.user.repository;
+package com.atalayas.backend.usuario.repository;
 
-import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.usuario.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;

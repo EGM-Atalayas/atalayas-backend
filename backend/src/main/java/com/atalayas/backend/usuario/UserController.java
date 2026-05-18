@@ -1,12 +1,12 @@
-package com.atalayas.backend.user;
+package com.atalayas.backend.usuario;
 
 import com.atalayas.backend.common.dto.PaginatedResponse;
-import com.atalayas.backend.user.dto.ChangePasswordRequest;
-import com.atalayas.backend.user.dto.CreateUserRequest;
-import com.atalayas.backend.user.dto.UpdateProfileRequest;
-import com.atalayas.backend.user.dto.UpdateUserRequest;
-import com.atalayas.backend.user.dto.UserProfileResponse;
-import com.atalayas.backend.user.dto.UserResponse;
+import com.atalayas.backend.usuario.dto.ChangePasswordRequest;
+import com.atalayas.backend.usuario.dto.CreateUserRequest;
+import com.atalayas.backend.usuario.dto.UpdateProfileRequest;
+import com.atalayas.backend.usuario.dto.UpdateUserRequest;
+import com.atalayas.backend.usuario.dto.UserProfileResponse;
+import com.atalayas.backend.usuario.dto.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;

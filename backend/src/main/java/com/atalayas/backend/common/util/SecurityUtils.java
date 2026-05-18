@@ -1,8 +1,8 @@
-package com.atalayas.backend.common.util;
+﻿package com.atalayas.backend.common.util;
 
 import com.atalayas.backend.common.enums.RoleType;
 import com.atalayas.backend.exception.UnauthorizedException;
-import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.usuario.entity.User;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 

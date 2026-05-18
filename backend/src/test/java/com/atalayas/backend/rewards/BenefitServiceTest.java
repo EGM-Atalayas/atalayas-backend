@@ -8,7 +8,7 @@ import com.atalayas.backend.rewards.entity.Benefit;
 import com.atalayas.backend.rewards.mapper.BenefitMapper;
 import com.atalayas.backend.rewards.repository.BenefitRepository;
 import com.atalayas.backend.support.TestFixtures;
-import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.usuario.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
