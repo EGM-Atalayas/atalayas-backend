@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/departamentos")
+@RequestMapping("/api/v1/departamentos")
 @RequiredArgsConstructor
 public class DepartamentoController {
 
