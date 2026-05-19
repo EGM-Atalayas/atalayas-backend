@@ -1,9 +1,11 @@
 package com.atalayas.backend.company;
 
+import com.atalayas.backend.ai.service.SupabaseStorageService;
 import com.atalayas.backend.audit.service.AuditService;
 import com.atalayas.backend.common.dto.PaginatedResponse;
 import com.atalayas.backend.common.enums.EstadoSolicitud;
 import com.atalayas.backend.common.enums.RoleType;
+import com.atalayas.backend.common.util.SecurityUtils;
 import com.atalayas.backend.communication.service.EmailService;
 import com.atalayas.backend.communication.service.NotificationService;
 import com.atalayas.backend.company.CompanySpecifications;
@@ -29,9 +31,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -61,6 +65,7 @@ public class CompanyService {
     private final NotificationService notificationService;
     private final AuditService auditService;
     private final ApplicationEventPublisher eventPublisher;
+    private final SupabaseStorageService supabaseStorageService;
 
 
     // ── SOLICITUD DE ALTA ─────────────────────────────────────────────────
@@ -108,11 +113,11 @@ public class CompanyService {
                 .build();
         adminUser = userRepository.save(adminUser);
 
-        // Paso 4 — Notificar a todos los superadmins de la nueva solicitud
+        // Paso 4 — Notificar a todos los superadmins (solo IDs — evita N+1)
         final Company savedCompany = company;
-        userRepository.findAllByRolCodigoRol("ROLE_ADMIN").forEach(admin ->
+        userRepository.findUuidsByRolCodigoRol("ROLE_ADMIN").forEach(adminId ->
                 notificationService.crearInterna(
-                        admin.getUsuarioId(),
+                        adminId,
                         "SOLICITUD_EMPRESA",
                         "Nueva solicitud de registro: " + savedCompany.getNombreEmpresa(),
                         "/superadmin/solicitudes"
@@ -398,6 +403,50 @@ public class CompanyService {
         auditService.registrar(
                 "Email de aprobación reenviado a empresa \"" + empresa.getNombreEmpresa() + "\"",
                 "info");
+    }
+
+
+    // ── LOGO ─────────────────────────────────────────────────────────────────
+
+    /**
+     * POST /api/v1/empresas/{id}/logo
+     * Sube el logo de la empresa a Supabase (bucket modulos/logos-empresa/) y persiste la URL.
+     * ROLE_ADMIN_EMPRESA solo puede actualizar el logo de su propia empresa.
+     */
+    @Transactional
+    public CompanyResponse subirLogo(UUID id, MultipartFile file) {
+        User caller = SecurityUtils.getCurrentUser();
+        boolean isSuperAdmin = caller.getRol().getCodigoRol().equals(RoleType.ROLE_ADMIN.name());
+
+        if (!isSuperAdmin && !id.equals(caller.getEmpresaId())) {
+            throw new AccessDeniedException("No puedes modificar el logo de otra empresa");
+        }
+
+        Company company = findOrThrow(id);
+
+        try {
+            String ext = getFileExtension(file.getOriginalFilename(), "jpg");
+            String fileName = id + "." + ext;
+            String contentType = file.getContentType() != null ? file.getContentType() : "image/jpeg";
+
+            String url = supabaseStorageService.subirArchivo(
+                    file.getBytes(), contentType, "logos-empresa", fileName);
+
+            company.setLogoUrl(url);
+            companyRepository.save(company);
+        } catch (AccessDeniedException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error subiendo logo de empresa {}: {}", id, e.getMessage());
+            throw new RuntimeException("No se pudo subir el logo: " + e.getMessage(), e);
+        }
+
+        return companyMapper.toResponse(company);
+    }
+
+    private String getFileExtension(String filename, String fallback) {
+        if (filename == null || !filename.contains(".")) return fallback;
+        return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
     }
 
 

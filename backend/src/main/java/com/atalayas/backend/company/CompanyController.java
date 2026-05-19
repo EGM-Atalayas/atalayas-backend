@@ -19,9 +19,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -203,6 +205,26 @@ public class CompanyController {
             @Valid @RequestBody ReenviarEmailRequest request) {
         companyService.reenviarEmail(id, request);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/{id}/logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Subir logo de empresa",
+               description = "Sube el logo de la empresa a Supabase Storage y actualiza `logoUrl`. " +
+                             "`ROLE_ADMIN_EMPRESA` solo puede actualizar el logo de su propia empresa.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Logo actualizado",
+                     content = @Content(schema = @Schema(implementation = CompanyResponse.class))),
+        @ApiResponse(responseCode = "403", description = "Intentando modificar el logo de otra empresa",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+        @ApiResponse(responseCode = "404", description = "Empresa no encontrada",
+                     content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
+    public ResponseEntity<CompanyResponse> subirLogo(
+            @PathVariable UUID id,
+            @RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(companyService.subirLogo(id, file));
     }
 }
 
