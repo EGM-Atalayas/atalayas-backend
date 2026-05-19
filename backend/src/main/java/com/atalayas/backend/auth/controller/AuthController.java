@@ -48,7 +48,7 @@ public class AuthController {
      * Genera el par de tokens, escribe las cookies HttpOnly y devuelve el
      * accessToken para que también pueda incluirse en el body de la respuesta.
      * Así el frontend puede usarlo como Authorization: Bearer cuando el
-     * navegador bloquee cookies cross-site (ej. Chrome con localhost ↔ railway.app).
+     * navegador bloquee cookies cross-site (ej. Chrome con localhost ↔ onrender.com).
      */
     private String writeAuthCookies(HttpServletResponse response, String email) {
         String[] tokens = authService.generateTokenPair(email);
