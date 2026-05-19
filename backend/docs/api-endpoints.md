@@ -66,8 +66,11 @@
 | `POST` | `/users/me/password` | Cualquiera | Cambiar contraseña propia. Requiere `passwordActual`, `passwordNueva`, `passwordConfirmar`. |
 | `POST` | `/users/me/avatar` | Cualquiera | Subir avatar propio (`multipart/form-data`, campo `file`). Devuelve `{ "avatarUrl": "..." }`. |
 | `GET` | `/users/{id}` | `ADMIN_EMPRESA` | Obtener usuario por ID. ADMIN_EMPRESA solo ve su empresa (devuelve `404` si es de otra, no `403`). |
+| `PATCH` | `/users/{id}` | `ADMIN_EMPRESA` | Actualizar datos de un usuario (nombre, apellidos, rol, etc.). |
 | `GET` | `/users` | `ADMIN_EMPRESA` | Listar usuarios. ADMIN_EMPRESA ve su empresa; ADMIN ve todos. |
+| `GET` | `/users/paginado` | `ADMIN_EMPRESA` | Listar usuarios paginados con búsqueda. Params: `?page=0&size=20&search=texto`. |
 | `DELETE` | `/users/{id}/desactivar` | `ADMIN_EMPRESA` | Soft-delete de usuario (activo = false). Devuelve `404` si el usuario es de otra empresa. |
+| `PATCH` | `/users/{id}/activar` | `ADMIN_EMPRESA` | Reactivar usuario (activo = true). |
 
 **`POST /users` — reglas de seguridad por rol:**
 | Quién llama | `empresaId` en body | Roles asignables | Resultado |
@@ -237,6 +240,9 @@ El campo `tiempo` es calculado en backend según la antigüedad del evento:
 |--------|------|-----------|-------------|
 | `POST` | `/anuncios` | `ADMIN_EMPRESA` | Crear anuncio. ADMIN puede crear globales (`esGlobal = true`). |
 | `GET` | `/anuncios` | ❌ Pública ¹ | Listar anuncios. Sin sesión: solo globales activos. Con sesión: empresa + globales. ADMIN ve toda la plataforma. |
+| `GET` | `/anuncios/paginado` | Cualquier autenticado | Listar paginado. Params: `?page=0&size=20&search=texto`. |
+| `PUT` | `/anuncios/{id}` | `ADMIN_EMPRESA` | Editar anuncio completo. `403` si es ajeno o global. |
+| `PATCH` | `/anuncios/{id}/vistas` | Cualquier autenticado | Registrar que el usuario vio el anuncio → `204 No Content`. |
 | `PATCH` | `/anuncios/{id}/desactivar` | `ADMIN_EMPRESA` | Soft-delete. ADMIN_EMPRESA solo desactiva los propios. |
 | `DELETE` | `/anuncios/{id}` | `ADMIN_EMPRESA` | Alias REST de `PATCH /{id}/desactivar`. Misma lógica. |
 
@@ -278,14 +284,34 @@ El campo `tiempo` es calculado en backend según la antigüedad del evento:
 
 **`NotificationResponse` — campos:** `notificacionId`, `destinatarioId`, `tipo`, `mensaje`, `enlace`, `leido`, `creadoEn`, `actualizadoEn`.
 ---
-## 11. Eventos de Comunidad · `/api/v1/eventos`
+## 11. Eventos EGM · `/api/v1/eventos`
+> Eventos corporativos globales del parque EGM (jornadas, ferias, actividades). Gestionados exclusivamente por `ROLE_ADMIN`.
+> → [Documentación detallada del módulo](modulos/eventos-egm.md)
+
+| Método | Ruta | Rol | Descripción |
+|--------|------|-----|-------------|
+| `POST` | `/eventos` | `ADMIN` | Crear evento EGM global. |
+| `GET` | `/eventos` | Cualquier autenticado | Listar eventos activos. |
+| `PUT` | `/eventos/{id}` | `ADMIN` | Actualizar evento completo. |
+| `PATCH` | `/eventos/{id}/desactivar` | `ADMIN` | Cancelar evento (soft delete). `estado → CANCELADO`. |
+
+**`EventoRequest` — campos:** `titulo`*, `descripcion`, `fecha`* (`YYYY-MM-DD`), `horaInicio` (`HH:mm:ss`), `horaFin`, `lugar`, `urlInfo`, `imagenUrl`.
+
+**`EstadoEvento`:** `PROXIMO` | `EN_CURSO` | `FINALIZADO` | `CANCELADO`.
+---
+## 11b. Eventos de Comunidad · `/api/v1/comunidad/eventos`
+> Eventos internos por empresa (teambuilding, reuniones abiertas, etc.). Multi-tenant: `ROLE_ADMIN_EMPRESA` gestiona los suyos. `ROLE_ADMIN` puede crear globales.
+> → [Documentación detallada del módulo](modulos/comunidad-eventos.md)
+
 | Método | Ruta | Rol mínimo | Descripción |
 |--------|------|-----------|-------------|
-| `POST` | `/eventos` | `ADMIN_EMPRESA` | Crear evento. ADMIN puede crear globales. |
-| `GET` | `/eventos` | Cualquiera | Listar eventos visibles: empresa + globales. |
-| `GET` | `/eventos/{id}` | Cualquiera | Obtener evento por ID. `403` si no pertenece a su empresa. |
-| `PUT` | `/eventos/{id}` | `ADMIN_EMPRESA` | Actualizar evento. Solo ADMIN puede cambiar `esGlobal`. |
-| `PATCH` | `/eventos/{id}/desactivar` | `ADMIN_EMPRESA` | Soft-delete. ADMIN_EMPRESA solo desactiva los propios. |
+| `POST` | `/comunidad/eventos` | `ADMIN_EMPRESA` | Crear evento de comunidad. ADMIN puede crear globales (`esGlobal = true`). |
+| `GET` | `/comunidad/eventos` | Cualquier autenticado | Listar eventos visibles: empresa + globales. ADMIN ve todos. |
+| `GET` | `/comunidad/eventos/{id}` | Cualquier autenticado | Obtener evento por ID. `403` si no pertenece a su empresa. |
+| `PUT` | `/comunidad/eventos/{id}` | `ADMIN_EMPRESA` | Actualizar evento. Solo ADMIN puede cambiar `esGlobal`. `403` si es ajeno o global. |
+| `PATCH` | `/comunidad/eventos/{id}/desactivar` | `ADMIN_EMPRESA` | Soft delete. ADMIN_EMPRESA solo desactiva los propios. |
+
+**`CommunityEventRequest` — campos:** `titulo`*, `descripcion`, `esGlobal` (default `false`), `fechaInicio`* (OffsetDateTime ISO 8601), `fechaFin`.
 ---
 ## 12. Beneficios · `/api/v1/beneficios`
 | Método | Ruta | Rol mínimo | Descripción |
@@ -296,14 +322,19 @@ El campo `tiempo` es calculado en backend según la antigüedad del evento:
 | `PATCH` | `/beneficios/{id}/desactivar` | `ADMIN_EMPRESA` | Soft-delete. ADMIN_EMPRESA solo desactiva los propios. |
 ---
 ## 13. Inteligencia Artificial · `/api/v1/ai`
-> Integración con **Gemini 2.0 Flash** (contenido, preguntas, chat, resumen) y **Groq llama-3.3-70b-versatile** (generación desde archivo). Requiere variables de entorno `GEMINI_API_KEY`, `GROQ_API_KEY`, `ELEVENLABS_API_KEY`.
+> Motor principal: **Groq llama-3.3-70b-versatile**. Motor de respaldo / archivo: **Gemini 2.0 Flash**. Audio: **ElevenLabs**.
+> Variables de entorno requeridas: `GEMINI_API_KEY`, `GROQ_API_KEY`, `ELEVENLABS_API_KEY`.
+> El chat implementa **fallback automático**: si Groq tiene rate limit, la petición se redirige a Gemini.
+
 | Método | Ruta | Rol mínimo | Descripción |
 |--------|------|-----------|-------------|
-| `POST` | `/ai/generar-contenido` | `ADMIN_EMPRESA` | Genera contenido formativo dado un tema, descripción y tipo de módulo. |
-| `POST` | `/ai/generar-preguntas` | `ADMIN_EMPRESA` | Genera preguntas de evaluación desde un prompt. `numPreguntas` opcional (por defecto 5). |
-| `POST` | `/ai/chat` | Cualquiera | Chatbot para empleados. Acepta `prompt`, `nombreEmpresa` y `contexto`. |
-| `POST` | `/ai/resumir` | `ADMIN_EMPRESA` | Genera un resumen estructurado de un texto largo. |
-| `POST` | `/ai/generar-desde-archivo` | `ADMIN_EMPRESA` | Sube un PDF/DOCX/TXT (`multipart/form-data`, part `archivo`) y genera salidas según `tiposSalida` (query param): `documentacion`, `podcast`, `video` o combinaciones. Devuelve `AiFileResponse`. |
+| `POST` | `/ai/generar-contenido` | `ADMIN_EMPRESA` | Genera contenido formativo dado `tema`, `descripcion` y `tipoModulo`. Usa Groq como principal. |
+| `POST` | `/ai/generar-preguntas` | `ADMIN_EMPRESA` | Genera preguntas de evaluación desde `prompt`. `numPreguntas` opcional (defecto 5). |
+| `POST` | `/ai/chat` | Cualquiera | Chatbot con streaming (`text/plain`). Body: `{ messages: [{role, content}], systemPrompt }`. Principal: Groq; fallback: Gemini. |
+| `POST` | `/ai/resumir` | `ADMIN_EMPRESA` | Resumen estructurado de un texto enviado en `prompt`. |
+| `POST` | `/ai/generar-desde-archivo` | `ADMIN_EMPRESA` | Sube PDF/DOCX/TXT (`multipart`, part `archivo`). Query param `tiposSalida`: `documentacion`, `podcast`, `video` o combinaciones separadas por coma. Devuelve `AiFileResponse`. Usa Gemini para doc+video, ElevenLabs para audio del podcast. |
+
+**`AiFileResponse` — campos:** `titulo`, `descripcion`, `contenido` (Markdown), `scriptPodcast` (texto plano TTS), `scriptVideo` (JSON array de slides), `podcastAudioUrl`, `tiposSalida`, `modelo`, `generadoEn`.
 ---
 ## 14. Sugerencias · `/api/v1/sugerencias`
 > Buzón de sugerencias de empleados hacia su empresa o hacia EGM Atalayas.
@@ -354,6 +385,45 @@ El campo `tiempo` es calculado en backend según la antigüedad del evento:
 | `prioridad` | `NORMAL` \| `CRITICA` | Las `CRITICA` generan entrada en `audit_log` automáticamente |
 | `empresaId` | `UUID` \| `null` | `null` = incidencia global de plataforma |
 
+---
+## 16. Servicios · `/api/v1/servicios`
+> Servicios del área empresarial EGM Atalayas (recursos compartidos del parque). Globales, sin scope de empresa.
+> Solo `ROLE_ADMIN` puede crear/editar/desactivar. Cualquier usuario autenticado puede leer.
+> → [Documentación detallada del módulo](modulos/servicios.md)
+
+| Método | Ruta | Rol | Descripción |
+|--------|------|-----|-------------|
+| `POST` | `/servicios` | `ADMIN` | Crear servicio. |
+| `GET` | `/servicios` | Cualquier autenticado | Listar servicios activos. Query param `?categoria=MOVILIDAD\|INSTALACIONES\|INICIATIVAS\|COMUNES` opcional. |
+| `PUT` | `/servicios/{id}` | `ADMIN` | Actualizar servicio completo. |
+| `PATCH` | `/servicios/{id}/desactivar` | `ADMIN` | Soft delete. `400` si ya desactivado. |
+
+**Categorías (`CategoriaServicio`):** `MOVILIDAD` | `INSTALACIONES` | `INICIATIVAS` | `COMUNES`.
+
+**`ServicioRequest` — campos:** `titulo`*, `descripcion`, `categoria`*, `iconoUrl`, `urlInfo`, `telefono`, `comoAcceder`.
+---
+## 17. Documentos · `/api/v1/documentos`
+> Gestión documental laboral (nóminas, contratos, políticas, certificados). Multi-tenant: cada empresa gestiona su propio repositorio.
+> Incluye generación automática de certificados PDF al completar módulos formativos.
+> → [Documentación detallada del módulo](modulos/documentos.md)
+
+### Endpoints de Admin (`ROLE_ADMIN` o `ROLE_ADMIN_EMPRESA`)
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `POST` | `/documentos` | Subir documento (`multipart/form-data`) y asignarlo a empleados. Params: `file`, `titulo`, `tipo`, `requiereFirma`, `asignarATodos`, `notificar`, `usuariosIds[]`, `departamentos[]`. Máx. **25 MB**. |
+| `GET` | `/documentos` | Listar documentos activos de la empresa con totales (`totalAsignados`, `totalVistos`, `totalFirmados`). |
+| `GET` | `/documentos/{id}/asignaciones` | Detalle de asignación por empleado (visto, firmado, fechas). |
+| `DELETE` | `/documentos/{id}` | Soft delete → `204 No Content`. |
+
+### Endpoints de Empleado (cualquier autenticado)
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/documentos/me` | Mis documentos asignados con estado de lectura/firma. |
+| `POST` | `/documentos/me/{id}/visto` | Marcar documento como visto → `204 No Content`. Idempotente. |
+| `POST` | `/documentos/me/{id}/firmar` | **Firmar documento** con firma manuscrita. Body: `{ "firmaBase64": "data:image/png;base64,..." }`. Response `200`: `{ "firmaUrl": "..." }`. `400` si ya firmado o `requiereFirma=false`. |
+| `GET` | `/documentos/me/certificado/{moduloId}` | URL del certificado PDF auto-generado para un módulo completado. `404` si no existe. |
+
+**`TipoDocumento`:** `NOMINA` | `CONTRATO` | `CERTIFICADO` | `POLITICA` | `OTRO`.
 ---
 ## Resumen de endpoints públicos (sin autenticación)
 | Método | Ruta | Nota |

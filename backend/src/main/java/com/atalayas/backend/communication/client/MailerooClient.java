@@ -11,6 +11,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -82,6 +83,56 @@ public class MailerooClient {
             throw ex;
         } catch (Exception ex) {
             throw new EmailSendException("Error de conexión con Maileroo al enviar a " + to + ": " + ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * Envía un email HTML a múltiples destinatarios vía BCC en una sola llamada API.
+     * El campo "to" apunta al remitente para no exponer las direcciones entre sí.
+     * 1 llamada API = N destinatarios (eficiente con plan Free de 30 emails/hora).
+     *
+     * @param from    remitente verificado en Maileroo
+     * @param subject asunto del correo
+     * @param html    cuerpo HTML del correo
+     * @param bccList lista de destinatarios BCC (max recomendado: 25 con plan Free)
+     * @throws EmailSendException si la API devuelve error HTTP o falla la conexión
+     */
+    public void sendBcc(String from, String subject, String html, List<String> bccList) {
+        if (bccList == null || bccList.isEmpty()) return;
+        String bcc = String.join(",", bccList);
+        try {
+            Map<String, String> body = Map.of(
+                    "from", from,
+                    "to", from,
+                    "bcc", bcc,
+                    "subject", subject,
+                    "html", html
+            );
+            String bodyJson = objectMapper.writeValueAsString(body);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(apiUrl))
+                    .timeout(Duration.ofSeconds(15))
+                    .header("Content-Type", "application/json")
+                    .header("X-API-Key", apiKey)
+                    .POST(HttpRequest.BodyPublishers.ofString(bodyJson))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                log.error("[MailerooClient] Error HTTP {} en BCC ({} dest.): {}",
+                        response.statusCode(), bccList.size(), response.body());
+                throw new EmailSendException(
+                        "Maileroo BCC devolvió HTTP " + response.statusCode() + " (" + bccList.size() + " dest.)", null);
+            }
+
+            log.debug("[MailerooClient] BCC enviado a {} destinatarios — HTTP {}", bccList.size(), response.statusCode());
+
+        } catch (EmailSendException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new EmailSendException("Error BCC con Maileroo (" + bccList.size() + " dest.): " + ex.getMessage(), ex);
         }
     }
 }

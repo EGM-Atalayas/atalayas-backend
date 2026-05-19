@@ -124,7 +124,7 @@ Las cookies se construyen en `CookieUtil.addTokenCookie()` con los siguientes fl
 
 ### 3.2 Por qué `Partitioned` en producción
 
-En producción, el frontend (`atalayas-frontend-production.up.railway.app`) y el backend (`atalayas-backend-production-4777.up.railway.app`) son subdominios distintos de `railway.app`, que está en la **Public Suffix List**. Chrome los trata como cross-site y requiere el atributo `Partitioned` (CHIPS) para no bloquear las cookies con `SameSite=None`.
+En producción, el frontend (`atalayas-frontend.onrender.com`) y el backend (`atalayas-backend.onrender.com`) son subdominios distintos de `onrender.com`, que está en la **Public Suffix List**. Chrome los trata como cross-site y requiere el atributo `Partitioned` (CHIPS) para no bloquear las cookies con `SameSite=None`.
 
 Como `ResponseCookie.partitioned()` solo está disponible desde Spring Framework 6.4 (Boot 3.4+) y este proyecto usa Spring Boot 3.2.4, el atributo se añade **manualmente** al header `Set-Cookie`:
 
@@ -319,11 +319,11 @@ Petición entrante
 
 ### 6.1 Variables de entorno
 
-| Variable | Dev (defecto) | Prod (Railway) | Descripción |
+| Variable | Dev (defecto) | Prod (Render) | Descripción |
 |---|---|---|---|
 | `JWT_SECRET` | `atalayas-local-dev-secret-key-must-be-at-least-32-characters-long` | Secret aleatorio ≥32 chars | Clave HMAC de firma |
 | `COOKIE_SECURE` | `false` | `true` | Activa `Secure` + `SameSite=None` + `Partitioned` |
-| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000,...` | URL del frontend en Railway | Orígenes CORS permitidos |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000,...` | URL del frontend en Render | Orígenes CORS permitidos |
 
 ### 6.2 `application.properties`
 

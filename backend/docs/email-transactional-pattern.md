@@ -1,36 +1,39 @@
-# Email y transacciones en CompanyService
+# Email y transacciones — Patrón Maileroo
 
 > **Estado**: ✅ Implementado (Mayo 2026) — usa Maileroo API (cliente HTTP nativo Java 21)
+> **Plan**: Free · 3.000 emails/mes · 30 emails/hora · BCC bulk para eventos
 
 ---
 
 ## Resumen del patrón implementado
 
-Los emails de aprobación y rechazo de empresas se envían **siempre después del commit de BD**
-mediante `@TransactionalEventListener(phase = AFTER_COMMIT) + @Async`.
+Todos los métodos públicos de `EmailService` son `@Async`: fire-and-forget, no bloquean el hilo HTTP.
+Los errores se capturan internamente con `try/catch` y se registran en log `ERROR`.
 
 ```
 HTTP request
-    └── CompanyService (transacción activa)
-            ├── Cambios en BD (empresa, usuarios)
-            ├── eventPublisher.publishEvent(CompanyEvent)   ← guardado, no enviado aún
-            └── COMMIT
+    └── Service (transacción activa)
+            ├── Cambios en BD
+            └── emailService.enviarXxx()   ← @Async: schedula en thread pool y retorna inmediatamente
+                    COMMIT
 
-    Después del commit (hilo async del pool):
-    CompanyEventListener.onCompanyEvent(event)
-            ├── emailService.enviarAprobacion() o enviarRechazo()
-            └── companyRepository.updateEmailEnviado(id, true)   ← nueva mini-transacción
+    Después (hilo async del pool):
+    EmailService.enviarXxx()
+            └── mailerooClient.send() / mailerooClient.sendBcc()
+                    └── POST https://api.maileroo.com/send
 ```
 
-**Ventajas sobre el try-catch anterior:**
+Para las aprobaciones/rechazos de empresa, el `CompanyEventListener` añade una capa extra
+de `@TransactionalEventListener(AFTER_COMMIT)` que garantiza que el email solo se intenta
+si el commit tuvo éxito:
 
-| | try-catch (anterior) | @TransactionalEventListener (actual) |
-|---|---|---|
-| Email se envía si el commit falla | ✗ posible | ✓ nunca |
-| Email se envía si el commit tiene éxito | ✓ | ✓ |
-| Fallo de envío revierte cambio de estado | ✗ (con el fix) | ✓ nunca |
-| HTTP response espera al proveedor de email | ✓ bloquea | ✗ async |
-| Visibilidad del fallo para el admin | ✗ solo logs | ✓ campo `emailEnviado` |
+```
+COMMIT
+──── hilo async (CompanyEventListener) ────────────────────────────────────
+CompanyEventListener.onCompanyEvent()
+        ├── emailService.enviarAprobacion()   ← @Async (schedula al pool)
+        └── companyRepository.updateEmailEnviado(true)   ← ejecuta inmediatamente
+```
 
 ---
 
@@ -175,32 +178,43 @@ badge de estado coloreado, y footer `© 2026 Atalayas Área Empresarial · Alica
 
 ### Plantillas disponibles
 
-| Método | Asunto | Badge | CTA |
-|--------|--------|-------|-----|
-| `enviarAprobacion` | `¡Tu empresa ha sido aprobada en Atalayas!` | 🟢 Verde — "✓ Solicitud aprobada" | Botón → `{frontendUrl}/login` |
-| `enviarRechazo` | `Actualización sobre tu solicitud de alta en Atalayas` | 🔴 Rojo — "✗ Solicitud no aprobada" | Link `soporte@atalayas.com` |
-| `enviarBienvenidaUsuarioCreado` | `Tu cuenta en Atalayas está lista` | 🔵 Azul — "Tu cuenta está lista" | Email destacado + Botón → `{frontendUrl}/login` |
-| `enviarRecuperacionPassword` | `Restablecer contraseña · Atalayas` | — | Botón → `{frontendUrl}/reset-password?token=…` |
+| Método | Tipo | Asunto | Badge | CTA |
+|--------|------|--------|-------|-----|
+| `enviarAprobacion` | Individual `@Async` | `¡Tu empresa ha sido aprobada en Atalayas!` | 🟢 Verde | Botón → `/login` |
+| `enviarRechazo` | Individual `@Async` | `Actualización sobre tu solicitud de alta en Atalayas` | 🔴 Rojo | Link soporte |
+| `enviarBienvenidaUsuarioCreado` | Individual `@Async` | `Tu cuenta en Atalayas está lista` | 🔵 Azul | Botón → `/login` |
+| `enviarRecuperacionPassword` | Individual `@Async` | `Restablecer contraseña · Atalayas` | — | Botón → `/reset-password?token=…` |
+| `enviarNuevoEventoMasivo` | **BCC bulk** `@Async` | `Nuevo evento · {titulo}` | 🟠 Naranja "📅 Nuevo evento" | Botón → `/eventos` |
+| `enviarEventoCanceladoMasivo` | **BCC bulk** `@Async` | `Evento cancelado · {titulo}` | ⚫ Gris "❌ Evento cancelado" | — |
+| `enviarNuevoEventoComunidadMasivo` | **BCC bulk** `@Async` | `Nuevo evento de comunidad · {titulo}` | 🟣 Morado "🎉 Evento de comunidad" | Botón → `/comunidad` |
+| `enviarEventoComunidadDesactivadoMasivo` | **BCC bulk** `@Async` | `Evento desactivado · {titulo}` | ⚫ Gris "❌ Evento desactivado" | — |
 
 ### Colores de badge
 
 ```
-Aprobación  → background: #ECFDF5  color: #059669  (verde)
-Rechazo     → background: #FEF2F2  color: #DC2626  (rojo)
-Bienvenida  → background: #EFF6FF  color: #1B3F7E  (azul)
+Aprobación              → background: #ECFDF5  color: #059669  (verde)
+Rechazo                 → background: #FEF2F2  color: #DC2626  (rojo)
+Bienvenida              → background: #EFF6FF  color: #1B3F7E  (azul)
+Nuevo evento EGM        → background: #FFF7ED  color: #EA580C  (naranja)
+Nuevo evento comunidad  → background: #F5F3FF  color: #7C3AED  (morado)
+Cancelado/desactivado   → background: #F3F4F6  color: #6B7280  (gris)
 ```
 
-### Implementación del envío
+### BCC bulk vs. envío individual
+
+Los métodos `*Masivo` usan `mailerooClient.sendBcc()`: una sola llamada HTTP con todos
+los destinatarios en el header `bcc`. El campo `to` apunta al remitente para preservar
+la privacidad entre destinatarios.
 
 ```java
-// EmailService — método privado común a los 3 emails de empresa
-private void send(String to, String subject, String html) {
-    mailerooClient.send(remitente, to, subject, html);
-    // EmailSendException lanzada por MailerooClient en caso de error
+// EmailService — método privado para BCC
+private void sendBcc(List<String> bccList, String subject, String html) {
+    mailerooClient.sendBcc(remitente, subject, html, bccList);
 }
 ```
 
-`EmailSendException` es capturada por `GlobalExceptionHandler` → devuelve HTTP `502`.
+Cap de destinatarios: `app.mail.max-bulk-recipients` (default `25`).
+Si la lista supera el cap se emite `WARN` y se trunca. Plan Free: 30 emails/hora.
 
 ---
 
@@ -270,30 +284,19 @@ que el envío falló y pueda reintentar.
 
 ## 6. Diagnóstico de fallos
 
-Si los emails no llegan, buscar en los logs del servidor entradas con nivel `WARN` del logger
-`com.atalayas.backend.company.event.CompanyEventListener`:
+Si los emails no llegan, buscar en los logs del servidor:
 
 ```
-WARN  CompanyEventListener - Fallo Resend API tras commit — empresa=Acme S.L. estado=APROBADA: ...
+# Fallo tras commit de empresa
+WARN  CompanyEventListener - Fallo Maileroo API tras commit — empresa=Acme S.L. estado=APROBADA: ...
+
+# Fallo en método @Async de EmailService
+ERROR EmailService - [EmailService] Error al enviar aprobación a admin@empresa.com: ...
+ERROR EmailService - [EmailService] Error al enviar nuevo evento masivo 'Jornada': ...
+
+# Cap de destinatarios alcanzado
+WARN  EmailService - [EmailService] NuevoEvento[Jornada] — lista de 40 destinatarios truncada a 25 ...
 ```
 
-### Errores frecuentes de Maileroo API
-
-| Error | Causa probable | Solución |
-|-------|---------------|----------|
-| HTTP `401 Unauthorized` | `MAILEROO_API_KEY` inválida o ausente | Verificar la clave en maileroo.com → API Keys |
-| HTTP `422 Unprocessable Entity` | Dominio remitente no verificado o body malformado | Verificar dominio en Maileroo; revisar `MAIL_FROM` |
-| HTTP `429 Too Many Requests` | Rate limit superado | Revisar plan de Maileroo; añadir retry con backoff |
-| `ConnectException` / Timeout | Sin conectividad con `api.maileroo.com` | Verificar red del servidor; el puerto 443 debe estar libre |
-| `EmailSendException: … malformado` | Email destinatario malformado | Revisar datos del usuario en BD |
-
-### Test rápido de la API key
-
-```bash
-curl -X POST https://api.maileroo.com/send \
-  -H "X-API-Key: $MAILEROO_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"from":"noreply@atalayas.com","to":"test@example.com","subject":"Test","html":"<p>OK</p>"}'
-```
-
-Respuesta esperada: HTTP 200 con id del mensaje.
+Ver también: [`docs/maileroo-api-key-test.md`](maileroo-api-key-test.md) para comandos `curl`/PowerShell,
+tabla de errores HTTP y checklist DKIM/SPF.
