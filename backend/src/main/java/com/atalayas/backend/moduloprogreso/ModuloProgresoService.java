@@ -2,11 +2,16 @@ package com.atalayas.backend.moduloprogreso;
 
 import com.atalayas.backend.common.util.SecurityUtils;
 import com.atalayas.backend.documento.CertificadoService;
+import com.atalayas.backend.exception.UnauthorizedException;
+import com.atalayas.backend.moduloprogreso.dto.EmpleadoProgresoResponse;
 import com.atalayas.backend.moduloprogreso.dto.GuardarProgresoRequest;
+import com.atalayas.backend.moduloprogreso.dto.ModuloProgresoResumen;
 import com.atalayas.backend.moduloprogreso.dto.ModuloProgresoResponse;
 import com.atalayas.backend.moduloprogreso.entity.ModuloProgreso;
 import com.atalayas.backend.moduloprogreso.repository.ModuloProgresoRepository;
+import com.atalayas.backend.module.repository.ModuleRepository;
 import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,6 +21,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -33,6 +39,8 @@ public class ModuloProgresoService {
 
     private final ModuloProgresoRepository repo;
     private final CertificadoService       certificadoService;
+    private final UserRepository           userRepository;
+    private final ModuleRepository         moduleRepository;
 
     // ── GUARDAR PROGRESO ───────────────────────────────────────────────────
 
@@ -115,6 +123,53 @@ public class ModuloProgresoService {
                         .porcentaje(0)
                         .completado(false)
                         .build());
+    }
+
+    // ── PROGRESO DE TODA LA EMPRESA (DASHBOARD ADMIN) ─────────────────────
+
+    @Transactional(readOnly = true)
+    public List<EmpleadoProgresoResponse> progresoEmpresa(UUID empresaId, User user) {
+        String rol = user.getRol().getCodigoRol();
+        if ("ROLE_ADMIN_EMPRESA".equals(rol) && !user.getEmpresaId().equals(empresaId)) {
+            throw new UnauthorizedException("Solo puedes consultar el progreso de tu empresa");
+        }
+
+        List<User> empleados = userRepository.findAllByEmpresaIdAndActivoTrue(empresaId);
+
+        return empleados.stream().map(emp -> {
+            List<ModuloProgreso> progresos = repo.findByUsuarioIdOrderByActualizadoEnDesc(emp.getUsuarioId());
+
+            if (progresos.isEmpty()) {
+                return EmpleadoProgresoResponse.builder()
+                        .usuarioId(emp.getUsuarioId())
+                        .nombre(emp.getNombre())
+                        .apellidos(emp.getApellidos())
+                        .modulos(List.of())
+                        .build();
+            }
+
+            Map<UUID, String> nombresModulos = moduleRepository.findAllById(
+                    progresos.stream().map(ModuloProgreso::getModuloId).collect(Collectors.toSet())
+            ).stream().collect(Collectors.toMap(
+                    m -> m.getModuloId(),
+                    m -> m.getNombre()
+            ));
+
+            List<ModuloProgresoResumen> modulos = progresos.stream().map(p ->
+                    ModuloProgresoResumen.builder()
+                            .moduloId(p.getModuloId())
+                            .nombreModulo(nombresModulos.getOrDefault(p.getModuloId(), null))
+                            .porcentaje(p.getPorcentaje())
+                            .build()
+            ).collect(Collectors.toList());
+
+            return EmpleadoProgresoResponse.builder()
+                    .usuarioId(emp.getUsuarioId())
+                    .nombre(emp.getNombre())
+                    .apellidos(emp.getApellidos())
+                    .modulos(modulos)
+                    .build();
+        }).collect(Collectors.toList());
     }
 
     // ── HELPERS ───────────────────────────────────────────────────────────
