@@ -43,16 +43,19 @@ public class IncidenciaService {
         return incidenciaMapper.toResponse(saved);
     }
 
+    /**
+     * Devuelve todas las incidencias si el usuario autenticado es SUPER_ADMIN;
+     * en caso contrario, filtra automáticamente por el empresaId del token JWT.
+     */
     @Transactional(readOnly = true)
-    public List<IncidenciaResponse> listarTodas() {
-        return incidenciaRepository.findAllByOrderByCreadoEnDesc()
-                .stream()
-                .map(incidenciaMapper::toResponse)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<IncidenciaResponse> listarPorEmpresa(UUID empresaId) {
+    public List<IncidenciaResponse> listar() {
+        if (SecurityUtils.isSuperAdmin()) {
+            return incidenciaRepository.findAllByOrderByCreadoEnDesc()
+                    .stream()
+                    .map(incidenciaMapper::toResponse)
+                    .toList();
+        }
+        UUID empresaId = SecurityUtils.getEmpresaId();
         return incidenciaRepository.findAllByEmpresaIdOrderByCreadoEnDesc(empresaId)
                 .stream()
                 .map(incidenciaMapper::toResponse)

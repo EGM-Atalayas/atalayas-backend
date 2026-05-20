@@ -39,7 +39,7 @@ public class IncidenciaController {
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
     @Operation(summary = "Listar incidencias — superadmin: todas; admin empresa: filtradas por empresa")
     public ResponseEntity<List<IncidenciaResponse>> listar() {
-        return ResponseEntity.ok(incidenciaService.listarTodas());
+        return ResponseEntity.ok(incidenciaService.listar());
     }
 
     @PatchMapping("/{id}/estado")
