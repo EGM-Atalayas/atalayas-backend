@@ -2,6 +2,7 @@ package com.atalayas.backend.moduloprogreso;
 
 import com.atalayas.backend.common.util.SecurityUtils;
 import com.atalayas.backend.documento.CertificadoService;
+import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.exception.UnauthorizedException;
 import com.atalayas.backend.moduloprogreso.dto.EmpleadoProgresoResponse;
 import com.atalayas.backend.moduloprogreso.dto.GuardarProgresoRequest;
@@ -54,6 +55,9 @@ public class ModuloProgresoService {
         User user = SecurityUtils.getCurrentUser();
         UUID userId    = user.getUsuarioId();
         UUID empresaId = user.getEmpresaId();
+
+        moduleRepository.findById(moduloId)
+                .orElseThrow(() -> new ResourceNotFoundException("Módulo no encontrado con id: " + moduloId));
 
         int completados = Math.max(0, req.getContenidosCompletados());
         int total       = Math.max(0, req.getTotalContenidos());
