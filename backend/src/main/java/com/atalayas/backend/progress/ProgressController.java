@@ -1,6 +1,8 @@
 package com.atalayas.backend.progress;
 
 import com.atalayas.backend.common.dto.PaginatedResponse;
+import com.atalayas.backend.moduloprogreso.ModuloProgresoService;
+import com.atalayas.backend.moduloprogreso.dto.EmpleadoProgresoResponse;
 import com.atalayas.backend.progress.dto.CompleteContentRequest;
 import com.atalayas.backend.progress.dto.ProgressResponse;
 import com.atalayas.backend.user.entity.User;
@@ -40,6 +42,7 @@ import java.util.UUID;
 public class ProgressController {
 
     private final ProgressService progressService;
+    private final ModuloProgresoService moduloProgresoService;
 
 
     /**
@@ -124,9 +127,9 @@ public class ProgressController {
 
     /**
      * GET /api/v1/progreso/empresa/{empresaId}
-     * Devuelve todo el progreso de los empleados de una empresa
-     * Útil para el dashboard de admin empresa
-     * Admin empresa solo puede consultar su propia empresa - 403 si es ajena
+     * Devuelve todos los empleados de la empresa con su progreso en cada módulo.
+     * Útil para el dashboard de admin empresa.
+     * Admin empresa solo puede consultar su propia empresa - 403 si es ajena.
      */
     @GetMapping("/empresa/{empresaId}")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
@@ -138,10 +141,10 @@ public class ProgressController {
         @ApiResponse(responseCode = "404", description = "Empresa no encontrada",
                      content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     })
-    public ResponseEntity<List<ProgressResponse>> progresoPorEmpresa(
+    public ResponseEntity<List<EmpleadoProgresoResponse>> progresoPorEmpresa(
             @PathVariable UUID empresaId,
             @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(progressService.progresoPorEmpresa(empresaId, user));
+        return ResponseEntity.ok(moduloProgresoService.progresoEmpresa(empresaId, user));
     }
 
     @GetMapping("/empresa/{empresaId}/paginado")
