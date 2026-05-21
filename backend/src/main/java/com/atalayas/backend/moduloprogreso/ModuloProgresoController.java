@@ -48,4 +48,11 @@ public class ModuloProgresoController {
     public ResponseEntity<ModuloProgresoResponse> miProgresoModulo(@PathVariable UUID moduloId) {
         return ResponseEntity.ok(service.miProgresoModulo(moduloId));
     }
+
+    @DeleteMapping("/{moduloId}/progreso")
+    @Operation(summary = "Reiniciar el progreso del usuario autenticado en un módulo")
+    public ResponseEntity<Void> reiniciarProgreso(@PathVariable UUID moduloId) {
+        service.reiniciarProgreso(moduloId);
+        return ResponseEntity.noContent().build();
+    }
 }

@@ -176,6 +176,17 @@ public class ModuloProgresoService {
         }).collect(Collectors.toList());
     }
 
+    // ── REINICIAR PROGRESO ───────────────────────────────────────────────
+
+    @Transactional
+    public void reiniciarProgreso(UUID moduloId) {
+        User user = SecurityUtils.getCurrentUser();
+        moduleRepository.findById(moduloId)
+                .orElseThrow(() -> new ResourceNotFoundException("Módulo no encontrado con id: " + moduloId));
+        repo.findByUsuarioIdAndModuloId(user.getUsuarioId(), moduloId)
+                .ifPresent(repo::delete);
+    }
+
     // ── HELPERS ───────────────────────────────────────────────────────────
 
     private ModuloProgresoResponse toResponse(ModuloProgreso p) {
