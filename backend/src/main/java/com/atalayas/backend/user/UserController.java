@@ -1,8 +1,11 @@
 package com.atalayas.backend.user;
 
+import com.atalayas.backend.common.dto.PaginatedResponse;
+import com.atalayas.backend.user.dto.AdminResetPasswordRequest;
 import com.atalayas.backend.user.dto.ChangePasswordRequest;
 import com.atalayas.backend.user.dto.CreateUserRequest;
 import com.atalayas.backend.user.dto.UpdateProfileRequest;
+import com.atalayas.backend.user.dto.UpdateUserRequest;
 import com.atalayas.backend.user.dto.UserProfileResponse;
 import com.atalayas.backend.user.dto.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -95,11 +98,29 @@ public class UserController {
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN_EMPRESA', 'ROLE_ADMIN')")
+    @Operation(summary = "Actualizar datos de un usuario (solo admins)")
+    public ResponseEntity<UserResponse> updateUser(@PathVariable UUID id,
+                                                    @Valid @RequestBody UpdateUserRequest request) {
+        return ResponseEntity.ok(userService.updateUser(id, request));
+    }
+
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN_EMPRESA', 'ROLE_ADMIN')")
     @Operation(summary = "Listar todos los usuarios (solo admins)")
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
+    }
+
+    @GetMapping("/paginado")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN_EMPRESA', 'ROLE_ADMIN')")
+    @Operation(summary = "Listar usuarios paginados con búsqueda opcional (solo admins)")
+    public ResponseEntity<PaginatedResponse<UserResponse>> getAllUsersPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String search) {
+        return ResponseEntity.ok(userService.getAllUsersPaged(page, size, search));
     }
 
     @DeleteMapping("/{id}/desactivar")
@@ -116,5 +137,22 @@ public class UserController {
     public ResponseEntity<Void> activarUsuario(@PathVariable UUID id) {
         userService.activarUsuario(id);
         return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{id}/desbloquear")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN_EMPRESA', 'ROLE_ADMIN')")
+    @Operation(summary = "Desbloquear cuenta de usuario — resetea intentos fallidos (solo admins)")
+    public ResponseEntity<Void> desbloquearUsuario(@PathVariable UUID id) {
+        userService.desbloquearUsuario(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{id}/reset-password")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN_EMPRESA', 'ROLE_ADMIN')")
+    @Operation(summary = "Resetear contraseña de un empleado (solo admins)")
+    public ResponseEntity<Void> resetPassword(@PathVariable UUID id,
+                                              @Valid @RequestBody AdminResetPasswordRequest request) {
+        userService.adminResetPassword(id, request);
+        return ResponseEntity.noContent().build();
     }
 }

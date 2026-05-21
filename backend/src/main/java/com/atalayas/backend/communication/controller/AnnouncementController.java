@@ -1,5 +1,6 @@
 package com.atalayas.backend.communication.controller;
 
+import com.atalayas.backend.common.dto.PaginatedResponse;
 import com.atalayas.backend.communication.dto.AnnouncementRequest;
 import com.atalayas.backend.communication.dto.AnnouncementResponse;
 import com.atalayas.backend.communication.service.AnnouncementService;
@@ -67,6 +68,17 @@ public class AnnouncementController {
     public ResponseEntity<List<AnnouncementResponse>> listar(
             @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(announcementService.listar(user));
+    }
+
+    @GetMapping("/paginado")
+    @Operation(summary = "Listar anuncios paginados con búsqueda opcional por título")
+    @ApiResponse(responseCode = "200", description = "Página de anuncios")
+    public ResponseEntity<PaginatedResponse<AnnouncementResponse>> listarPaged(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String search) {
+        return ResponseEntity.ok(announcementService.listarPaged(user, page, size, search));
     }
 
     /**

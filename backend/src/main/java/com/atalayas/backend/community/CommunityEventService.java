@@ -1,6 +1,7 @@
 package com.atalayas.backend.community;
 
 import com.atalayas.backend.common.enums.RoleType;
+import com.atalayas.backend.communication.service.EmailService;
 import com.atalayas.backend.community.dto.CommunityEventRequest;
 import com.atalayas.backend.community.dto.CommunityEventResponse;
 import com.atalayas.backend.community.entity.CommunityEvent;
@@ -9,6 +10,7 @@ import com.atalayas.backend.community.repository.CommunityEventRepository;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.exception.UnauthorizedException;
 import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,6 +36,8 @@ public class CommunityEventService {
 
     private final CommunityEventRepository communityEventRepository;
     private final CommunityEventMapper communityEventMapper;
+    private final UserRepository userRepository;
+    private final EmailService emailService;
 
 
     // ── CREAR ────────────────────────────────────────────────────────────────
@@ -46,7 +50,6 @@ public class CommunityEventService {
     public CommunityEventResponse crear(CommunityEventRequest request, User user) {
         RoleType rol = user.getRol().getRoleType();
 
-        // Admin empresa no puede crear eventos globales ni de otra empresa
         UUID empresaId = (rol == RoleType.ROLE_ADMIN_EMPRESA) ? user.getEmpresaId() : request.getEmpresaId();
         boolean esGlobal = (rol == RoleType.ROLE_ADMIN_EMPRESA) ? false : request.isEsGlobal();
 
@@ -54,6 +57,11 @@ public class CommunityEventService {
                 communityEventMapper.toEntity(request, empresaId, esGlobal, user.getUsuarioId()));
 
         log.info("Evento creado: {} por usuario: {}", guardado.getEventoId(), user.getEmail());
+
+        List<String> emails = emailsScopeEvento(esGlobal, empresaId);
+        emailService.enviarNuevoEventoComunidadMasivo(
+                emails, guardado.getTitulo(), guardado.getFechaInicio(), guardado.getLugar());
+
         return communityEventMapper.toResponse(guardado);
     }
 
@@ -121,6 +129,10 @@ public class CommunityEventService {
         evento.setDescripcion(request.getDescripcion());
         evento.setFechaInicio(request.getFechaInicio());
         evento.setFechaFin(request.getFechaFin());
+        evento.setLugar(request.getLugar());
+        evento.setLatitud(request.getLatitud());
+        evento.setLongitud(request.getLongitud());
+        evento.setImagenUrl(request.getImagenUrl());
 
         // Solo superadmin puede promocionar o degradar un evento a global
         if (user.getRol().getRoleType() == RoleType.ROLE_ADMIN) {
@@ -151,7 +163,12 @@ public class CommunityEventService {
 
         evento.setActivo(false);
         log.info("Evento desactivado: {} por usuario: {}", eventoId, user.getEmail());
-        return communityEventMapper.toResponse(communityEventRepository.save(evento));
+        CommunityEventResponse response = communityEventMapper.toResponse(communityEventRepository.save(evento));
+
+        List<String> emails = emailsScopeEvento(evento.isEsGlobal(), evento.getEmpresaId());
+        emailService.enviarEventoComunidadDesactivadoMasivo(emails, evento.getTitulo());
+
+        return response;
     }
 
 
@@ -180,5 +197,21 @@ public class CommunityEventService {
         if (!user.getEmpresaId().equals(evento.getEmpresaId())) {
             throw new UnauthorizedException("No puedes modificar eventos de otra empresa");
         }
+    }
+
+    /** Emails de usuarios activos según el scope del evento (global = toda la plataforma, empresa = su scope). */
+    private List<String> emailsScopeEvento(boolean esGlobal, UUID empresaId) {
+        if (esGlobal) {
+            return userRepository.findAll().stream()
+                    .filter(u -> u.isActivo() && u.getEmpresaId() != null)
+                    .map(User::getEmail)
+                    .collect(Collectors.toList());
+        }
+        if (empresaId != null) {
+            return userRepository.findAllByEmpresaIdAndActivoTrue(empresaId).stream()
+                    .map(User::getEmail)
+                    .collect(Collectors.toList());
+        }
+        return List.of();
     }
 }

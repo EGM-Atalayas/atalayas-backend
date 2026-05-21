@@ -1,11 +1,14 @@
 package com.atalayas.backend.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import com.atalayas.backend.exception.EmailSendException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -16,7 +19,6 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
-
 /**
  * Manejador global de excepciones para toda la aplicación.
  *
@@ -78,6 +80,18 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
     }
 
+    @ExceptionHandler(LockedException.class)
+    public ResponseEntity<Map<String, Object>> handleLocked(LockedException ex) {
+        return buildResponse(HttpStatus.LOCKED,
+                "Cuenta bloqueada por demasiados intentos fallidos. Restablece tu contraseña para desbloquearla.");
+    }
+
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity<Map<String, Object>> handleDisabled(DisabledException ex) {
+        return buildResponse(HttpStatus.UNAUTHORIZED,
+                "Cuenta desactivada. Contacta con tu administrador.");
+    }
+
     /**
      * 403 — Acceso denegado por Spring Security.
      * Se lanza cuando un @PreAuthorize falla — el usuario no tiene el rol requerido.
@@ -111,7 +125,7 @@ public class GlobalExceptionHandler {
         }
 
         Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", OffsetDateTime.now());
+        body.put("timestamp", OffsetDateTime.now().toString());
         body.put("status", HttpStatus.BAD_REQUEST.value());
         body.put("error", "Validación fallida");
         body.put("fieldErrors", fieldErrors);
@@ -156,14 +170,12 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 502 — Fallo al enviar correo electrónico (dependencia SMTP externa).
+     * 502 — Fallo al enviar correo electrónico (Resend API).
      * HTTP 502 Bad Gateway es semánticamente correcto: el servidor actuó como
-     * proxy hacia Gmail/SMTP y recibió una respuesta inválida o no recibió
-     * respuesta en el tiempo esperado.
+     * proxy hacia Resend y recibió una respuesta de error o no pudo conectar.
      *
-     * Nota: CompanyService ya captura MailException localmente para que el
-     * fallo SMTP no revierta la transacción de BD. Este handler cubre cualquier
-     * otro punto del sistema donde pueda escapar sin capturar.
+     * EmailSendException envuelve ResendException y se lanza desde EmailService.
+     * Este handler cubre cualquier punto del sistema donde escape sin capturar.
      */
     @ExceptionHandler(EmailSendException.class)
     public ResponseEntity<Map<String, Object>> handleEmailSend(EmailSendException ex) {
@@ -172,13 +184,31 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 409 — Violación de integridad de datos en base de datos.
+     * Ocurre cuando se intenta guardar un registro que viola una restricción
+     * de la base de datos (unique, not null, foreign key, etc.).
+     * Ejemplo: email duplicado en actualización de usuario.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrity(
+            DataIntegrityViolationException ex) {
+        String message = ex.getMostSpecificCause() != null
+                ? ex.getMostSpecificCause().getMessage()
+                : "La operación viola una restricción de integridad de datos";
+        return buildResponse(HttpStatus.CONFLICT, message);
+    }
+
+    /**
      * 500 — Cualquier excepción no controlada que llegue hasta aquí.
      * No expone el mensaje original para no filtrar información interna al cliente.
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-                "Error interno del servidor");
+        Throwable root = ex;
+        while (root.getCause() != null) root = root.getCause();
+        String detail = ex.getClass().getSimpleName() + ": " + ex.getMessage()
+            + (root != ex ? " | caused by: " + root.getClass().getSimpleName() + ": " + root.getMessage() : "");
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "ERR500: " + detail);
     }
 
 
@@ -188,11 +218,11 @@ public class GlobalExceptionHandler {
      * Construye el cuerpo de respuesta de error estándar de la plataforma.
      * Todos los errores tienen la misma estructura para que el frontend
      * pueda procesarlos de forma uniforme sin casos especiales.
-     */
+     */ 
     private ResponseEntity<Map<String, Object>> buildResponse(
             HttpStatus status, String message) {
         Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", OffsetDateTime.now());
+        body.put("timestamp", OffsetDateTime.now().toString());
         body.put("status", status.value());
         body.put("error", status.getReasonPhrase());
         body.put("message", message);

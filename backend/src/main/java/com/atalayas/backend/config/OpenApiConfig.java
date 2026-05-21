@@ -29,7 +29,7 @@ import org.springframework.context.annotation.Configuration;
  *
  * Servidores:
  *   El servidor activo se lee de la variable de entorno SERVER_URL.
- *   En Railway se configura SERVER_URL=https://atalayas-backend-production-4777.up.railway.app
+ *   En Render se configura SERVER_URL=https://atalayas-backend.onrender.com
  *   En local no hace falta configurarla (default: http://localhost:8080).
  */
 @Configuration

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -42,9 +43,20 @@ public class IncidenciaService {
         return incidenciaMapper.toResponse(saved);
     }
 
+    /**
+     * Devuelve todas las incidencias si el usuario autenticado es SUPER_ADMIN;
+     * en caso contrario, filtra automáticamente por el empresaId del token JWT.
+     */
     @Transactional(readOnly = true)
-    public List<IncidenciaResponse> listarTodas() {
-        return incidenciaRepository.findAllByOrderByCreadoEnDesc()
+    public List<IncidenciaResponse> listar() {
+        if (SecurityUtils.isSuperAdmin()) {
+            return incidenciaRepository.findAllByOrderByCreadoEnDesc()
+                    .stream()
+                    .map(incidenciaMapper::toResponse)
+                    .toList();
+        }
+        UUID empresaId = SecurityUtils.getEmpresaId();
+        return incidenciaRepository.findAllByEmpresaIdOrderByCreadoEnDesc(empresaId)
                 .stream()
                 .map(incidenciaMapper::toResponse)
                 .toList();
@@ -57,5 +69,13 @@ public class IncidenciaService {
                         "Incidencia no encontrada con id: " + id));
         incidencia.setEstado(nuevoEstado);
         return incidenciaMapper.toResponse(incidenciaRepository.saveAndFlush(incidencia));
+    }
+
+    @Transactional
+    public void eliminar(Long id) {
+        if (!incidenciaRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Incidencia no encontrada con id: " + id);
+        }
+        incidenciaRepository.deleteById(id);
     }
 }

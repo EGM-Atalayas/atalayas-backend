@@ -1,13 +1,12 @@
 package com.atalayas.backend.incidencia;
 
+import com.atalayas.backend.incidencia.dto.CambiarEstadoRequest;
 import com.atalayas.backend.incidencia.dto.IncidenciaRequest;
 import com.atalayas.backend.incidencia.dto.IncidenciaResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import com.atalayas.backend.incidencia.enums.EstadoIncidencia;
 import jakarta.validation.Valid;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,37 +18,44 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/incidencias")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('ROLE_ADMIN')")
-@Tag(name = "Incidencias", description = "Gestión de incidencias de la plataforma (superadmin)")
+@Tag(name = "Incidencias", description = "Gestión de incidencias")
 @SecurityRequirement(name = "bearerAuth")
 public class IncidenciaController {
 
     private final IncidenciaService incidenciaService;
 
+    /**
+     * Cualquier usuario autenticado puede reportar una incidencia.
+     * El servicio asigna automáticamente el empresaId del token si no se envía.
+     */
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA', 'ROLE_EMPLEADO')")
     @Operation(summary = "Crear nueva incidencia")
     public ResponseEntity<IncidenciaResponse> crear(@Valid @RequestBody IncidenciaRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(incidenciaService.crear(request));
     }
 
     @GetMapping
-    @Operation(summary = "Listar todas las incidencias ordenadas por fecha DESC")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
+    @Operation(summary = "Listar incidencias — superadmin: todas; admin empresa: filtradas por empresa")
     public ResponseEntity<List<IncidenciaResponse>> listar() {
-        return ResponseEntity.ok(incidenciaService.listarTodas());
+        return ResponseEntity.ok(incidenciaService.listar());
     }
 
     @PatchMapping("/{id}/estado")
-    @Operation(summary = "Cambiar el estado de una incidencia (ABIERTA | EN_CURSO | RESUELTA | CERRADA)")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
+    @Operation(summary = "Cambiar el estado de una incidencia (ABIERTA | EN_CURSO | CERRADA)")
     public ResponseEntity<IncidenciaResponse> cambiarEstado(
             @PathVariable Long id,
-            @RequestBody Map<String, String> body) {
-        EstadoIncidencia estado;
-        try {
-            estado = EstadoIncidencia.valueOf(body.get("estado").toUpperCase());
-        } catch (IllegalArgumentException | NullPointerException e) {
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok(incidenciaService.cambiarEstado(id, estado));
+            @Valid @RequestBody CambiarEstadoRequest request) {
+        return ResponseEntity.ok(incidenciaService.cambiarEstado(id, request.getEstado()));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_ADMIN_EMPRESA')")
+    @Operation(summary = "Eliminar una incidencia definitivamente")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+        incidenciaService.eliminar(id);
+        return ResponseEntity.noContent().build();
     }
 }
-

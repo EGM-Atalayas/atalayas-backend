@@ -1,9 +1,11 @@
 package com.atalayas.backend.progress;
 
+import com.atalayas.backend.common.dto.PaginatedResponse;
 import com.atalayas.backend.common.enums.ProgressStatus;
 import com.atalayas.backend.communication.service.NotificationService;
 import com.atalayas.backend.content.entity.ContentItem;
 import com.atalayas.backend.content.repository.ContentRepository;
+import com.atalayas.backend.documento.CertificadoService;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.exception.UnauthorizedException;
 import com.atalayas.backend.progress.dto.CompleteContentRequest;
@@ -13,8 +15,12 @@ import com.atalayas.backend.progress.repository.ProgressRepository;
 import com.atalayas.backend.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -43,6 +49,7 @@ public class ProgressService {
     private final ProgressRepository progressRepository;
     private final ContentRepository contentRepository;
     private final NotificationService notificationService;
+    private final CertificadoService certificadoService;
 
 
     // ── REGISTRAR O ACTUALIZAR PROGRESO ───────────────────────────────────
@@ -117,6 +124,21 @@ public class ProgressService {
                     "¡Has completado \"" + contenido.getTitulo() + "\"! Sigue así.",
                     "/formacion/contenido/" + request.getContenidoId()
             );
+
+            // Generar certificado si el módulo está al 100%.
+            // Se registra en afterCommit para garantizar que el registro de progreso
+            // ya está visible en BD antes de que CertificadoService cuente los completados.
+            if (contenido.getModuloId() != null && targetEmpresaId != null) {
+                final UUID fUserId    = targetUsuarioId;
+                final UUID fModuloId  = contenido.getModuloId();
+                final UUID fEmpresaId = targetEmpresaId;
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        certificadoService.generarSiModuloCompletado(fUserId, fModuloId, fEmpresaId);
+                    }
+                });
+            }
         }
 
         return toResponse(progressRepository.save(progreso));
@@ -166,10 +188,6 @@ public class ProgressService {
 
     // ── PROGRESO DE TODA LA EMPRESA (DASHBOARD ADMIN) ─────────────────────
 
-    /**
-     * Devuelve todo el progreso de los empleados de una empresa.
-     * Admin empresa solo puede consultar su propia empresa.
-     */
     public List<ProgressResponse> progresoPorEmpresa(UUID empresaId, User user) {
         String rol = user.getRol().getCodigoRol();
 
@@ -184,6 +202,21 @@ public class ProgressService {
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    public PaginatedResponse<ProgressResponse> progresoPorEmpresaPaged(UUID empresaId, User user, int page, int size) {
+        String rol = user.getRol().getCodigoRol();
+
+        if ("ROLE_ADMIN_EMPRESA".equals(rol)
+                && !user.getEmpresaId().equals(empresaId)) {
+            throw new UnauthorizedException(
+                    "Solo puedes consultar el progreso de tu empresa");
+        }
+
+        var pageResult = progressRepository.findByEmpresaIdOrderByActualizadoEnDesc(
+                empresaId,
+                PageRequest.of(page, size, Sort.by("actualizadoEn").descending()));
+        return PaginatedResponse.of(pageResult, this::toResponse);
     }
 
 

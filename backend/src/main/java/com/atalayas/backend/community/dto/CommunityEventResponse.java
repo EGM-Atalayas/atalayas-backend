@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -27,6 +28,10 @@ public class CommunityEventResponse {
     private boolean activo;
     private OffsetDateTime fechaInicio;
     private OffsetDateTime fechaFin;
+    private String         lugar;
+    private BigDecimal     latitud;
+    private BigDecimal     longitud;
+    private String         imagenUrl;
     private OffsetDateTime creadoEn;
     private OffsetDateTime actualizadoEn;
 }

@@ -1,5 +1,6 @@
 package com.atalayas.backend.user.entity;
 
+import com.atalayas.backend.department.entity.Departamento;
 import com.atalayas.backend.role.entity.Rol;
 import jakarta.persistence.*;
 import lombok.*;
@@ -104,8 +105,9 @@ public class User implements UserDetails {
     private String puestoTrabajo;
 
     // Departamento al que pertenece el empleado (usado para visibilidad de módulos)
-    @Column(name = "departamento", length = 50)
-    private String departamento;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "departamento_id")
+    private Departamento departamento;
 
     // Soft delete, false significa que la cuenta está desactivada
     @Column(name = "activo", nullable = false)
@@ -114,6 +116,11 @@ public class User implements UserDetails {
 
     @Column(name = "fecha_registro", updatable = false)
     private OffsetDateTime fechaRegistro;
+
+    // Fecha en la que el usuario fue dado de baja (activo = false)
+    // null si el usuario sigue activo
+    @Column(name = "fecha_baja")
+    private OffsetDateTime fechaBaja;
 
     @Column(name = "ultimo_login")
     private OffsetDateTime ultimoLogin;

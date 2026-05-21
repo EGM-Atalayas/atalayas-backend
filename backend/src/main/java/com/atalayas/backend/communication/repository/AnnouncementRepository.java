@@ -2,6 +2,7 @@ package com.atalayas.backend.communication.repository;
 
 import com.atalayas.backend.communication.entity.Announcement;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -9,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface AnnouncementRepository extends JpaRepository<Announcement, UUID> {
+public interface AnnouncementRepository extends JpaRepository<Announcement, UUID>, JpaSpecificationExecutor<Announcement> {
 
     /**
      * Listado para ROLE_ADMIN_EMPRESA y ROLE_EMPLEADO:

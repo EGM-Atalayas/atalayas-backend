@@ -40,6 +40,7 @@ public class UserResponse {
     private int intentosFallidos;
 
     private OffsetDateTime fechaRegistro;
+    private OffsetDateTime fechaBaja;
     private OffsetDateTime ultimoLogin;
     private OffsetDateTime actualizadoEn;
 }

@@ -14,11 +14,11 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * Escucha CompanyEvent y envía el email correspondiente DESPUÉS del commit de BD.
  *
  * - phase = AFTER_COMMIT garantiza que el email solo sale si la transacción tuvo éxito.
- * - @Async descarga el envío SMTP a un hilo del pool: la respuesta HTTP al admin
- *   no espera al servidor de correo (mejora latencia percibida).
- * - Un fallo SMTP no puede causar rollback porque el commit ya ocurrió.
- * - updateEmailEnviado() abre una nueva transacción (REQUIRED sobre contexto vacío)
- *   solo en el caso de aprobación; el rechazo elimina la empresa físicamente.
+ * - @Async descarga el envío via Maileroo API a un hilo del pool: la respuesta HTTP al admin
+ *   no espera a la llamada externa (mejora latencia percibida).
+ * - EmailService métodos son también @Async — el updateEmailEnviado se ejecuta inmediatamente
+ *   tras schedulear el envío (emailEnviado = true significa "envío iniciado").
+ * - Un fallo de Maileroo no puede causar rollback porque el commit ya ocurrió.
  */
 @Slf4j
 @Component
@@ -55,7 +55,7 @@ public class CompanyEventListener {
                         event.emailAdmin(), event.nombreEmpresa());
             }
         } catch (Exception ex) {
-            log.warn("Fallo Resend API tras commit — empresa={} estado={}: {}",
+            log.warn("Fallo Maileroo API tras commit — empresa={} estado={}: {}",
                     event.nombreEmpresa(), event.estadoNuevo(), ex.getMessage(), ex);
         }
     }

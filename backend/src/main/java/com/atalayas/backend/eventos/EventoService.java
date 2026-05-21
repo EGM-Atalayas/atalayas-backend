@@ -1,5 +1,6 @@
 package com.atalayas.backend.eventos;
 
+import com.atalayas.backend.communication.service.EmailService;
 import com.atalayas.backend.eventos.dto.EventoRequest;
 import com.atalayas.backend.eventos.dto.EventoResponse;
 import com.atalayas.backend.eventos.entity.Evento;
@@ -8,6 +9,7 @@ import com.atalayas.backend.eventos.mapper.EventoMapper;
 import com.atalayas.backend.eventos.repository.EventoRepository;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.user.entity.User;
+import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,12 +26,18 @@ public class EventoService {
 
     private final EventoRepository eventoRepository;
     private final EventoMapper eventoMapper;
+    private final UserRepository userRepository;
+    private final EmailService emailService;
 
     @Transactional
     public EventoResponse crear(EventoRequest request, User user) {
         Evento guardado = eventoRepository.save(
                 eventoMapper.toEntity(request, user.getUsuarioId()));
         log.info("Evento creado: {} por usuario: {}", guardado.getEventoId(), user.getEmail());
+
+        List<String> emails = activeCompanyEmails();
+        emailService.enviarNuevoEventoMasivo(emails, guardado.getTitulo(), guardado.getFecha(), guardado.getLugar());
+
         return eventoMapper.toResponse(guardado);
     }
 
@@ -67,11 +75,24 @@ public class EventoService {
         evento.setEstado(EstadoEvento.CANCELADO);
         evento.setActivo(false);
         log.info("Evento cancelado: {} por usuario: {}", eventoId, user.getEmail());
-        return eventoMapper.toResponse(eventoRepository.save(evento));
+        EventoResponse response = eventoMapper.toResponse(eventoRepository.save(evento));
+
+        List<String> emails = activeCompanyEmails();
+        emailService.enviarEventoCanceladoMasivo(emails, evento.getTitulo(), evento.getFecha());
+
+        return response;
     }
 
     private Evento findOrThrow(UUID eventoId) {
         return eventoRepository.findById(eventoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento no encontrado: " + eventoId));
+    }
+
+    /** Emails de todos los usuarios activos que pertenecen a una empresa. */
+    private List<String> activeCompanyEmails() {
+        return userRepository.findAll().stream()
+                .filter(u -> u.isActivo() && u.getEmpresaId() != null)
+                .map(User::getEmail)
+                .collect(Collectors.toList());
     }
 }

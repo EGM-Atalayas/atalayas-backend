@@ -8,9 +8,13 @@ import com.atalayas.backend.communication.service.NotificationService;
 import com.atalayas.backend.exception.ResourceNotFoundException;
 import com.atalayas.backend.role.entity.Rol;
 import com.atalayas.backend.role.repository.RoleRepository;
+import com.atalayas.backend.common.dto.PaginatedResponse;
+import com.atalayas.backend.department.repository.DepartamentoRepository;
+import com.atalayas.backend.user.dto.AdminResetPasswordRequest;
 import com.atalayas.backend.user.dto.ChangePasswordRequest;
 import com.atalayas.backend.user.dto.CreateUserRequest;
 import com.atalayas.backend.user.dto.UpdateProfileRequest;
+import com.atalayas.backend.user.dto.UpdateUserRequest;
 import com.atalayas.backend.user.dto.UserProfileResponse;
 import com.atalayas.backend.user.dto.UserResponse;
 import com.atalayas.backend.user.entity.User;
@@ -18,6 +22,9 @@ import com.atalayas.backend.user.mapper.UserMapper;
 import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -29,8 +36,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * 🔒 Servicio filtrado por empresaId.
- * 👑 SUPER_ADMIN bypassa el filtro y puede acceder a usuarios de cualquier empresa.
+ * Servicio filtrado por empresaId.
+ * SUPER_ADMIN bypassa el filtro y puede acceder a usuarios de cualquier empresa.
  *
  * <p>Regla de enmascarado: si un ADMIN/EMPLEADO accede al ID de un usuario
  * de otra empresa, se lanza {@link ResourceNotFoundException} (HTTP 404)
@@ -48,6 +55,7 @@ public class UserService {
     private final NotificationService notificationService;
     private final EmailService emailService;
     private final ImageService imageService;
+    private final DepartamentoRepository departamentoRepository;
 
     @Transactional(readOnly = true)
     public UserProfileResponse getCurrentUserProfile() {
@@ -85,6 +93,15 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public PaginatedResponse<UserResponse> getAllUsersPaged(int page, int size, String search) {
+        UUID empresaId = SecurityUtils.isSuperAdmin() ? null : SecurityUtils.getEmpresaId();
+        Specification<User> spec = UserSpecifications.filtered(search, empresaId);
+        var pageResult = userRepository.findAll(spec,
+                PageRequest.of(page, size, Sort.by("apellidos").ascending()));
+        return PaginatedResponse.of(pageResult, userMapper::toUserResponse);
+    }
+
     @Transactional
     public void desactivarUsuario(UUID id) {
         User user;
@@ -97,6 +114,7 @@ public class UserService {
                     .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
         }
         user.setActivo(false);
+        user.setFechaBaja(java.time.OffsetDateTime.now());
         userRepository.save(user);
     }
 
@@ -112,6 +130,21 @@ public class UserService {
                     .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
         }
         user.setActivo(true);
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void desbloquearUsuario(UUID id) {
+        User user;
+        if (SecurityUtils.isSuperAdmin()) {
+            user = userRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+        } else {
+            UUID empresaId = SecurityUtils.getEmpresaId();
+            user = userRepository.findByUsuarioIdAndEmpresaId(id, empresaId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+        }
+        user.setIntentosFallidos(0);
         userRepository.save(user);
     }
 
@@ -151,7 +184,12 @@ public class UserService {
             throw new AccessDeniedException("No tienes permisos para crear usuarios con el rol ROLE_ADMIN");
         }
 
-        // 5. Crear y persistir el usuario
+        // 5. Resolver departamento por nombre si se proporcionó
+        var departamentoEntity = (request.getDepartamento() != null && !request.getDepartamento().isBlank())
+                ? departamentoRepository.findByNombreIgnoreCaseAndActivoTrue(request.getDepartamento()).orElse(null)
+                : null;
+
+        // 6. Crear y persistir el usuario
         User user = User.builder()
                 .nombre(request.getNombre())
                 .apellidos(request.getApellidos())
@@ -160,14 +198,14 @@ public class UserService {
                 .empresaId(empresaId)
                 .rol(role)
                 .puestoTrabajo(request.getPuestoTrabajo())
-                .departamento(request.getDepartamento())
+                .departamento(departamentoEntity)
                 .build();
 
         final User savedUser = userRepository.save(user);
         log.info("Usuario creado por admin - usuarioId={} empresaId={} rol={}",
                 savedUser.getUsuarioId(), empresaId, role.getCodigoRol());
 
-        // 6. Notificación interna de bienvenida al nuevo usuario
+        // 7. Notificación interna de bienvenida al nuevo usuario
         notificationService.crearInterna(
                 savedUser.getUsuarioId(),
                 "BIENVENIDA",
@@ -175,7 +213,7 @@ public class UserService {
                 "/dashboard"
         );
 
-        // 6b. Notificar al/los admin empresa que hay un nuevo empleado
+        // 7b. Notificar al/los admin empresa que hay un nuevo empleado
         if (role.getRoleType() == RoleType.ROLE_EMPLEADO) {
             userRepository.findAllByEmpresaIdAndActivoTrue(empresaId).stream()
                     .filter(u -> "ROLE_ADMIN_EMPRESA".equals(u.getRol().getCodigoRol())
@@ -188,7 +226,7 @@ public class UserService {
                     ));
         }
 
-        // 7. Email de bienvenida — el fallo de email no revierte la creación
+        // 8. Email de bienvenida — el fallo de email no revierte la creación
         try {
             emailService.enviarBienvenidaUsuarioCreado(
                     savedUser.getEmail(), savedUser.getNombre(), empresaId.toString());
@@ -228,6 +266,37 @@ public class UserService {
     }
 
     @Transactional
+    public UserResponse updateUser(UUID id, UpdateUserRequest request) {
+        User user;
+        if (SecurityUtils.isSuperAdmin()) {
+            user = userRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+        } else {
+            UUID empresaId = SecurityUtils.getEmpresaId();
+            user = userRepository.findByUsuarioIdAndEmpresaId(id, empresaId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+        }
+
+        if (request.getNombre() != null) user.setNombre(request.getNombre());
+        if (request.getApellidos() != null) user.setApellidos(request.getApellidos());
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+            if (!request.getEmail().equals(user.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
+                throw new IllegalArgumentException("Ya existe un usuario con el email: " + request.getEmail());
+            }
+            user.setEmail(request.getEmail());
+        }
+        if (request.getPuestoTrabajo() != null) {
+            user.setPuestoTrabajo(request.getPuestoTrabajo());
+        }
+        if (request.getDepartamento() != null) {
+            departamentoRepository.findByNombreIgnoreCaseAndActivoTrue(request.getDepartamento())
+                    .ifPresentOrElse(user::setDepartamento, () -> user.setDepartamento(null));
+        }
+
+        return userMapper.toUserResponse(userRepository.save(user));
+    }
+
+    @Transactional
     public void changeMyPassword(ChangePasswordRequest request) {
         if (!request.getPasswordNueva().equals(request.getPasswordConfirmar())) {
             throw new com.atalayas.backend.exception.BusinessException("Las contraseñas no coinciden");
@@ -238,6 +307,21 @@ public class UserService {
         }
         user.setPassword(passwordEncoder.encode(request.getPasswordNueva()));
         userRepository.save(user);
+    }
+
+    @Transactional
+    public void adminResetPassword(UUID id, AdminResetPasswordRequest request) {
+        User target;
+        if (SecurityUtils.isSuperAdmin()) {
+            target = userRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+        } else {
+            UUID empresaId = SecurityUtils.getEmpresaId();
+            target = userRepository.findByUsuarioIdAndEmpresaId(id, empresaId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+        }
+        target.setPassword(passwordEncoder.encode(request.getNuevaPassword()));
+        userRepository.save(target);
     }
 
     private User getCurrentUser() {

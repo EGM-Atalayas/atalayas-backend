@@ -1,8 +1,6 @@
 package com.atalayas.backend.common.service;
 
-import com.resend.Resend;
-import com.resend.core.exception.ResendException;
-import com.resend.services.emails.model.CreateEmailOptions;
+import com.atalayas.backend.communication.client.MailerooClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,7 +13,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class PasswordResetEmailService {
 
-    private final Resend resend;
+    private final MailerooClient mailerooClient;
 
     @Value("${app.mail.from}")
     private String from;
@@ -70,7 +68,7 @@ public class PasswordResetEmailService {
                           <td style="background:#f5f6f8;padding:20px 40px;text-align:center;
                                      border-top:1px solid #e2e5ea;">
                             <p style="color:#9BA3B0;font-size:12px;margin:0;">
-                              © 2025 Atalayas Área Empresarial · Alicante
+                              © 2026 Atalayas Área Empresarial · Alicante
                             </p>
                           </td>
                         </tr>
@@ -82,16 +80,10 @@ public class PasswordResetEmailService {
                 """.formatted(nombre, enlace);
 
         try {
-            CreateEmailOptions request = CreateEmailOptions.builder()
-                    .from(from)
-                    .to(destinatario)
-                    .subject("Restablecer contraseña · Atalayas")
-                    .html(html)
-                    .build();
-            resend.emails().send(request);
-            log.info("[EmailService] Correo de recuperación enviado a {}", destinatario);
-        } catch (ResendException e) {
-            log.error("[EmailService] Error al enviar correo a {}: {}", destinatario, e.getMessage());
+            mailerooClient.send(from, destinatario, "Restablecer contraseña · Atalayas", html);
+            log.info("[MailerooClient] Correo de recuperación enviado a {}", destinatario);
+        } catch (Exception e) {
+            log.error("[MailerooClient] Error al enviar correo a {}: {}", destinatario, e.getMessage());
         }
     }
 }

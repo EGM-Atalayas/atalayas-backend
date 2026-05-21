@@ -45,4 +45,3 @@ public class CreateUserRequest {
     @Size(max = 50)
     private String departamento;
 }
-

@@ -4,6 +4,7 @@ import com.atalayas.backend.common.enums.EstadoSolicitud;
 import com.atalayas.backend.company.entity.Company;
 import com.atalayas.backend.dashboard.dto.SectorDistribucionDto;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -16,7 +17,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface CompanyRepository extends JpaRepository<Company, UUID> {
+public interface CompanyRepository extends JpaRepository<Company, UUID>, JpaSpecificationExecutor<Company> {
 
     /** Todas las empresas con un estado concreto. */
     List<Company> findAllByEstadoSolicitud(EstadoSolicitud estadoSolicitud);

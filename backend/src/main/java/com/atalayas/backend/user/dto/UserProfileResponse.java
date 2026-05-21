@@ -1,5 +1,6 @@
 package com.atalayas.backend.user.dto;
 
+import com.atalayas.backend.user.enums.Disponibilidad;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -41,7 +42,7 @@ public class UserProfileResponse {
     private String bannerUrl;
     private String bio;
     private String telefono;
-    private com.atalayas.backend.user.enums.Disponibilidad disponibilidad;
+    private Disponibilidad disponibilidad;
     private boolean notifNuevoModulo;
     private boolean notifModuloCompletado;
     private boolean notifComunicado;

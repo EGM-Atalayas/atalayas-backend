@@ -2,6 +2,9 @@ package com.atalayas.backend.user.repository;
 
 import com.atalayas.backend.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -9,7 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, UUID> {
+public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificationExecutor<User> {
 
     Optional<User> findByEmail(String email);
 
@@ -57,6 +60,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     /** Todos los usuarios con un código de rol concreto (ej. ROLE_ADMIN). */
     List<User> findAllByRolCodigoRol(String codigoRol);
+
+    /** Solo los IDs de usuarios con un código de rol — evita carga lazy (N+1). */
+    @Query("SELECT u.usuarioId FROM User u WHERE u.rol.codigoRol = :codigoRol")
+    List<UUID> findUuidsByRolCodigoRol(@Param("codigoRol") String codigoRol);
 
     /** Usuarios cuya fecha de registro es posterior a la fecha dada — "nuevos este mes". */
     long countByFechaRegistroAfter(java.time.OffsetDateTime fecha);

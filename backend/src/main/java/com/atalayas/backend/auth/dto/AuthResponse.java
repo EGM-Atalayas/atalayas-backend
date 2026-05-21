@@ -30,6 +30,7 @@ public class AuthResponse {
     private String nombre;
     private String apellidos;
     private String avatarUrl;
+    private String bannerUrl;
 
     // Puesto de trabajo
     private String puestoTrabajo;
