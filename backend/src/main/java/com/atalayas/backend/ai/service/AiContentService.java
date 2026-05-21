@@ -1,21 +1,18 @@
 package com.atalayas.backend.ai.service;
 
-import com.atalayas.backend.ai.client.GroqClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * Generación automática de contenido formativo con llama-3.3-70b-versatile (Groq)
- * El admin describe un tema y la IA genera el contenido estructurado
- * listo para crear un módulo formativo completo
+ * Generación automática de contenido formativo con Groq (fallback a Gemini).
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AiContentService {
 
-    private final GroqClient groqClient;
+    private final AiProviderService aiProviderService;
 
     private static final String SYSTEM_PROMPT = """
             Eres un experto en diseño instruccional y formación corporativa para empresas españolas.
@@ -78,7 +75,7 @@ public class AiContentService {
                 Extensión mínima: 800 palabras. Tono profesional pero cercano.
                 """, tema, tipoModulo, descripcion != null ? descripcion : "Sin contexto adicional");
 
-        return groqClient.completar(SYSTEM_PROMPT, userPrompt);
+        return aiProviderService.completar(SYSTEM_PROMPT, userPrompt);
     }
 
 
@@ -111,6 +108,6 @@ public class AiContentService {
                 Genera las %d preguntas completas, sin omitir ninguna.
                 """, limite, contenido, limite);
 
-        return groqClient.completar(SYSTEM_PROMPT, userPrompt);
+        return aiProviderService.completar(SYSTEM_PROMPT, userPrompt);
     }
 }
