@@ -16,10 +16,18 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
-    // Cubre cualquier puerto de localhost en desarrollo (http://localhost:*)
+    // Cubre cualquier puerto de localhost en desarrollo
     private static final List<String> LOCAL_ORIGINS = List.of(
-            "http://localhost:[*]",
-            "http://127.0.0.1:[*]"
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://localhost:4200",
+            "http://localhost:8080",
+            "http://localhost:10000",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:4200",
+            "http://127.0.0.1:8080",
+            "http://127.0.0.1:10000"
     );
 
     // Orígenes adicionales de producción (ej: URL de Vercel/Render)

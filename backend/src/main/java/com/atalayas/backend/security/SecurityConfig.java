@@ -49,6 +49,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/empresas/solicitud").permitAll()
                         // Contador de vistas — no requiere autenticación (operación no crítica)
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/anuncios/*/vistas").permitAll()
+                        // Chatbot IA — público, el contexto del usuario viene desde el frontend
+                        .requestMatchers(HttpMethod.POST, "/api/v1/ai/chat").permitAll()
                         // Lectura pública — sin sesión devuelve solo contenido global/vigente
                         .requestMatchers(HttpMethod.GET, "/api/v1/anuncios").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/comunicados").permitAll()
