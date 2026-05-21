@@ -254,6 +254,7 @@ public class UserService {
         if (request.getPuestoTrabajo() != null) user.setPuestoTrabajo(request.getPuestoTrabajo());
         if (request.getAvatarUrl() != null) user.setAvatarUrl(request.getAvatarUrl());
         if (request.getBannerUrl() != null) user.setBannerUrl(request.getBannerUrl());
+
         if (request.getBio() != null) user.setBio(request.getBio());
         if (request.getTelefono() != null) user.setTelefono(request.getTelefono());
         if (request.getDisponibilidad() != null) user.setDisponibilidad(request.getDisponibilidad());
