@@ -24,7 +24,7 @@ import java.util.Map;
 
 /**
  * Cliente HTTP hacia la API de Groq (compatible con OpenAI).
- * Modelo: llama-3.3-70b-versatile
+ * Modelo: meta-llama/llama-4-scout-17b-16e-instruct
  * IA principal — chat, contenido formativo y resúmenes.
  */
 @Slf4j
