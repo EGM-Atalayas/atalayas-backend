@@ -2,14 +2,13 @@ package com.atalayas.backend.ai.controller;
 
 import com.atalayas.backend.ai.client.ElevenLabsClient;
 import com.atalayas.backend.ai.client.GeminiClient;
-import com.atalayas.backend.ai.client.GroqClient;
-import com.atalayas.backend.ai.client.RateLimitException;
 import com.atalayas.backend.ai.dto.AiFileResponse;
 import com.atalayas.backend.ai.dto.AiPromptRequest;
 import com.atalayas.backend.ai.dto.AiResponse;
 import com.atalayas.backend.ai.dto.ChatRequest;
 import com.atalayas.backend.ai.service.AiContentService;
 import com.atalayas.backend.ai.service.AiFileService;
+import com.atalayas.backend.ai.service.AiProviderService;
 import com.atalayas.backend.ai.service.AiSummaryService;
 import com.atalayas.backend.ai.service.SupabaseStorageService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -54,7 +53,7 @@ public class AiController {
     private final AiContentService aiContentService;
     private final AiSummaryService aiSummaryService;
     private final AiFileService aiFileService;
-    private final GroqClient groqClient;
+    private final AiProviderService aiProviderService;
     private final GeminiClient geminiClient;
     private final ElevenLabsClient elevenLabsClient;
     private final SupabaseStorageService supabaseStorageService;
@@ -147,28 +146,11 @@ public class AiController {
         log.info("Chat streaming - {} mensajes", request.getMessages().size());
         StreamingResponseBody stream = outputStream -> {
             try {
-                groqClient.streamCompletions(request.getSystemPrompt(), request.getMessages(), outputStream);
-            } catch (RateLimitException e) {
-                log.warn("Groq rate limit — fallback a Gemini");
-                try {
-                    geminiClient.streamCompletions(request.getSystemPrompt(), request.getMessages(), outputStream);
-                } catch (RateLimitException ex) {
-                    log.error("Groq y Gemini con rate limit simultáneo");
-                    try {
-                        outputStream.write("El asistente está temporalmente saturado. Por favor, inténtalo de nuevo en unos minutos.".getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                        outputStream.flush();
-                    } catch (Exception ignored) {}
-                } catch (Exception ex) {
-                    log.error("Error en fallback Gemini: {}", ex.getMessage(), ex);
-                    try {
-                        outputStream.write(("[ERROR] " + ex.getMessage()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                        outputStream.flush();
-                    } catch (Exception ignored) {}
-                }
+                aiProviderService.streamCompletions(request.getSystemPrompt(), request.getMessages(), outputStream);
             } catch (Exception e) {
-                log.error("Error en streaming chat: {}", e.getMessage(), e);
+                log.error("Error en streaming chat (Groq y Gemini fallaron): {}", e.getMessage(), e);
                 try {
-                    outputStream.write(("[ERROR] " + e.getMessage()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    outputStream.write("El asistente no está disponible temporalmente. Inténtalo de nuevo en unos minutos.".getBytes(java.nio.charset.StandardCharsets.UTF_8));
                     outputStream.flush();
                 } catch (Exception ignored) {}
             }

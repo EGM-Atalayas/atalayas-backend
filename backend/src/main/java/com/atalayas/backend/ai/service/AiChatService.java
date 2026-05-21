@@ -1,22 +1,19 @@
 package com.atalayas.backend.ai.service;
 
-import com.atalayas.backend.ai.client.GroqClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 
 /**
- * Chatbot de consulta para empleados con llama-3.3-70b-versatile (Groq)
- * Responde preguntas sobre módulos formativos, protocolos internos
- * y dudas sobre el puesto de trabajo en el contexto de su empresa
+ * Chatbot de consulta para empleados con Groq (fallback a Gemini).
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AiChatService {
 
-    private final GroqClient groqClient;
+    private final AiProviderService aiProviderService;
 
     private static final String SYSTEM_PROMPT_TEMPLATE = """
             Eres el asistente virtual de formación de %s, empresa ubicada en
@@ -58,6 +55,6 @@ public class AiChatService {
                 ? String.format("Contexto de la empresa:\n%s\n\nPregunta: %s", contexto, pregunta)
                 : pregunta;
 
-        return groqClient.completar(systemPrompt, userPrompt);
+        return aiProviderService.completar(systemPrompt, userPrompt);
     }
 }
