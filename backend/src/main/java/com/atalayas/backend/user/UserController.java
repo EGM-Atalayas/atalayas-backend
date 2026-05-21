@@ -139,6 +139,14 @@ public class UserController {
         return ResponseEntity.ok().build();
     }
 
+    @PatchMapping("/{id}/desbloquear")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN_EMPRESA', 'ROLE_ADMIN')")
+    @Operation(summary = "Desbloquear cuenta de usuario — resetea intentos fallidos (solo admins)")
+    public ResponseEntity<Void> desbloquearUsuario(@PathVariable UUID id) {
+        userService.desbloquearUsuario(id);
+        return ResponseEntity.ok().build();
+    }
+
     @PatchMapping("/{id}/reset-password")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN_EMPRESA', 'ROLE_ADMIN')")
     @Operation(summary = "Resetear contraseña de un empleado (solo admins)")

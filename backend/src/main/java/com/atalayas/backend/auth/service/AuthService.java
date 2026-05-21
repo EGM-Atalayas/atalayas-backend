@@ -13,6 +13,7 @@ import com.atalayas.backend.user.entity.User;
 import com.atalayas.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -53,12 +54,24 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
-
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+                .orElseThrow(() -> new BadCredentialsException("Credenciales incorrectas"));
+
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            );
+        } catch (BadCredentialsException ex) {
+            user.setIntentosFallidos(user.getIntentosFallidos() + 1);
+            userRepository.save(user);
+            throw ex;
+        }
+
+        // Login exitoso: resetear contador
+        if (user.getIntentosFallidos() > 0) {
+            user.setIntentosFallidos(0);
+            userRepository.save(user);
+        }
 
         return buildAuthResponse(user);
     }
