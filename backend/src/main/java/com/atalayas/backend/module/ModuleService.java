@@ -241,7 +241,8 @@ public class ModuleService {
         RoleType rol = user.getRol().getRoleType();
         if (rol == RoleType.ROLE_ADMIN) return;
 
-        if (!user.getEmpresaId().equals(modulo.getEmpresaId())) {
+        if (modulo.getEmpresaId() != null
+                && !user.getEmpresaId().equals(modulo.getEmpresaId())) {
             throw new UnauthorizedException(
                     "No puedes modificar módulos de otra empresa");
         }
