@@ -237,18 +237,9 @@ public class ModuleService {
         }
     }
 
-    /**
-     * Verifica que el usuario puede modificar este módulo.
-     * Solo el superadmin puede tocar módulos globales (empresaId = null).
-     */
     private void validarAccesoEscritura(TrainingModule modulo, User user) {
         RoleType rol = user.getRol().getRoleType();
         if (rol == RoleType.ROLE_ADMIN) return;
-
-        if (modulo.getEmpresaId() == null) {
-            throw new UnauthorizedException(
-                    "Solo el superadmin puede modificar módulos globales");
-        }
 
         if (!user.getEmpresaId().equals(modulo.getEmpresaId())) {
             throw new UnauthorizedException(
